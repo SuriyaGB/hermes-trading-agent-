@@ -1,0 +1,4 @@
+yfinance
+requests
+ib_insync
+python-dotenv

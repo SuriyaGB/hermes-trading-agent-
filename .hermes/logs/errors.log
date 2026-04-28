@@ -1,0 +1,93 @@
+2026-04-25 18:57:52,764 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 18:57:54,146 ERROR [20260425_185751_51a84b] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:11:43,076 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:11:44,260 ERROR [20260425_191141_be56d1] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:28:23,396 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:28:24,365 ERROR [20260425_192821_b50931] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:29:23,393 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:29:24,267 ERROR [20260425_192921_e3fad4] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:30:16,017 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:30:17,000 ERROR [20260425_193014_66456f] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:36:27,378 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:36:28,298 ERROR [20260425_193625_f9a789] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:37:38,901 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:37:39,520 ERROR [20260425_193737_6701e1] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:38:36,850 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-25 19:38:37,628 WARNING root: Failed to fetch model metadata from OpenRouter: HTTPSConnectionPool(host='openai.ai', port=443): Max retries exceeded with url: /api/v1/models (Caused by NameResolutionError("HTTPSConnection(host='openai.ai', port=443): Failed to resolve 'openai.ai' ([Errno -2] Name or service not known)"))
+2026-04-25 19:38:38,321 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-25 19:38:39,217 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:38:53,486 ERROR [20260425_193837_53cf32] root: API call failed after 3 retries. Connection error. | provider=openai model=gpt-5.4 msgs=2 tokens=~5,039
+2026-04-27 09:16:28,477 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 09:16:29,524 WARNING root: Failed to fetch model metadata from OpenRouter: HTTPSConnectionPool(host='openai.ai', port=443): Max retries exceeded with url: /api/v1/models (Caused by NameResolutionError("HTTPSConnection(host='openai.ai', port=443): Failed to resolve 'openai.ai' ([Errno -2] Name or service not known)"))
+2026-04-27 09:16:30,339 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 09:16:31,339 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-27 09:16:49,593 ERROR [20260427_091629_835c18] root: API call failed after 3 retries. Connection error. | provider=openai model=gpt-5.4 msgs=2 tokens=~5,038
+2026-04-27 09:19:25,034 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 09:19:27,388 WARNING root: Failed to fetch model metadata from OpenRouter: HTTPSConnectionPool(host='openai.ai', port=443): Max retries exceeded with url: /api/v1/models (Caused by NameResolutionError("HTTPSConnection(host='openai.ai', port=443): Failed to resolve 'openai.ai' ([Errno -2] Name or service not known)"))
+2026-04-27 09:19:27,657 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 09:19:28,269 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-27 09:19:41,545 ERROR [20260427_091925_9528be] root: API call failed after 3 retries. Connection error. | provider=openai model=gpt-5.4 msgs=2 tokens=~4,988
+2026-04-27 12:06:11,080 WARNING __main__: Detected closed shared OpenAI client; recreating before use (chat_completion_stream_request) thread=Thread-1 (_call):128223360587456 provider=openai base_url=https://api.openai.com/v1 model=gpt-4o
+2026-04-27 12:06:17,167 WARNING __main__: Tool execute_code returned error (1.03s): {"status": "error", "output": "\n--- stderr ---\nTraceback (most recent call last):\n  File \"/tmp/hermes_sandbox_o2lrbr1a/script.py\", line 8, in <module>\n    eval(result)\nTypeError: eval() arg 1 m
+2026-04-27 12:06:17,182 WARNING __main__: Detected closed shared OpenAI client; recreating before use (chat_completion_stream_request) thread=Thread-7 (_call):128223336466112 provider=openai base_url=https://api.openai.com/v1 model=gpt-4o
+2026-04-27 12:06:20,431 WARNING __main__: Tool clarify returned error (0.00s): {"error": "Clarify tool is not available in this execution context."}
+2026-04-27 12:06:20,451 WARNING __main__: Detected closed shared OpenAI client; recreating before use (chat_completion_stream_request) thread=Thread-8 (_call):128223336466112 provider=openai base_url=https://api.openai.com/v1 model=gpt-4o
+2026-04-27 12:06:22,694 WARNING __main__: Tool terminal returned error (0.62s): {"output": "bash: syntax error near unexpected token `__hermes_rc=$?'", "exit_code": 2, "error": null}
+2026-04-27 12:06:22,711 WARNING __main__: Detected closed shared OpenAI client; recreating before use (chat_completion_stream_request) thread=Thread-10 (_call):128223336466112 provider=openai base_url=https://api.openai.com/v1 model=gpt-4o
+2026-04-27 12:06:26,774 WARNING __main__: Tool session_search returned error (0.00s): {"success": false, "error": "Session database not available."}
+2026-04-27 12:06:26,787 WARNING __main__: Detected closed shared OpenAI client; recreating before use (chat_completion_stream_request) thread=Thread-11 (_call):128223336466112 provider=openai base_url=https://api.openai.com/v1 model=gpt-4o
+2026-04-27 12:07:34,009 WARNING __main__: Detected closed shared OpenAI client; recreating before use (chat_completion_stream_request) thread=Thread-1 (_call):130272241825472 provider=openai base_url=https://api.openai.com/v1 model=gpt-4o
+2026-04-27 12:09:20,301 WARNING __main__: Detected closed shared OpenAI client; recreating before use (chat_completion_stream_request) thread=Thread-10 (_call):130271978444480 provider=openai base_url=https://api.openai.com/v1 model=gpt-4o
+2026-04-27 12:59:15,141 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 12:59:17,332 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 12:59:25,034 ERROR [20260427_125915_44a3fa] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=openai model=gpt-5.4 msgs=2 tokens=~4,987
+2026-04-27 13:00:24,662 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:00:25,163 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:00:26,565 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:00:26,642 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:00:26,738 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:00:27,063 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:00:35,388 ERROR [20260427_130025_7f8c3b] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=openai model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:01:13,523 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:01:13,988 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:01:15,240 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:01:15,320 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:01:15,509 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:01:15,916 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:01:23,447 ERROR [20260427_130113_357fa0] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=openai model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:02:07,875 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:02:08,348 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:02:09,709 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:02:09,765 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:02:09,896 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:02:10,182 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:02:17,888 ERROR [20260427_130208_1941ca] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=openai model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:02:54,435 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:03:04,372 ERROR [20260427_130254_c239d0] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=custom model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:05:10,894 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:05:20,877 ERROR [20260427_130511_a28a2b] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=custom model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:10:18,534 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:10:27,794 ERROR [20260427_131018_159e61] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=custom model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:10:38,760 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:10:49,271 ERROR [20260427_131039_110b9a] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=custom model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:11:51,001 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:12:38,657 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:15:52,057 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:16:08,498 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 17:50:27,953 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 17:59:34,926 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 17:59:54,252 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 18:00:58,709 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:23:51,248 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:25:01,937 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:26:16,087 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:27:26,902 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:28:23,195 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:29:41,275 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:36:22,456 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:37:35,490 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:38:39,146 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:39:38,568 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:40:23,551 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:42:38,770 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:43:18,679 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'

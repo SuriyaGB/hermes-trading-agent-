@@ -55,6 +55,22 @@ def calculate_local_delta(S, K, T, r, iv, option_type='put'):
     else:
         return norm.cdf(d1) - 1
 
+def get_recent_news():
+    try:
+        ticker = yf.Ticker("AAPL")
+        news = ticker.news
+        if not news:
+            return []
+        
+        headlines = [
+            n.get('content', {}).get('title', '')
+            for n in news[:3]
+            if n.get('content', {}).get('title')
+        ]
+        return headlines if headlines else ["NEWS_UNAVAILABLE"]
+    except Exception:
+        return ["NEWS_UNAVAILABLE"]
+
 # Path Management (Root Relative)
 BASE_DIR = Path(__file__).parent
 STATE_FILE = BASE_DIR / 'trade_state.json'
@@ -194,7 +210,7 @@ def get_ibkr_analysis() -> Dict[str, Any]:
             final_data["cost_basis"] = adj_basis
 
     try:
-        ticker = yf.Ticker("AAPL", session=session)
+        ticker = yf.Ticker("AAPL")
         cal = ticker.calendar
         earn_date = cal.get('Earnings Date', [datetime.now()])[0] if isinstance(cal, dict) else cal.iloc[0, 0]
         if hasattr(earn_date, 'to_pydatetime'):
@@ -204,6 +220,8 @@ def get_ibkr_analysis() -> Dict[str, Any]:
     except:
         final_data["earnings_days"] = 14
         
+    final_data["recent_news"] = get_recent_news()
+
     return final_data
 
 if __name__ == "__main__":

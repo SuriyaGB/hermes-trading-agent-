@@ -1,0 +1,437 @@
+2026-04-25 18:57:46,436 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-25 18:57:46,439 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-25 18:57:46,633 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-25 18:57:46,722 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-25 18:57:49,492 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-25 18:57:52,764 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 18:57:54,146 ERROR [20260425_185751_51a84b] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:11:39,686 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-25 19:11:39,687 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-25 19:11:39,738 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-25 19:11:39,799 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-25 19:11:40,663 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-25 19:11:43,076 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:11:44,260 ERROR [20260425_191141_be56d1] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:28:20,351 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-25 19:28:20,351 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-25 19:28:20,410 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-25 19:28:20,453 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-25 19:28:21,047 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-25 19:28:23,396 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:28:24,365 ERROR [20260425_192821_b50931] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:29:20,500 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-25 19:29:20,500 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-25 19:29:20,544 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-25 19:29:20,580 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-25 19:29:21,159 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-25 19:29:23,393 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:29:24,267 ERROR [20260425_192921_e3fad4] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:30:13,066 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-25 19:30:13,067 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-25 19:30:13,100 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-25 19:30:13,137 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-25 19:30:13,679 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-25 19:30:16,017 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:30:17,000 ERROR [20260425_193014_66456f] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:36:24,282 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-25 19:36:24,283 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-25 19:36:24,354 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-25 19:36:24,408 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-25 19:36:25,076 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-25 19:36:27,378 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:36:28,298 ERROR [20260425_193625_f9a789] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:37:36,031 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-25 19:37:36,032 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-25 19:37:36,067 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-25 19:37:36,107 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-25 19:37:36,705 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-25 19:37:38,901 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:37:39,520 ERROR [20260425_193737_6701e1] root: Non-retryable client error: Error code: 401 - {'error': {'message': 'Missing Authentication header', 'code': 401}}
+2026-04-25 19:38:35,190 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-25 19:38:35,190 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-25 19:38:35,256 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-25 19:38:35,405 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-25 19:38:36,388 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-25 19:38:36,850 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-25 19:38:37,409 INFO cli: No model configured — defaulting to gpt-5.4 for provider openai
+2026-04-25 19:38:37,628 WARNING root: Failed to fetch model metadata from OpenRouter: HTTPSConnectionPool(host='openai.ai', port=443): Max retries exceeded with url: /api/v1/models (Caused by NameResolutionError("HTTPSConnection(host='openai.ai', port=443): Failed to resolve 'openai.ai' ([Errno -2] Name or service not known)"))
+2026-04-25 19:38:38,321 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-25 19:38:39,217 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-25 19:38:53,486 ERROR [20260425_193837_53cf32] root: API call failed after 3 retries. Connection error. | provider=openai model=gpt-5.4 msgs=2 tokens=~5,039
+2026-04-27 09:16:26,037 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 09:16:26,038 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 09:16:26,163 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 09:16:26,288 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 09:16:27,937 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 09:16:28,477 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 09:16:29,178 INFO cli: No model configured — defaulting to gpt-5.4 for provider openai
+2026-04-27 09:16:29,524 WARNING root: Failed to fetch model metadata from OpenRouter: HTTPSConnectionPool(host='openai.ai', port=443): Max retries exceeded with url: /api/v1/models (Caused by NameResolutionError("HTTPSConnection(host='openai.ai', port=443): Failed to resolve 'openai.ai' ([Errno -2] Name or service not known)"))
+2026-04-27 09:16:30,339 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 09:16:31,339 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-27 09:16:49,593 ERROR [20260427_091629_835c18] root: API call failed after 3 retries. Connection error. | provider=openai model=gpt-5.4 msgs=2 tokens=~5,038
+2026-04-27 09:19:23,879 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 09:19:23,884 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 09:19:23,924 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 09:19:23,973 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 09:19:24,597 INFO run_agent: Loaded environment variables from .hermes/.env
+2026-04-27 09:19:25,034 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 09:19:27,126 INFO cli: No model configured — defaulting to gpt-5.4 for provider openai
+2026-04-27 09:19:27,388 WARNING root: Failed to fetch model metadata from OpenRouter: HTTPSConnectionPool(host='openai.ai', port=443): Max retries exceeded with url: /api/v1/models (Caused by NameResolutionError("HTTPSConnection(host='openai.ai', port=443): Failed to resolve 'openai.ai' ([Errno -2] Name or service not known)"))
+2026-04-27 09:19:27,657 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 09:19:28,269 WARNING agent.auxiliary_client: Auxiliary auto-detect: no provider available (tried: openai, nous, local/custom, openai-codex, api-key). Compression, summarization, and memory flush will not work. Set OPENROUTER_API_KEY or configure a local model in config.yaml.
+2026-04-27 09:19:41,545 ERROR [20260427_091925_9528be] root: API call failed after 3 retries. Connection error. | provider=openai model=gpt-5.4 msgs=2 tokens=~4,988
+2026-04-27 12:59:13,704 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 12:59:13,704 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 12:59:13,773 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 12:59:13,856 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 12:59:14,655 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 12:59:15,141 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 12:59:16,809 INFO cli: No model configured — defaulting to gpt-5.4 for provider openai
+2026-04-27 12:59:17,332 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 12:59:17,359 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 12:59:25,034 ERROR [20260427_125915_44a3fa] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=openai model=gpt-5.4 msgs=2 tokens=~4,987
+2026-04-27 13:00:23,696 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 13:00:23,697 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 13:00:23,735 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 13:00:23,784 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 13:00:24,331 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 13:00:24,662 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:00:25,163 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:00:26,565 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:00:26,642 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:00:26,738 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:00:27,063 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:00:27,101 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 13:00:35,388 ERROR [20260427_130025_7f8c3b] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=openai model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:01:12,531 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 13:01:12,531 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 13:01:12,567 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 13:01:12,614 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 13:01:13,251 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 13:01:13,523 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:01:13,988 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:01:15,240 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:01:15,320 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:01:15,509 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:01:15,916 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:01:15,964 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 13:01:23,447 ERROR [20260427_130113_357fa0] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=openai model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:02:06,948 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 13:02:06,948 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 13:02:06,983 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 13:02:07,028 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 13:02:07,583 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 13:02:07,875 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:02:08,348 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:02:09,709 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:02:09,765 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:02:09,896 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:02:10,182 WARNING agent.auxiliary_client: resolve_provider_client: openai requested but OPENROUTER_API_KEY not set
+2026-04-27 13:02:10,219 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 13:02:17,888 ERROR [20260427_130208_1941ca] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=openai model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:02:53,427 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 13:02:53,427 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 13:02:53,462 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 13:02:53,500 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 13:02:54,146 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 13:02:54,435 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:02:54,889 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:02:56,080 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:02:56,184 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:02:56,267 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:02:56,907 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 13:03:04,372 ERROR [20260427_130254_c239d0] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=custom model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:05:09,794 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 13:05:09,795 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 13:05:09,832 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 13:05:09,869 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 13:05:10,604 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 13:05:10,894 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:05:11,373 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:05:12,650 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:05:12,750 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:05:12,806 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:05:13,227 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 13:05:20,877 ERROR [20260427_130511_a28a2b] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=custom model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:10:17,486 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 13:10:17,487 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 13:10:17,522 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 13:10:17,562 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 13:10:18,173 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 13:10:18,534 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:10:19,020 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:10:20,295 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:10:20,380 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:10:20,440 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:10:21,132 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 13:10:27,794 ERROR [20260427_131018_159e61] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=custom model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:10:37,726 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 13:10:37,726 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 13:10:37,766 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 13:10:37,809 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 13:10:38,455 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 13:10:38,760 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:10:39,220 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:10:40,388 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:10:40,488 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:10:40,633 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:10:41,201 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 13:10:49,271 ERROR [20260427_131039_110b9a] root: API call failed after 3 retries. 'NoneType' object has no attribute 'build_kwargs' | provider=custom model=gpt-4o msgs=2 tokens=~4,987
+2026-04-27 13:11:50,068 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 13:11:50,069 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 13:11:50,106 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 13:11:50,145 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 13:11:50,702 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 13:11:51,001 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:11:51,503 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:11:52,683 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:11:52,744 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:11:52,804 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:11:53,400 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 13:12:37,613 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 13:12:37,614 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 13:12:37,662 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 13:12:37,711 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 13:12:38,357 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 13:12:38,657 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:12:39,276 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:12:40,370 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:12:40,445 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:12:40,500 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:12:41,093 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 13:12:46,678 INFO [20260427_131239_885342] agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 13:12:58,413 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 13:12:58,413 INFO agent.auxiliary_client: Auxiliary title_generation: using auto (gpt-4o-mini)
+2026-04-27 13:15:51,097 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 13:15:51,098 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 13:15:51,134 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 13:15:51,181 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 13:15:51,767 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 13:15:52,057 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:15:52,526 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:15:53,630 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:15:53,753 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:15:53,830 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:15:54,406 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 13:16:07,132 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 13:16:07,133 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 13:16:07,185 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 13:16:07,229 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 13:16:08,160 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 13:16:08,498 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 13:16:09,073 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:16:10,377 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:16:10,446 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:16:10,508 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 13:16:11,070 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 13:17:38,350 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 13:17:38,350 INFO agent.auxiliary_client: Auxiliary title_generation: using auto (gpt-4o-mini)
+2026-04-27 17:50:25,213 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 17:50:25,214 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 17:50:25,340 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 17:50:25,508 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 17:50:27,405 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 17:50:27,953 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 17:50:28,885 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 17:50:32,209 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 17:50:32,298 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 17:50:32,398 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 17:50:32,906 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 17:59:33,952 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 17:59:33,957 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 17:59:34,017 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 17:59:34,055 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 17:59:34,628 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 17:59:34,926 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 17:59:35,411 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 17:59:36,897 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 17:59:36,974 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 17:59:37,048 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 17:59:37,485 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 17:59:42,443 INFO [20260427_175935_00f665] agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 17:59:53,000 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 17:59:53,000 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 17:59:53,044 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 17:59:53,089 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 17:59:53,953 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 17:59:54,252 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 17:59:54,800 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 17:59:56,247 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 17:59:56,349 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 17:59:56,428 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 17:59:56,932 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 18:00:01,238 INFO [20260427_175954_561d10] agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 18:00:57,325 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 18:00:57,334 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 18:00:57,389 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 18:00:57,438 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 18:00:58,230 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 18:00:58,709 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 18:00:59,400 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 18:01:01,388 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 18:01:01,509 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 18:01:01,615 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 18:01:02,271 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 18:01:07,770 INFO [20260427_180059_63dce3] agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 18:01:23,001 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 18:01:23,002 INFO agent.auxiliary_client: Auxiliary title_generation: using auto (gpt-4o-mini)
+2026-04-27 19:23:48,765 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 19:23:48,767 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 19:23:48,925 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 19:23:49,099 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 19:23:50,790 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 19:23:51,248 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:23:52,438 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:23:56,408 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:23:56,558 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:23:56,630 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:23:57,385 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 19:24:03,663 INFO [20260427_192352_c71aa7] agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 19:25:00,975 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 19:25:00,975 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 19:25:01,020 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 19:25:01,062 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 19:25:01,666 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 19:25:01,937 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:25:02,474 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:25:03,662 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:25:03,771 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:25:03,970 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:25:04,499 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 19:26:15,001 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 19:26:15,002 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 19:26:15,060 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 19:26:15,103 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 19:26:15,720 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 19:26:16,087 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:26:16,868 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:26:18,284 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:26:18,393 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:26:18,592 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:26:19,034 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 19:27:24,815 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 19:27:24,816 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 19:27:24,874 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 19:27:24,959 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 19:27:26,388 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 19:27:26,902 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:27:27,612 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:27:29,525 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:27:29,687 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:27:29,948 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:27:30,377 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 19:28:21,449 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 19:28:21,450 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 19:28:21,500 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 19:28:21,552 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 19:28:22,604 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 19:28:23,195 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:28:24,019 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:28:26,603 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:28:26,721 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:28:26,807 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:28:27,410 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 19:28:59,095 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 19:28:59,095 INFO agent.auxiliary_client: Auxiliary title_generation: using auto (gpt-4o-mini)
+2026-04-27 19:29:40,082 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 19:29:40,082 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 19:29:40,122 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 19:29:40,163 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 19:29:40,977 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 19:29:41,275 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:29:41,877 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:29:43,375 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:29:43,457 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:29:43,535 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:29:44,328 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 19:36:21,211 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 19:36:21,212 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 19:36:21,278 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 19:36:21,335 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 19:36:22,140 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 19:36:22,456 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:36:23,051 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:36:24,743 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:36:24,819 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:36:24,880 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:36:25,499 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 19:36:46,998 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 19:36:46,999 INFO agent.auxiliary_client: Auxiliary title_generation: using auto (gpt-4o-mini)
+2026-04-27 19:37:34,335 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 19:37:34,335 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 19:37:34,373 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 19:37:34,414 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 19:37:35,183 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 19:37:35,490 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:37:36,096 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:37:38,171 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:37:38,262 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:37:38,329 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:37:38,699 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 19:38:02,756 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 19:38:02,757 INFO agent.auxiliary_client: Auxiliary title_generation: using auto (gpt-4o-mini)
+2026-04-27 19:38:38,188 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 19:38:38,188 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 19:38:38,227 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 19:38:38,277 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 19:38:38,867 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 19:38:39,146 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:38:39,665 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:38:40,835 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:38:40,902 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:38:40,961 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:38:41,614 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 19:38:52,328 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 19:38:52,328 INFO agent.auxiliary_client: Auxiliary title_generation: using auto (gpt-4o-mini)
+2026-04-27 19:39:37,553 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 19:39:37,554 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 19:39:37,588 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 19:39:37,626 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 19:39:38,276 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 19:39:38,568 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:39:39,109 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:39:40,792 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:39:40,880 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:39:40,936 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:39:41,197 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 19:39:58,735 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 19:39:58,736 INFO agent.auxiliary_client: Auxiliary title_generation: using auto (gpt-4o-mini)
+2026-04-27 19:40:22,392 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 19:40:22,393 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 19:40:22,424 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 19:40:22,460 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 19:40:23,180 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 19:40:23,551 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:40:24,114 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:40:25,767 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:40:25,838 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:40:25,900 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:40:26,325 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 19:40:37,879 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 19:40:37,879 INFO agent.auxiliary_client: Auxiliary title_generation: using auto (gpt-4o-mini)
+2026-04-27 19:42:37,766 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 19:42:37,767 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 19:42:37,798 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 19:42:37,835 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 19:42:38,487 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 19:42:38,770 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:42:39,268 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:42:40,493 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:42:40,557 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:42:40,617 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:42:41,110 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 19:42:56,530 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 19:42:56,530 INFO agent.auxiliary_client: Auxiliary title_generation: using auto (gpt-4o-mini)
+2026-04-27 19:43:17,735 INFO hermes_cli.plugins: Plugin 'openai' registered image_gen provider: openai
+2026-04-27 19:43:17,735 INFO hermes_cli.plugins: Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-04-27 19:43:17,769 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-04-27 19:43:17,806 INFO hermes_cli.plugins: Plugin discovery complete: 5 found, 4 enabled
+2026-04-27 19:43:18,408 INFO run_agent: Loaded environment variables from /home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/.env
+2026-04-27 19:43:18,679 WARNING tools.registry: Could not import tool module tools.mixture_of_agents_tool: No module named 'tools.openai_client'
+2026-04-27 19:43:19,192 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:43:20,669 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:43:20,742 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:43:20,802 INFO agent.auxiliary_client: Vision auto-detect: using main provider custom (gpt-4o-mini)
+2026-04-27 19:43:21,238 INFO agent.auxiliary_client: Auxiliary auto-detect: using main provider custom (gpt-4o)
+2026-04-27 19:43:36,178 INFO agent.auxiliary_client: Auxiliary auto-detect: using local/custom (gpt-4o-mini) — skipped: openai, nous
+2026-04-27 19:43:36,178 INFO agent.auxiliary_client: Auxiliary title_generation: using auto (gpt-4o-mini)

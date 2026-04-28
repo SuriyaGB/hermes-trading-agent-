@@ -1,0 +1,1 @@
+/home/gbrithp2/Documents/krc_Lab/Live_Trade/.hermes/SOUL.md

@@ -1,0 +1,3 @@
+timestamp,action,strike,expiry,dte,delta,premium,premium_per_contract,min_premium_required,floor_used,earnings_days,iv30_rank,vix_seen,reason,result
+2026-05-07T11:39:07.457603,HOLD_PUT_POSITION,,,,,0,0.0,0.0,0.0,85,70.8,17.39,,HOLD
+2026-05-07T11:53:26.101721,HOLD_PUT_POSITION,,,,,0,0.0,0.0,0.0,85,70.8,17.39,,HOLD

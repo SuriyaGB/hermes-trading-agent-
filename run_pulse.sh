@@ -33,4 +33,4 @@ hermes chat --query "MISSION: Run AAPL Wheel Pulse.
 
 # Extract and Execute
 echo "[LOG] Extracting JSON from $TMP_OUTPUT..."
-cat $TMP_OUTPUT | grep "{" | python3 -u $PROJECT_ROOT/executor.py
+cat $TMP_OUTPUT | python3 -u $PROJECT_ROOT/executor.py

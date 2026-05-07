@@ -21,6 +21,40 @@ IB_HOST = os.getenv("IBKR_HOST", "127.0.0.1")
 IB_PORT = int(os.getenv("IBKR_PORT", 7497))
 CLIENT_ID = int(os.getenv("IBKR_CLIENT_ID", 10))
 
+def extract_decision(raw_input: str) -> dict | None:
+    """
+    Professional Stack-Based JSON Extractor.
+    Finds balanced { } pairs to handle multi-line and log interference.
+    """
+    candidates = []
+    depth = 0
+    start = -1
+    
+    for i, char in enumerate(raw_input):
+        if char == '{':
+            if depth == 0:
+                start = i
+            depth += 1
+        elif char == '}':
+            depth -= 1
+            if depth == 0 and start != -1:
+                # We found a complete balanced block
+                candidate = raw_input[start:i+1].strip()
+                candidates.append(candidate)
+                start = -1
+                
+    # Scan candidates from LAST to FIRST (Decision is always last)
+    for candidate in reversed(candidates):
+        try:
+            data = json.loads(candidate)
+            # Validation: Must be a dict and have the 'decision' key
+            if isinstance(data, dict) and 'decision' in data:
+                return data
+        except json.JSONDecodeError:
+            continue
+            
+    return None
+
 def load_state():
     default_state = {"current_phase": "CASH_ONLY", "current_cycle_put_premium": None}
     try:
@@ -141,14 +175,17 @@ async def execute_decision(decision_data: dict):
             trade = ib.placeOrder(contract, LimitOrder('SELL', 1, mid_price))
             if await wait_for_fill(ib, trade):
                 fill_p = trade.orderStatus.avgFillPrice
-                if right == 'P': 
-                    state['current_cycle_put_premium'] = fill_p
-                    state['assignment_strike'] = strike
-                state['current_option_strike'] = strike
-                state['current_option_expiry'] = expiry
-                state['current_phase'] = "CSP_ACTIVE" if right == 'P' else "CC_ACTIVE"
-                save_state(state)
-                append_to_log(decision, 'AAPL', strike, fill_p, fill_p if right == 'P' else 0)
+                try:
+                    if right == 'P': 
+                        state['current_cycle_put_premium'] = fill_p
+                        state['assignment_strike'] = strike
+                    state['current_option_strike'] = strike
+                    state['current_option_expiry'] = expiry
+                    state['current_phase'] = "CSP_ACTIVE" if right == 'P' else "CC_ACTIVE"
+                    append_to_log(decision, 'AAPL', strike, fill_p, fill_p if right == 'P' else 0)
+                finally:
+                    save_state(state)
+                    print("[EXECUTOR] State saved safely after fill.")
             else:
                 ib.cancelOrder(trade.order)
             return
@@ -179,12 +216,15 @@ async def execute_decision(decision_data: dict):
                     trade = ib.placeOrder(contract, LimitOrder('BUY', 1, mid_p))
                 if await wait_for_fill(ib, trade):
                     fill_p = trade.orderStatus.avgFillPrice
-                    state['current_phase'] = "CASH_ONLY"
-                    state['current_cycle_put_premium'] = None
-                    state['current_option_strike'] = None
-                    state['current_option_expiry'] = None
-                    save_state(state)
-                    append_to_log(decision, 'AAPL', contract.strike, fill_p, 0)
+                    try:
+                        state['current_phase'] = "CASH_ONLY"
+                        state['current_cycle_put_premium'] = None
+                        state['current_option_strike'] = None
+                        state['current_option_expiry'] = None
+                        append_to_log(decision, 'AAPL', contract.strike, fill_p, 0)
+                    finally:
+                        save_state(state)
+                        print("[EXECUTOR] State saved safely after close.")
             return
 
         if decision.startswith("HOLD_"):
@@ -215,7 +255,13 @@ async def execute_decision(decision_data: dict):
                 close_trade = ib.placeOrder(curr_contract, LimitOrder('BUY', 1, mid))
                 print(f"[EXECUTOR] Closing position {curr_contract.localSymbol}...")
                 if await wait_for_fill(ib, close_trade):
-                    print("[EXECUTOR] Step 1 Complete: Position Closed.")
+                    try:
+                        print("[EXECUTOR] Step 1 Complete: Position Closed.")
+                        state['current_phase'] = "CASH_ONLY"
+                        state['current_option_strike'] = None
+                        state['current_option_expiry'] = None
+                    finally:
+                        save_state(state)
                 else:
                     print("[EXECUTOR] ROLL ABORTED: Failed to close current position.")
                     ib.cancelOrder(close_trade.order)
@@ -252,20 +298,24 @@ async def execute_decision(decision_data: dict):
             open_trade = ib.placeOrder(new_contract, LimitOrder('SELL', 1, mid_new))
             if await wait_for_fill(ib, open_trade):
                  fill_p = open_trade.orderStatus.avgFillPrice
-                 state['current_phase'] = "CSP_ACTIVE" if right == 'P' else "CC_ACTIVE"
-                 state['current_option_strike'] = target_strike
-                 state['current_option_expiry'] = expiry
-                 save_state(state)
-                 append_to_log(decision, 'AAPL', target_strike, fill_p, fill_p if right == 'P' else 0)
-                 print("[EXECUTOR] ROLL COMPLETE: New position active.")
+                 try:
+                     state['current_phase'] = "CSP_ACTIVE" if right == 'P' else "CC_ACTIVE"
+                     state['current_option_strike'] = target_strike
+                     state['current_option_expiry'] = expiry
+                     append_to_log(decision, 'AAPL', target_strike, fill_p, fill_p if right == 'P' else 0)
+                 finally:
+                     save_state(state)
+                     print("[EXECUTOR] ROLL COMPLETE: New position active and state saved.")
             else:
                  # --- FIX 3: ROLL STATE RESET ---
                  ib.cancelOrder(open_trade.order)
                  print("[EXECUTOR] ROLL PARTIAL FAILURE: Position closed but new one not opened.")
-                 state['current_phase'] = "CASH_ONLY"
-                 state['current_option_strike'] = None
-                 state['current_option_expiry'] = None
-                 save_state(state)
+                 try:
+                     state['current_phase'] = "CASH_ONLY"
+                     state['current_option_strike'] = None
+                     state['current_option_expiry'] = None
+                 finally:
+                     save_state(state)
             return
 
     except Exception as e:
@@ -279,11 +329,11 @@ async def execute_decision(decision_data: dict):
 if __name__ == "__main__":
     try:
         raw_input = sys.stdin.read()
-        start = raw_input.find("{")
-        end = raw_input.rfind("}") + 1
-        if start != -1:
-            decision_data = json.loads(raw_input[start:end])
+        decision_data = extract_decision(raw_input)
+        if decision_data:
             ib = IB()
             ib.run(execute_decision(decision_data))
+        else:
+            print("[EXECUTOR] ERROR: No valid JSON decision found in input.")
     except Exception as e:
         print(f"CRITICAL: {str(e)}")

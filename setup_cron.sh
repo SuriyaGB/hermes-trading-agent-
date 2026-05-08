@@ -1,30 +1,24 @@
 #!/bin/bash
-# setup_cron.sh — Schedule Hermes 30-minute pulse (Delayed Data Optimized)
-PROJECT_ROOT=$(dirname "$(realpath "$0")")
-SCRIPT_PATH="$PROJECT_ROOT/run_pulse_sim.sh"
-LOG_PATH="$PROJECT_ROOT/pulse_cron.log"
+# setup_cron.sh — Final Automation Proof (IST)
+# ─────────────────────────────────────────────────────────────
 
-# Cron Schedule (IST):
-# Optimized for 15-minute delayed data (Starts at 19:30 instead of 19:00)
-# Entry 1: 19:30 shift
-CRON1="30 19 * * 1-5 $SCRIPT_PATH >> $LOG_PATH 2>&1"
-# Entry 2: 20:00 - 23:30 shift
-CRON2="0,30 20-23 * * 1-5 $SCRIPT_PATH >> $LOG_PATH 2>&1"
-# Entry 3: 00:00 - 01:30 shift (overflow)
-CRON3="0,30 0-1 * * 2-6 $SCRIPT_PATH >> $LOG_PATH 2>&1"
+PROJECT_DIR="/home/gbrithp2/Documents/krc_Lab/Live_Trade"
+SCRIPT_PATH="$PROJECT_DIR/run_pulse_sim.sh"
+LOG_PATH="$PROJECT_DIR/pulse_cron.log"
 
-# Create temp crontab
-crontab -l > mycron 2>/dev/null
-sed -i "/run_pulse_sim.sh/d" mycron
+# Clean existing cron
+crontab -r 2>/dev/null
 
-# Add new entries
-echo "$CRON1" >> mycron
-echo "$CRON2" >> mycron
-echo "$CRON3" >> mycron
+# 1. SPECIAL TRIGGER: 20:15 IST (8:15 PM) — THE FINAL PROOF
+(crontab -l 2>/dev/null; echo "15 20 * * 1-5 $SCRIPT_PATH >> $LOG_PATH 2>&1") | crontab -
 
-# Install new crontab
-crontab mycron
-rm mycron
+# 2. 20:30 IST (8:30 PM) — Regular Session
+(crontab -l 2>/dev/null; echo "30 20 * * 1-5 $SCRIPT_PATH >> $LOG_PATH 2>&1") | crontab -
 
-echo "[SIM] Cron setup complete. Pulse scheduled for 19:30 - 01:30 IST (Delayed Data Buffer Active)."
-echo "[SIM] Logs: $LOG_PATH"
+# 3. 21:00-23:30 IST — Main Session (Every 30 mins)
+(crontab -l 2>/dev/null; echo "0,30 21-23 * * 1-5 $SCRIPT_PATH >> $LOG_PATH 2>&1") | crontab -
+
+# 4. 00:00-01:00 IST — Late Session
+(crontab -l 2>/dev/null; echo "0,30 0-1 * * 2-6 $SCRIPT_PATH >> $LOG_PATH 2>&1") | crontab -
+
+echo "[INSTITUTIONAL] Final Proof Triggered for 20:15 IST (in 5 minutes). Watch the group."

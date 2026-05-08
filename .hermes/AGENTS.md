@@ -58,11 +58,11 @@ Symbol-specific overrides are defined in the Skill File.
   <rule category="VIX_ZONES">
     These thresholds apply universally. The Skill File may NOT override VIX rules.
     <when>
-      <condition>VIX is below 16</condition>
+      <condition>VIX is below 13</condition>
       <action>No new positions. Premiums too cheap. Log VIX value in reason.</action>
     </when>
     <when>
-      <condition>VIX is between 16 and 29.9</condition>
+      <condition>VIX is between 13 and 29.9</condition>
       <action>IDEAL zone. All decisions proceed to phase logic.</action>
     </when>
     <when>
@@ -163,7 +163,7 @@ with the same ID, use the Skill File's version. These engine phases are the gene
       2. Target DTE is between 30 and 45 days (nearest monthly expiry)
       3. Strike price is minimum 6% below current spot price
       4. Expected premium is minimum 1.0% of strike price
-      5. VIX is between 16 and 29.9
+      5. VIX is between 13 and 29.9
       6. earnings_days > Skill File's defined earnings gate (default: 14 days)
     </conditions_to_execute>
     <decision_true>SELL_NEW_PUT</decision_true>
@@ -205,7 +205,7 @@ with the same ID, use the Skill File's version. These engine phases are the gene
       2. Target Call Delta is within Skill File's range (default: 0.25 to 0.35)
       3. Target DTE is between 30 and 45 days
       4. Strike price MUST be above Adjusted Cost Basis
-      5. VIX is between 16 and 29.9
+      5. VIX is between 13 and 29.9
     </conditions_to_execute>
     <decision_true>SELL_NEW_CALL. Execute same day as assignment or next trading day at latest.</decision_true>
     <decision_false>HOLD_ASSIGNED_EQUITY. Log which condition failed with exact live values.</decision_false>

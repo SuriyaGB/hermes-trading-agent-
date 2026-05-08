@@ -1,6 +1,21 @@
 {
-  "total_cash": 25000.00,
-  "positions": [],
+  "total_cash": 250465.0,
+  "reserved_margin": 0.0,
+  "aapl_shares": 0,
+  "unrealized_pnl": 0.0,
   "realized_pnl": 0.0,
-  "unrealized_pnl": 0.0
+  "positions": [
+    {
+      "symbol": "AAPL",
+      "type": "Option",
+      "right": "P",
+      "strike": 280.0,
+      "expiry": "20260612",
+      "quantity": -1,
+      "avg_cost": 4.65,
+      "multiplier": 100
+    }
+  ],
+  "last_update": "2026-05-07T20:25:00",
+  "reserved_collateral": 28000.0
 }

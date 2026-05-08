@@ -10,6 +10,7 @@ from scipy.stats import norm
 from scipy.optimize import brentq
 import requests_cache
 
+import sys
 from ib_insync import IB, Stock, Option, util
 
 session = requests_cache.CachedSession('hermes_cache', expire_after=300)
@@ -42,17 +43,31 @@ def get_vix() -> float:
 
 
 def get_recent_news(symbol: str = "AAPL") -> List[str]:
-    """Fetch recent AAPL-relevant headlines."""
+    """
+    Fetch raw headlines for the LLM to analyze.
+    Removes Python-level keyword filtering to allow LLM to use its own context.
+    """
     try:
-        news = yf.Ticker(symbol).news
-        keywords = [symbol, 'APPLE', 'IPHONE', 'FED', 'MARKET', 'NASDAQ']
-        headlines = [
-            item['title'] for item in news[:10]
-            if any(k in item.get('title', '').upper() for k in keywords)
-        ]
-        return headlines[:6] if headlines else ["No significant news found."]
-    except:
-        return ["News service temporarily unavailable."]
+        ticker = yf.Ticker(symbol)
+        raw_news = ticker.news
+        if not raw_news:
+            return []
+            
+        headlines = []
+        for item in raw_news:
+            # yfinance structure update: title is now inside 'content'
+            content = item.get("content", {})
+            title = content.get("title")
+            if title:
+                headlines.append(title)
+            
+            if len(headlines) >= 6:
+                break
+                
+        return headlines
+    except Exception as e:
+        sys.stderr.write(f"[NEWS_ERROR] Failed to fetch raw news: {e}\n")
+        return []
 
 
 def get_iv30_rank(symbol: str = "AAPL") -> float | None:
@@ -138,6 +153,88 @@ def get_days_to_exdiv(symbol: str = "AAPL") -> int | None:
     return None
 
 
+def get_yf_option_chain(symbol: str, spot: float, chosen_lower: float, upper_bound: float, earnings_days: int) -> dict:
+    """
+    Bulletproof Fallback: Fetches option chain from yfinance if IBKR is blind.
+    Ensures the Brain always has tradeable strikes to evaluate.
+    """
+    try:
+        tk = yf.Ticker(symbol)
+        expiries = tk.options
+        if not expiries:
+            return {"option_chain": [], "chosen_expiry": None, "chosen_dte": None}
+
+        today = datetime.now()
+        best_expiry = None
+        best_dte = None
+        best_diff = 999
+        
+        # Select target expiry (Monthly window 21-45 days, before earnings)
+        for exp in expiries:
+            try:
+                d = datetime.strptime(exp, '%Y-%m-%d')
+                dte = (d - today).days
+                if 21 <= dte <= 45 and dte < earnings_days:
+                    diff = abs(dte - 35)
+                    if diff < best_diff:
+                        best_diff = diff
+                        best_expiry = exp
+                        best_dte = dte
+            except: continue
+        
+        if not best_expiry:
+            return {"option_chain": [], "chosen_expiry": None, "chosen_dte": None}
+
+        # Fetch chain from Yahoo
+        chain = tk.option_chain(best_expiry)
+        puts = chain.puts
+        
+        r = get_risk_free_rate()
+        T = best_dte / 365.0
+        menu = []
+
+        for _, row in puts.iterrows():
+            strike = float(row['strike'])
+            if chosen_lower <= strike <= upper_bound:
+                bid = float(row['bid'])
+                ask = float(row['ask'])
+                mid = (bid + ask) / 2.0
+                if mid <= 0: mid = float(row['lastPrice'])
+                
+                # Quality gate: 1% return min
+                if mid < strike * 0.01: continue
+                
+                # Black-Scholes Delta calculation (Yahoo delta is unreliable)
+                iv = float(row['impliedVolatility'])
+                if iv <= 0: iv = 0.30 
+                
+                delta = calculate_local_delta(spot, strike, T, r, iv, 'put')
+                abs_delta = round(abs(delta), 4)
+                
+                # Delta band: 0.10 to 0.35
+                if 0.10 <= abs_delta <= 0.35:
+                    menu.append({
+                        "strike": strike,
+                        "expiry": best_expiry.replace('-', ''),
+                        "dte": best_dte,
+                        "bid": round(bid, 2),
+                        "ask": round(ask, 2),
+                        "mid": round(mid, 2),
+                        "delta": abs_delta,
+                        "premium_per_contract": round(mid * 100, 2),
+                        "source": "yfinance_fallback"
+                    })
+        
+        return {
+            "option_chain": sorted(menu, key=lambda x: x['strike']),
+            "chosen_expiry": best_expiry.replace('-', ''),
+            "chosen_dte": best_dte
+        }
+    except Exception as e:
+        sys.stderr.write(f"[EYE] Yahoo Fallback Failed: {e}\n")
+        return {"option_chain": [], "chosen_expiry": None, "chosen_dte": None}
+
+
 # ═══════════════════════════════════════════════════════════════
 # 2. BLACK-SCHOLES MATH ENGINE (Greeks fallback)
 # ═══════════════════════════════════════════════════════════════
@@ -214,6 +311,15 @@ async def get_option_chain(ib, symbol: str = "AAPL",
         if not math.isfinite(spot) or spot <= 0:
             return _empty
 
+        # ── ROOT CAUSE FIX (Error 321) ────────────────────────────────────
+        # Read the real IBKR conId from the qualified contract.
+        # Passing conId=0 to reqSecDefOptParamsAsync is the cause of Error 321.
+        # IBKR cannot validate the option chain request without a real contract ID.
+        underlying_con_id = contract.conId
+        if not underlying_con_id:
+            sys.stderr.write(f"[EYE] WARNING: Could not get conId for {symbol}. Option chain unavailable.\n")
+            return _empty
+
         # ── VIX-Dynamic Lower Bound ───────────────────────────────────────
         vix = get_vix()
         if vix < 20:
@@ -239,8 +345,8 @@ async def get_option_chain(ib, symbol: str = "AAPL",
             "upper_bound":  upper_bound
         }
 
-        # ── Fetch IBKR Option Params ──────────────────────────────────────
-        chains = await ib.reqSecDefOptParamsAsync(symbol, '', 'STK', 0)
+        # ── Fetch IBKR Option Params (using real conId) ───────────────────
+        chains = await ib.reqSecDefOptParamsAsync(symbol, '', 'STK', underlying_con_id)
         chain  = next((c for c in chains if c.exchange == 'SMART'), None)
         if chain is None:
             chain = chains[0] if chains else None
@@ -281,6 +387,12 @@ async def get_option_chain(ib, symbol: str = "AAPL",
 
         contracts = [Option(symbol, best_expiry, s, 'P', 'SMART') for s in valid_strikes]
         qualified  = await ib.qualifyContractsAsync(*contracts)
+        # Filter out any contracts that failed qualification (conId == 0)
+        # to prevent secondary Error 321s when requesting tickers.
+        qualified  = [c for c in qualified if c.conId and c.conId != 0]
+        if not qualified:
+            return {**_empty, "chosen_expiry": best_expiry,
+                    "chosen_dte": best_dte, "filter_debug": filter_debug}
         tickers    = await ib.reqTickersAsync(*qualified)
 
         # ── Build Quality-Filtered Menu ───────────────────────────────────
@@ -332,6 +444,15 @@ async def get_option_chain(ib, symbol: str = "AAPL",
         iv30 = get_iv30_rank(symbol)
         iv_caution = iv30 is not None and 75.0 <= iv30 <= 85.0
 
+        # ── FINAL FALLBACK: If IBKR menu is empty, trigger Yahoo ──────────
+        if not menu:
+            sys.stderr.write(f"[EYE] IBKR returned 0 qualified strikes. Engaging Yahoo Fallback...\n")
+            yf_res = get_yf_option_chain(symbol, spot, chosen_lower, upper_bound, earnings_days)
+            menu = yf_res["option_chain"]
+            if menu:
+                best_expiry = yf_res["chosen_expiry"]
+                best_dte = yf_res["chosen_dte"]
+
         return {
             "option_chain":  sorted(menu, key=lambda x: x['strike']),
             "chosen_expiry": best_expiry,
@@ -341,7 +462,7 @@ async def get_option_chain(ib, symbol: str = "AAPL",
         }
 
     except Exception as e:
-        print(f"ERROR in get_option_chain: {e}")
+        sys.stderr.write(f"ERROR in get_option_chain: {e}\n")
         return _empty
 
 
@@ -449,14 +570,43 @@ async def fetch_ibkr_data() -> Dict[str, Any]:
 
         # Account / portfolio status
         if os.getenv("SIM_MODE") == "1":
-            from sim_executor import load_portfolio
-            pos = load_portfolio().get("positions", [])
-            if any(x.get("type") == "Stock" for x in pos):
+            from sim_executor import load_portfolio, load_state
+            portfolio = load_portfolio()
+            state = load_state()
+            pos_list = portfolio.get("positions", [])
+            
+            if any(x.get("type") == "Stock" for x in pos_list):
                 data["account_status"] = "SHARES_ASSIGNED"
-                if any(x.get("type") == "Option" for x in pos):
+                if any(x.get("type") == "Option" for x in pos_list):
                     data["account_status"] = "CC_ACTIVE"
-            elif any(x.get("type") == "Option" for x in pos):
+            elif any(x.get("type") == "Option" for x in pos_list):
                 data["account_status"] = "CSP_ACTIVE"
+            
+            # Populate position details for the Brain
+            if data["account_status"] in ["CSP_ACTIVE", "CC_ACTIVE"]:
+                # Find the option position
+                opt = next((x for x in pos_list if x.get("type") == "Option"), None)
+                if opt:
+                    data["strike_held"] = opt.get("strike")
+                    # Calculate DTE from expiry string (YYYYMMDD)
+                    try:
+                        exp_str = opt.get("expiry")
+                        if exp_str:
+                            exp_date = datetime.strptime(exp_str, '%Y%m%d').date()
+                            data["dte_seen"] = (exp_date - datetime.now().date()).days
+                    except: pass
+                    
+                    # Calculate P&L %
+                    # (Current Mid - Cost) / Cost
+                    # Note: For Short Puts, P&L is (Credit - Current Price) / Credit
+                    # But for simplicity, the Brain looks at (Strike - Current Price) or just Theta.
+                    # We'll provide the raw cost basis for the Brain to calculate.
+                    data["cost_basis"] = state.get("adjusted_cost_basis")
+                    avg_cost = opt.get("avg_cost", 0)
+                    if avg_cost > 0:
+                        # Estimate current mid from Yahoo for P&L
+                        # For now, we'll let the Brain see the spot vs strike.
+                        pass
         # LIVE IBKR account status logic would go here
 
     except Exception as e:

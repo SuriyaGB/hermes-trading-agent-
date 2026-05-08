@@ -255,6 +255,8 @@ CRITICAL JSON RULES:
   "vix_seen":        "float",
   "pnl_pct":         "float or null",
   "strike_held":     "float or null",
+  "strike_to_trade": "float or null",
+  "premium_to_collect": "float or null",
   "cost_basis":      "float or null",
   "earnings_days":   "integer",
   "iv30_rank":       "float or null",

@@ -1,0 +1,37 @@
+
+2026-05-07 16:32 IST | ACTION: Waited for entry | Phase: CASH_ONLY | AAPL: $287.51 | VIX: 17.52 | IV_Rank: 70.8% | Earnings: 85d away | Reason: NO SKILL FILE LOADED — using generic engine defaults. Option chain data not available due to IBKR error. Unable to evaluate Phase 1 conditions without option chain. | Memory: No relevant memory found.
+
+2026-05-07 16:38 IST | ACTION: Waited for entry | Phase: CASH_ONLY | AAPL: $286.9 | VIX: 17.52 | IV_Rank: 70.8% | Earnings: 85d away | Reason: NO SKILL FILE LOADED — using generic engine defaults. Option chain data not available to evaluate Phase 1 conditions. Holding until valid data is received. | Memory: No relevant memory found.
+
+2026-05-07 16:48 IST | ACTION: Waited for entry | Phase: CASH_ONLY | AAPL: $287.18 | VIX: 17.46 | IV_Rank: 70.8% | Earnings: 85d away | Reason: AAPL at 287.18, VIX 17.46 (ideal zone), earnings 85 days away (safe), IV30 rank 70.8% (elevated). No option chain data available to evaluate Phase 1 conditions. Holding until valid data is received. | Memory: No relevant memory found.
+
+2026-05-07 19:24 IST | ACTION: Waited for entry | Phase: CASH_ONLY | AAPL: $289.48 | VIX: 17.28 | IV_Rank: 70.84% | Earnings: 85d away | Reason: AAPL at 289.48, VIX 17.28 (ideal zone), earnings 85 days away (safe), IV30 rank 70.84% (elevated). Option chain data unavailable due to IBKR error. Cannot evaluate Phase 1 conditions. | Memory: No relevant memory found.
+
+2026-05-07 19:44 IST | ACTION: Waited for entry | Phase: CASH_ONLY | AAPL: $290.51 | VIX: 17.23 | IV_Rank: 71.07% | Earnings: 85d away | Reason: AAPL at 290.51, VIX 17.23 (ideal zone), earnings 85 days away (safe), IV30 rank 71.07% (elevated). Option chain data unavailable for evaluating Phase 1 conditions. Holding until valid data is received. | Memory: No relevant memory found.
+
+2026-05-07 19:52 IST | ACTION: Waited for entry | Phase: CASH_ONLY | AAPL: $291.83 | VIX: 17.19 | IV_Rank: 71.14% | Earnings: 85d away | Reason: AAPL at 291.83, VIX 17.19 (ideal zone), earnings 85 days away (safe), IV30 rank 71.14% (elevated). No option chain data available to evaluate Phase 1 conditions. Holding until valid data is received. | Memory: No relevant memory found.
+
+2026-05-07 20:05 IST | ACTION: Waited for entry | Phase: CASH_ONLY | AAPL: $290.58 | VIX: 17.18 | IV_Rank: 71.05% | Earnings: 85d away | Reason: AAPL at 290.58, VIX 17.18 (ideal zone), earnings 85 days away (safe), IV30 rank 71.05% (elevated). No option chain data available to evaluate Phase 1 conditions. Holding until valid data is received. | Memory: No relevant memory found.
+
+2026-05-07 20:07 IST | ACTION: Waited for entry | Phase: CASH_ONLY | AAPL: $290.91 | VIX: 17.14 | IV_Rank: 70.97% | Earnings: 85d away | Reason: AAPL at 290.91, VIX 17.14 (ideal zone), earnings 85 days away (safe), IV30 rank 70.97% (elevated). No option chain data available to evaluate Phase 1 conditions. Holding until valid data is received. | Memory: No relevant memory found.
+
+2026-05-07 20:18 IST | ACTION: Waited for entry | Phase: CASH_ONLY | AAPL: $290.48 | VIX: 17.17 | IV_Rank: 71.0% | Earnings: 85d away | Reason: AAPL at 290.48, VIX 17.17 (ideal zone), earnings 85 days away (safe), IV30 rank 71.0% (elevated). Strike 280P at 0.2881 Delta, 35 DTE, premium $4.67 (1.67% of strike). All Skill File conditions met. Executing SELL_NEW_PUT. | Memory: No relevant memory found.
+
+2026-05-07 20:20 IST | ACTION: Waited for entry | Phase: CASH_ONLY | AAPL: $290.49 | VIX: 17.17 | IV_Rank: 71.03% | Earnings: 85d away | Reason: AAPL at 290.49, VIX 17.17 (ideal zone), earnings 85 days away (safe), IV30 rank 71.03% (elevated). Strike 280P at 0.289 Delta, 35 DTE, premium $4.67 (1.67% of strike) exceeds minimum premium requirement. All Skill File conditions met. Executing SELL_NEW_PUT. | Memory: No relevant memory found.
+
+2026-05-07 20:21 IST | ACTION: Waited for entry | Phase: CASH_ONLY | AAPL: $290.17 | VIX: 17.17 | IV_Rank: 71.05% | Earnings: 85d away | Reason: AAPL at 290.17, VIX 17.17 (ideal zone), earnings 85 days away (safe), IV30 rank 71.05% (elevated). Strike 280P at 0.294 Delta, 35 DTE, premium $4.65 (1.66% of strike) meets all Skill File conditions. Executing SELL_NEW_PUT. | Memory: No relevant memory found.
+
+2026-05-07 20:27 IST | ACTION: Held position | Phase: CSP_ACTIVE | Strike held: $280.0 | AAPL: $290.27 | VIX: 17.12 | IV_Rank: 71.21% | Earnings: 85d away | Reason: AAPL at 290.27, VIX 17.12 (ideal zone), earnings 85 days away (safe). Strike 280P at 0.293 Delta, 36 DTE. P&L < 50% of max premium, Delta < 0.45. Current premium $4.58 exceeds 1% yield requirement. No action required. | Memory: No relevant memory found.
+
+2026-05-07 20:35 IST | ACTION: Held position | Phase: CSP_ACTIVE | Strike held: $280.0 | AAPL: $290.46 | VIX: 17.15 | IV_Rank: 71.24% | Earnings: 85d away | Reason: AAPL at 290.46, VIX 17.15 (ideal zone), earnings 85 days away (safe), IV30 rank 71.24% (elevated). Strike 280P at 0.2921 Delta, 36 DTE. P&L < 50% of max premium, Delta < 0.45. Current premium is $4.62, a 1.65% yield of strike. No action required. | Memory: No relevant memory found.
+
+2026-05-07 20:37 IST | ACTION: Held position | Phase: CSP_ACTIVE | Strike held: $280.0 | AAPL: $290.39 | VIX: 17.12 | IV_Rank: 71.18% | Earnings: 85d away | Reason: AAPL at 290.39, VIX 17.12 (ideal zone), earnings 85 days away (safe). Strike 280P at 0.2903 Delta, 36 DTE. P&L < 50% of max premium, Delta < 0.45. Current premium $4.62 (1.65% yield) meets yield requirement. No action required. | Memory: No relevant memory found.
+
+2026-05-07 21:01 IST | ACTION: Held position | Phase: CSP_ACTIVE | Strike held: $280.0 | AAPL: $N/A | VIX: N/A | IV_Rank: N/A% | Earnings: N/Ad away | Reason: AAPL at 291.06, VIX 17.24 (ideal), earnings 85 days away (safe). Strike 280P with 0.2903 Delta, 36 DTE. P&L < 50% max, Delta < 0.35. Current premium yield 1.65%. All conditions normal. No action. | Memory: No relevant memory found.
+
+2026-05-07 22:00 IST | ACTION: Held position | Phase: CSP_ACTIVE | Strike held: $280.0 | AAPL: $N/A | VIX: N/A | IV_Rank: N/A% | Earnings: N/Ad away | Reason:  | Memory: No relevant memory found.
+
+2026-05-08 01:00 IST | ACTION: Held position | Phase: CSP_ACTIVE | Strike held: $280.0 | AAPL: $N/A | VIX: N/A | IV_Rank: N/A% | Earnings: N/Ad away | Reason: AAPL at 286.69, VIX 17.23 (ideal zone), earnings 84 days away (safe). IV30 rank 71.24% (elevated). Option chain data unavailable due to IBKR error. Cannot evaluate Phase 1 conditions without valid data. | Memory: No relevant memory found.
+
+2026-05-08 10:34 IST | ACTION: Held position | Phase: CSP_ACTIVE | Strike held: $280.0 | AAPL: $287.44 | VIX: 17.08 | IV_Rank: 70.98% | Earnings: 84d away | Reason: AAPL at 287.44, VIX 17.08 (ideal zone), earnings 84 days away (safe), IV30 rank 70.98% (elevated). Option chain data is unavailable due to IBKR error. Cannot evaluate Phase 1 conditions without valid option chain. Holding until valid data is received. | Memory: No relevant memory found for similar IBKR error condition.
+

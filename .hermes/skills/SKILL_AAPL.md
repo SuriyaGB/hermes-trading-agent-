@@ -1,3 +1,41 @@
+# MEMORY CONTEXT PROTOCOL
+## Read This Before Every Decision
+
+You will receive an ADAPTIVE CONTEXT field containing
+past pulse summaries from previous trading sessions.
+
+### How To Use Memory
+
+STEP 1 — Read memory FIRST before looking at live data.
+  Identify any entries where market conditions were
+  similar to today (VIX level, IV rank, price zone).
+
+STEP 2 — Look for warning patterns:
+  If memory shows: 'delta crept from 0.26 to 0.31 over
+  5 pulses' → be more conservative on delta today.
+  If memory shows: 'VIX spiked fast after this level'
+  → reduce position size or skip new entry.
+  If memory shows: 'position closed at 50% in 14 days
+  at VIX 17' → similar conditions today = normal operation.
+
+STEP 3 — Memory INFORMS but does not OVERRIDE math.
+  The floor formula, premium formula, and delta limits
+  in this skill file are NON-NEGOTIABLE.
+  Memory only adjusts HOW CONSERVATIVE you are
+  within those limits — never outside them.
+
+STEP 4 — If memory is empty or irrelevant:
+  'No prior memory found' = first session or no match.
+  Proceed with standard SKILL_AAPL.md rules only.
+  Do not invent memories that were not provided.
+
+STEP 5 — After deciding, include this field in output:
+  'memory_observation': one sentence max.
+  What did you notice from memory that affected
+  your decision? Or 'No relevant memory found.'
+  Example: 'Memory shows delta crept at similar VIX —
+            going conservative at delta 0.22 today.'
+
 # SKILL_AAPL.md — AAPL Wheel Strategy Specialist File
 # Version: 4.0 (Instruction-Based) | May 2026
 # ─────────────────────────────────────────────────────────────────────────────
@@ -30,7 +68,7 @@
       - min_strike = max(floor_A, floor_B)
     RULE:
       Never select a strike below min_strike. Both input values are provided live by the Eye.
-      If all available strikes in the menu are below min_strike, output HOLD_PUT_POSITION.
+      If all available strikes in the menu are below min_strike, output WAIT_FOR_ENTRY.
   </instruction>
 
   <instruction id="FAIR_PREMIUM_YIELD">
@@ -39,14 +77,14 @@
       min_premium = (strike × 100 × 0.01) / 100
     RULE:
       Minimum acceptable premium is 1.0% of the strike price.
-      If the best mid price in the menu is below min_premium, output HOLD_PUT_POSITION.
+      If the best mid price in the menu is below min_premium, output WAIT_FOR_ENTRY.
       Example: Strike $270 requires $2.70 minimum premium ($270 per contract).
   </instruction>
 
   <instruction id="IV_RANK_ADJUSTMENT">
     REASON: Calibrate risk and delta targets based on the current volatility regime.
     RULES:
-      - iv30_rank < 25%: Premiums too cheap. Output HOLD_PUT_POSITION (Reason: IV_TOO_LOW).
+      - iv30_rank < 25%: Premiums too cheap. Output WAIT_FOR_ENTRY (Reason: IV_TOO_LOW).
       - iv30_rank 25% to 60% (NORMAL): Target Delta 0.25 to 0.28.
       - iv30_rank 60% to 85% (ELEVATED): Target Delta 0.20 to 0.25 (Sell further OTM).
       - iv30_rank > 85% AND earnings_days < 21: DANGER. (Blocked by Python Gate).
@@ -87,7 +125,35 @@
   2. PREFERRED DELTA: 0.25 to 0.28 (Normal) | 0.18 to 0.22 (High IV).
   3. PROFIT TARGET: Close early at 50% max premium profit.
   4. ROLL TRIGGER: If Delta exceeds 0.35, evaluate ROLL for credit or Assignment.
-  5. NEWS REACTION: If headline mentions 'Criminal probe' or 'Bankruptcy' → ABORT.
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # ELITE HYBRID NEWS FRAMEWORK
+  # ─────────────────────────────────────────────────────────────────────────
+  5. HISTORICAL GROUNDING: 
+     Remember: AAPL has survived 40+ years of probes, fines, and crashes. 
+     You are a calm professional. Do not overreact to speculative headlines.
+     
+  6. IV-FIRST FILTER:
+     Check IV Rank BEFORE reading headlines.
+     - If IV Rank is high (>50%), market fear is already priced in. 
+     - High IV + Bad News = Opportunity to sell expensive fear at wider strikes.
+     
+  7. THE 3-BUCKET DECISION:
+     Analyze the 6 raw headlines and categorize into one of three buckets:
+     
+     - BUCKET A: BLACK SWAN (Existential threat to AAPL itself)
+       Criteria: Confirmed Bankruptcy, SEC Trading Halt, or Fraud Conviction.
+       Action: Output ABORT_DUE_TO_RISK.
+       
+     - BUCKET B: NEGATIVE NUDGE (Risky but survivable)
+       Criteria: DOJ probes, regulatory fines, misses, or product recalls.
+       Action: RE-PRICE RISK. Widen strike selection (lower delta).
+       CRITICAL CONSTRAINT: The new strike MUST still meet the 1.0% premium yield 
+       requirement (min_premium). If no such strike exists → WAIT_FOR_ENTRY.
+       
+     - BUCKET C: NOISE (Standard market activity)
+       Criteria: Product launches, analyst upgrades, routine lawsuits.
+       Action: IGNORE. Execute standard wheel strategy.
 </brain_reference_aapl>
 
 <!-- END OF SKILL_AAPL.md | Version 4.0 | TIMELLESS INSTRUCTIONS -->

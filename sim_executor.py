@@ -22,6 +22,10 @@ from pathlib import Path
 from datetime import datetime
 
 import yfinance as yf
+import subprocess
+import os
+import urllib.request
+import urllib.parse
 
 # ─────────────────────────────────────────────
 # CONFIG — Paths
@@ -147,6 +151,132 @@ def append_to_audit_log(decision_data: dict, action: str, result: str, reason: s
 
 
 # ─────────────────────────────────────────────
+# FIX 4B: MEMORY STORAGE (Closing the Loop)
+# ─────────────────────────────────────────────
+def build_memory_summary(decision: dict, trade_state: dict, portfolio: dict, action: str = None) -> str:
+    """
+    Translates the technical decision into a plain English narrative for SQLite.
+    """
+    if action is None:
+        action = decision.get('action') or decision.get('decision', 'UNKNOWN')
+    
+    price      = decision.get('price_seen', 'N/A')
+    vix        = decision.get('vix_seen', 'N/A')
+    iv_rank    = decision.get('iv30_rank', 'N/A')
+    earn       = decision.get('earnings_days', 'N/A')
+    strike     = decision.get('strike_held') or decision.get('strike', None)
+    delta      = decision.get('delta_seen', None)
+    dte        = decision.get('dte_seen') or decision.get('chosen_dte', None)
+    premium    = decision.get('mid') or decision.get('premium', None)
+    phase      = trade_state.get('current_phase', 'UNKNOWN')
+    mem_obs    = decision.get('memory_observation', 'No relevant memory found.')
+    reason     = decision.get('reason', '')
+    timestamp  = datetime.now().strftime('%Y-%m-%d %H:%M IST')
+    
+    # Build summary based on action type
+    if action == 'SELL_NEW_PUT':
+        summary = (
+            f"{timestamp} | ACTION: Opened CSP | "
+            f"Strike: ${strike} | Delta: {delta} | DTE: {dte} | "
+            f"Premium: ${premium} | AAPL: ${price} | "
+            f"VIX: {vix} | IV_Rank: {iv_rank}% | "
+            f"Earnings: {earn}d away | "
+            f"Memory: {mem_obs}"
+        )
+    elif action == 'WAIT_FOR_ENTRY':
+        summary = (
+            f"{timestamp} | ACTION: Waited for entry | "
+            f"Phase: CASH_ONLY | AAPL: ${price} | "
+            f"VIX: {vix} | IV_Rank: {iv_rank}% | "
+            f"Earnings: {earn}d away | Reason: {reason} | "
+            f"Memory: {mem_obs}"
+        )
+    elif action in ['HOLD_PUT_POSITION', 'HOLD_CALL_POSITION', 'HOLD']:
+        existing_strike = trade_state.get('current_option_strike', 'none')
+        summary = (
+            f"{timestamp} | ACTION: Held position | "
+            f"Phase: {phase} | Strike held: ${existing_strike} | "
+            f"AAPL: ${price} | VIX: {vix} | IV_Rank: {iv_rank}% | "
+            f"Earnings: {earn}d away | Reason: {reason} | "
+            f"Memory: {mem_obs}"
+        )
+    elif action == 'CLOSE_PUT_POSITION':
+        summary = (
+            f"{timestamp} | ACTION: Closed CSP | "
+            f"Strike: ${strike} | AAPL: ${price} | "
+            f"VIX: {vix} | Reason: {reason} | "
+            f"Memory: {mem_obs}"
+        )
+    elif action == 'SELL_NEW_CALL':
+        summary = (
+            f"{timestamp} | ACTION: Opened CC | "
+            f"Strike: ${strike} | Delta: {delta} | DTE: {dte} | "
+            f"Premium: ${premium} | AAPL: ${price} | "
+            f"VIX: {vix} | Memory: {mem_obs}"
+        )
+    elif action == 'ROLL_PUT':
+        summary = (
+            f"{timestamp} | ACTION: Rolled Put | "
+            f"New strike: ${strike} | AAPL: ${price} | "
+            f"VIX: {vix} | Reason: {reason} | "
+            f"Memory: {mem_obs}"
+        )
+    else:
+        summary = (
+            f"{timestamp} | ACTION: {action} | "
+            f"Phase: {phase} | AAPL: ${price} | "
+            f"VIX: {vix} | IV_Rank: {iv_rank}% | "
+            f"Reason: {reason} | Memory: {mem_obs}"
+        )
+    
+    return summary
+
+
+def store_memory(summary: str) -> None:
+    """
+    Directly appends the summary to .hermes/MEMORY.md.
+    Unbreakable, no CLI dependency.
+    """
+    memory_file = PROJECT_ROOT / '.hermes' / 'MEMORY.md'
+    try:
+        with open(memory_file, 'a') as f:
+            f.write(summary + "\n\n")
+        sim_log("Memory storage successful (Direct Write to MEMORY.md).")
+    except Exception as e:
+        sim_log(f"Memory storage skipped (Non-critical): {e}")
+
+
+def send_telegram_alert(summary: str) -> None:
+    """
+    Sends the pulse summary to the user's Telegram bot.
+    Fail-safe: errors are logged but never block execution.
+    """
+    token   = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    
+    if not token or not chat_id or "your_" in token:
+        sim_log("Telegram alert skipped: Credentials not set in .env")
+        return
+
+    # Clean the summary for Telegram (escaped characters if needed, but plain text is usually fine)
+    # Prefix with a bot icon for visibility
+    text = f"🤖 AAPL Pulse Alert\n\n{summary}"
+    
+    try:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        data = urllib.parse.urlencode({"chat_id": chat_id, "text": text}).encode("utf-8")
+        req = urllib.request.Request(url, data=data)
+        
+        with urllib.request.urlopen(req, timeout=10) as response:
+            if response.status == 200:
+                sim_log("Telegram alert sent successfully.")
+            else:
+                sim_log(f"Telegram alert failed with status: {response.status}")
+    except Exception as e:
+        sim_log(f"Telegram alert skipped (Network/API Error): {e}")
+
+
+# ─────────────────────────────────────────────
 # FIX 3C: ATOMIC COMMIT
 # ─────────────────────────────────────────────
 def commit_trade(portfolio: dict, state: dict):
@@ -177,32 +307,60 @@ def commit_trade(portfolio: dict, state: dict):
 
 
 # ─────────────────────────────────────────────
-# FIX 3A & 3B: VALIDATION GATES
+# FIX 3A & 3B: VALIDATION GATES (Audit Hardened)
 # ─────────────────────────────────────────────
-def validate_csp_trade(strike, delta, dte, premium, earnings_days, ma_200, low_52w) -> tuple[bool, str]:
-    if delta is not None and delta > 0.35: return False, f"delta {delta} > MAX 0.35"
-    if dte < 21: return False, f"DTE {dte} < MIN 21"
+def validate_csp_trade(strike, delta, dte, premium, decision_data):
+    """
+    5-Point Safety Gate for Cash Secured Puts.
+    Re-validates the Brain's decision against hard math rules.
+    """
+    # 1. NULL GUARDS (Audit Fix)
+    if strike is None: return False, "Strike is missing (NoneType)"
+    if delta is None:  return False, "Delta is missing (NoneType)"
+    if dte is None:    return False, "DTE is missing (NoneType)"
+    if premium is None: return False, "Premium is missing (NoneType)"
+
+    # 2. DELTA & DTE GATES
+    if delta > 0.35: return False, f"delta {delta} > 0.35"
+    if dte < 25:     return False, f"dte {dte} < 25"
+    if dte > 55:     return False, f"dte {dte} > 55"
+
+    # 3. STRIKE FLOOR GATE
+    floor_a = decision_data.get('ma_200', 0)
+    floor_b = decision_data.get('fifty_two_week_low', 0)
+    min_strike = max(floor_a or 0, floor_b or 0)
     
-    floor_A = round(low_52w * 1.15, 2)
-    floor_B = round(ma_200 * 0.95, 2)
-    min_strike = max(floor_A, floor_B)
     if strike < min_strike: return False, f"strike {strike} < floor {min_strike}"
     
+    # 4. EARNINGS GATE
+    earnings_days = decision_data.get("earnings_days")
     if earnings_days is not None and dte >= earnings_days:
         return False, f"expiry DTE {dte} >= earnings {earnings_days}"
         
+    # 5. PREMIUM YIELD GATE (1.0% rule)
     min_prem = round(strike * 0.01, 2)
-    if premium is None or premium < min_prem:
+    if premium < min_prem:
         return False, f"premium {premium} < min {min_prem}"
         
     return True, ""
 
 
-def validate_cc_trade(strike, cost_basis, days_to_exdiv) -> tuple[bool, str]:
-    if cost_basis is not None and strike <= cost_basis:
-        return False, f"CC strike {strike} <= cost_basis {cost_basis}"
-    if days_to_exdiv is not None and days_to_exdiv <= 7:
-        return False, f"Ex-div in {days_to_exdiv} days."
+def validate_cc_trade(strike, dte, premium, decision_data, portfolio):
+    """
+    3-Point Safety Gate for Covered Calls.
+    """
+    # 1. NULL GUARDS (Audit Fix)
+    if strike is None: return False, "Strike is missing (NoneType)"
+    if dte is None:    return False, "DTE is missing (NoneType)"
+
+    # 2. DTE GATES
+    if dte < 25: return False, f"dte {dte} < 25"
+    if dte > 55: return False, f"dte {dte} > 55"
+
+    # 3. COST BASIS PROTECTION
+    cost_basis = portfolio.get('aapl_cost_basis', 0)
+    if strike <= cost_basis: return False, f"strike {strike} <= cost basis {cost_basis}"
+    
     return True, ""
 
 
@@ -213,46 +371,29 @@ def get_aapl_price() -> float:
     try: return round(yf.Ticker('AAPL').fast_info.last_price, 2)
     except: return 0.0
 
-def get_option_mid_price(strike: float, expiry_str: str, right: str):
-    try:
-        exp_fmt = f"{expiry_str[:4]}-{expiry_str[4:6]}-{expiry_str[6:8]}"
-        aapl = yf.Ticker('AAPL')
-        chain = aapl.option_chain(exp_fmt)
-        opts = chain.puts if right == 'P' else chain.calls
-        row = opts[opts['strike'] == float(strike)]
-        if row.empty: return None, None, None
-        bid, ask = float(row['bid'].values[0]), float(row['ask'].values[0])
-        mid = round((bid + ask) / 2, 2) if bid > 0 and ask > 0 else (round(ask * 0.98, 2) if ask > 0 else None)
-        return bid, ask, mid
-    except: return None, None, None
-
 
 # ─────────────────────────────────────────────
 # DECISION HANDLERS
 # ─────────────────────────────────────────────
 def handle_sell_new_put(decision_data: dict, state: dict, portfolio: dict):
     sim_log("Decision: SELL_NEW_PUT")
-    strike = decision_data.get("strike_held")
+    # Priority: strike_to_trade (new field) -> strike_held (fallback)
+    strike = decision_data.get("strike_to_trade") or decision_data.get("strike_held")
     delta = decision_data.get("delta_seen")
-    dte = decision_data.get("chosen_dte") or 40
-    premium = decision_data.get("mid") or 0.0
+    dte = decision_data.get("dte_seen") or decision_data.get("chosen_dte")
+    premium = decision_data.get("premium_to_collect") or decision_data.get("mid")
     
-    passed, reason = validate_csp_trade(
-        strike, delta, dte, premium, 
-        decision_data.get("earnings_days"), 
-        decision_data.get("ma_200", 0), 
-        decision_data.get("fifty_two_week_low", 0)
-    )
+    passed, reason = validate_csp_trade(strike, delta, dte, premium, decision_data)
     
     if not passed:
         sim_log(f"ABORTED: {reason}")
         append_to_audit_log(decision_data, "SELL_NEW_PUT", "ABORTED", reason)
         return
 
-    # Execution
+    # Execution (Atomic State Update)
     expiry = decision_data.get("chosen_expiry")
     collateral = round(float(strike) * 100, 2)
-    premium_total = round(premium * 100, 2)
+    premium_total = round(float(premium) * 100, 2)
     
     if portfolio["total_cash"] < collateral:
         sim_log("ABORTED: Insufficient cash for collateral.")
@@ -281,7 +422,8 @@ def handle_sell_new_call(decision_data: dict, state: dict, portfolio: dict):
         sim_log("ABORTED: No shares held.")
         return
 
-    strike = decision_data.get("strike_held")
+    # Priority: strike_to_trade (new field) -> strike_held (fallback)
+    strike = decision_data.get("strike_to_trade") or decision_data.get("strike_held")
     cost_basis = state.get("adjusted_cost_basis")
     days_to_exdiv = decision_data.get("days_to_exdiv")
 
@@ -336,12 +478,23 @@ def handle_close_for_profit(decision_data: dict, state: dict, portfolio: dict, a
 
 
 def handle_hold(decision: str, state: dict, decision_data: dict):
-    sim_log(f"Decision: {decision}")
-    state["last_decision"] = decision
+    phase = state.get("current_phase", "CASH_ONLY")
+    
+    # Language Correction: Phase-aware action naming
+    actual_action = decision
+    if phase == "CASH_ONLY":
+        actual_action = "WAIT_FOR_ENTRY"
+    elif phase == "CSP_ACTIVE":
+        actual_action = "HOLD_PUT_POSITION"
+    elif phase == "CC_ACTIVE":
+        actual_action = "HOLD_CALL_POSITION"
+        
+    sim_log(f"Decision: {actual_action}")
+    state["last_decision"] = actual_action
     # Update timestamp even on hold
     with open(STATE_PATH, 'w') as f:
         json.dump(state, f, indent=2)
-    append_to_audit_log(decision_data, decision, "HOLD")
+    append_to_audit_log(decision_data, actual_action, "HOLD")
 
 
 # ─────────────────────────────────────────────
@@ -360,7 +513,17 @@ def main():
     elif decision == "SELL_NEW_CALL": handle_sell_new_call(decision_data, state, portfolio)
     elif decision == "CLOSE_FOR_PROFIT": handle_close_for_profit(decision_data, state, portfolio)
     elif decision == "CLOSE_FOR_LOSS": handle_close_for_profit(decision_data, state, portfolio, "CLOSE_FOR_LOSS")
-    elif decision.startswith("HOLD"): handle_hold(decision, state, decision_data)
+    elif decision.startswith("HOLD") or decision == "WAIT_FOR_ENTRY":
+        handle_hold(decision, state, decision_data)
+    
+    # --- Final Step: Record Learning (Fix 4B) ---
+    # Use the corrected 'actual_action' if it was a hold, otherwise use the decision
+    actual_action = state.get("last_decision", decision)
+    summary = build_memory_summary(decision_data, state, portfolio, actual_action)
+    store_memory(summary)
+    
+    # --- Telegram Notification (Option 1) ---
+    send_telegram_alert(summary)
     
     sim_log("Pulse Complete.")
     sim_log("=" * 60)

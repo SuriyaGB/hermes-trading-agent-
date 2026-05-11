@@ -1,2 +1,24 @@
+# Environment & Virtual Machine
 .venv/
 .env
+data/portfolio.json
+data/trade_state.json
+data/trade_state_history.jsonl
+data/trades_log.csv
+.eye_cache.json
+logs/
+hermes_cache.sqlite
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment/secrets
+.env
+*.key
+.hermes/.env
+
+# Runtime Logs
+.hermes/MEMORY.md
+.hermes_output.log
+pulse_cron.log
+synthetic_result.log

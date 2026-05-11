@@ -9,7 +9,8 @@ from typing import List, Dict, Any
 
 # Mocking load_portfolio for standalone eye check
 def load_portfolio():
-    portfolio_path = '/home/gbrithp2/Documents/krc_Lab/Live_Trade/portfolio.json'
+    from pathlib import Path
+    portfolio_path = Path(__file__).parent.parent / 'data' / 'portfolio.json'
     try:
         with open(portfolio_path, 'r') as f: return json.load(f)
     except: return {"positions": []}

@@ -12,10 +12,10 @@ from ib_insync import IB, Stock, Option, LimitOrder, MarketOrder, util
 util.patchAsyncio() # The Hammer: Allow nested loops
 
 # CONFIG
-PROJECT_ROOT = Path(__file__).parent
-STATE_PATH = PROJECT_ROOT / 'trade_state.json'
-LOG_PATH = PROJECT_ROOT / 'trade_log.csv'
-LOCK_FILE = PROJECT_ROOT / 'executor.lock'
+PROJECT_ROOT = Path(__file__).parent.parent
+STATE_PATH = PROJECT_ROOT / 'data' / 'trade_state.json'
+LOG_PATH = PROJECT_ROOT / 'data' / 'trades_log.csv'
+LOCK_FILE = PROJECT_ROOT / 'logs' / 'executor.lock'
 
 IB_HOST = os.getenv("IBKR_HOST", "127.0.0.1")
 IB_PORT = int(os.getenv("IBKR_PORT", 7497))
@@ -71,7 +71,7 @@ def save_state(state):
     with open(STATE_PATH, 'w') as f:
         json.dump(state, f, indent=2)
     # Append to History Log (The "Time Machine")
-    HISTORY_PATH = PROJECT_ROOT / 'trade_state_history.jsonl'
+    HISTORY_PATH = PROJECT_ROOT / 'data' / 'trade_state_history.jsonl'
     with open(HISTORY_PATH, 'a') as f:
         f.write(json.dumps(state) + '\n')
 

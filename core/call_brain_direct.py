@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import urllib.request
+from pathlib import Path
 
 def call_openai(eye_data):
     api_key = os.getenv("OPENAI_API_KEY")
@@ -12,7 +13,8 @@ def call_openai(eye_data):
     
     # Read AGENTS.md for the rules
     try:
-        with open("AGENTS.md", "r") as f:
+        rule_path = Path(__file__).parent.parent / '.hermes' / 'AGENTS.md'
+        with open(rule_path, "r") as f:
             agents_rules = f.read()
     except:
         agents_rules = "Follow wheel strategy rules."

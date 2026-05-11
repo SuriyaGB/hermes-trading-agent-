@@ -18,7 +18,7 @@ export FORCE_PULSE=1
 
 # 2. PHASE 1: The Eye (Data Fetching)
 echo "[SIM] Phase 1: Running Eye..."
-EYE_DATA=$(python3 get_ibkr_analysis.py)
+EYE_DATA=$(python3 core/get_ibkr_analysis.py)
 
 # NEW: Save Eye Data to cache for the Executor (Unbreakable Reporting)
 echo "$EYE_DATA" > .eye_cache.json
@@ -26,8 +26,8 @@ echo "$EYE_DATA" > .eye_cache.json
 # 3. PHASE 2: The Brain (Direct Private Line)
 echo "[SIM] Phase 4: Calling Brain..."
 # Using the direct private line to ensure 100% authentication and zero noise
-BRAIN_DECISION=$(echo "$EYE_DATA" | python3 call_brain_direct.py)
+BRAIN_DECISION=$(echo "$EYE_DATA" | python3 core/call_brain_direct.py)
 
 # 4. PHASE 3: The Executor (Action & Reporting)
 echo "[SIM] Phase 5: Executing Decision..."
-echo "$BRAIN_DECISION" | python3 sim_executor.py
+echo "$BRAIN_DECISION" | python3 core/sim_executor.py

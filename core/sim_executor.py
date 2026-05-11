@@ -9,9 +9,11 @@ import urllib.parse
 # ─────────────────────────────────────────────
 # CONFIG — Paths
 # ─────────────────────────────────────────────
-PROJECT_ROOT   = Path(__file__).parent
-STATE_PATH     = PROJECT_ROOT / 'trade_state.json'
-PORTFOLIO_PATH = PROJECT_ROOT / 'portfolio.json'
+PROJECT_ROOT   = Path(__file__).parent.parent
+STATE_PATH     = PROJECT_ROOT / 'data' / 'trade_state.json'
+PORTFOLIO_PATH = PROJECT_ROOT / 'data' / 'portfolio.json'
+LOG_PATH       = PROJECT_ROOT / 'data' / 'trades_log.csv'
+LOCK_FILE      = PROJECT_ROOT / 'logs' / 'executor.lock'
 EYE_CACHE_PATH = PROJECT_ROOT / '.eye_cache.json'
 MEMORY_PATH    = PROJECT_ROOT / '.hermes' / 'MEMORY.md'
 

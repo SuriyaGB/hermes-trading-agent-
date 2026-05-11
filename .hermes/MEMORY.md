@@ -118,3 +118,107 @@ Strike: $280.0 | Delta: -0.1112 | DTE: 21 | Earn: 90d
 News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
 Reason: AAPL at 294.39, VIX 17.42 (ideal zone), earnings 90 days away (safe). Current delta for strike 280.0 is -0.1112 (deep OTM, safe zone). No conditions met for closing or rolling. Holding position.
 
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-08 20:30 IST | Phase: CSP_ACTIVE
+AAPL: $293.48 | VIX: 17.3 | IV_Current: 16.3%
+P&L: $272.0 / $465.0 (58.5% Captured)
+Strike: $280.0 | Delta: -0.1243 | DTE: 21 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL at 293.48, VIX 17.3 (ideal zone), earnings 90 days away (safe). Current delta -0.1243 (below 0.20, safe zone). DTE 21 days, premium decay ongoing. No immediate action required.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-08 21:00 IST | Phase: CSP_ACTIVE
+AAPL: $292.83 | VIX: 17.27 | IV_Current: 11.2%
+P&L: $267.0 / $465.0 (57.4% Captured)
+Strike: $280.0 | Delta: -0.1352 | DTE: 21 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL at 292.83, VIX 17.27 (ideal zone), earnings 90 days away (safe). Current Delta for 280P is -0.1352 (deep OTM, safe zone). No conditions met for closing or rolling. Holding position.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-08 21:30 IST | Phase: CSP_ACTIVE
+AAPL: $292.3 | VIX: 17.31 | IV_Current: 11.2%
+P&L: $259.0 / $465.0 (55.7% Captured)
+Strike: $280.0 | Delta: -0.1454 | DTE: 21 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL at 292.3, VIX 17.31 (ideal zone), earnings 90 days away (safe). Current delta -0.1454 (safe zone), DTE 21 days. No conditions met for closing or rolling. Holding position.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-08 22:00 IST | Phase: CSP_ACTIVE
+AAPL: $292.78 | VIX: 17.22 | IV_Current: 17.7%
+P&L: $250.0 / $465.0 (53.8% Captured)
+Strike: $280.0 | Delta: -0.1354 | DTE: 21 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL at 292.78, VIX 17.22 (ideal zone), earnings 90 days away (safe). Current delta -0.1354 (safe zone), DTE 21 days. No conditions met for closing or rolling. Holding position.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-08 22:30 IST | Phase: CSP_ACTIVE
+AAPL: $292.08 | VIX: 17.27 | IV_Current: 6.3%
+P&L: $258.0 / $465.0 (55.5% Captured)
+Strike: $280.0 | Delta: -0.1491 | DTE: 21 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL at 292.08, VIX 17.27 (ideal zone), earnings 90 days away (safe). Current delta -0.1491 (safe zone), DTE 21 days. No conditions met for closing or rolling. Holding position.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-08 23:00 IST | Phase: CSP_ACTIVE
+AAPL: $292.15 | VIX: 17.34 | IV_Current: 11.5%
+P&L: $248.0 / $465.0 (53.3% Captured)
+Strike: $280.0 | Delta: -0.1487 | DTE: 21 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL at 292.15, VIX 17.34 (ideal zone), earnings 90 days away (safe). Current delta -0.1487 (below 0.20, safe zone). No conditions met for closing or rolling. Holding position.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-08 23:30 IST | Phase: CSP_ACTIVE
+AAPL: $292.09 | VIX: 17.47 | IV_Current: 10.9%
+P&L: $238.0 / $465.0 (51.2% Captured)
+Strike: $280.0 | Delta: -0.4237 | DTE: 21 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL at 292.09, VIX 17.47 (ideal zone), earnings 90 days away (safe). Current delta -0.4237 is in the caution zone. No immediate action required.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-09 00:00 IST | Phase: CSP_ACTIVE
+AAPL: $292.72 | VIX: 17.46 | IV_Current: 14.3%
+P&L: $244.0 / $465.0 (52.5% Captured)
+Strike: $280.0 | Delta: -0.1341 | DTE: 20 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL at 292.72, VIX 17.46 (ideal zone), delta for 280P is -0.1341 (safe zone), DTE 20 days. No conditions met for closing or rolling. Holding position.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-09 00:30 IST | Phase: CSP_ACTIVE
+AAPL: $292.92 | VIX: 17.44 | IV_Current: 8.4%
+P&L: $250.0 / $465.0 (53.8% Captured)
+Strike: $280.0 | Delta: -0.1302 | DTE: 20 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL at 292.92, VIX 17.44 (ideal zone), earnings 90 days away (safe). Current delta -0.1302 (below 0.20, safe zone). No conditions met for closing or rolling. Holding position.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-09 01:00 IST | Phase: CSP_ACTIVE
+AAPL: $293.43 | VIX: 17.49 | IV_Current: 10.6%
+P&L: $254.0 / $465.0 (54.6% Captured)
+Strike: $280.0 | Delta: -0.1221 | DTE: 20 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL at 293.43, VIX 17.49 (ideal zone), earnings 90 days away (safe). Current delta -0.1221 (below 0.20, safe zone). No conditions met for closing or rolling. Holding position.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-09 01:30 IST | Phase: CSP_ACTIVE
+AAPL: $293.15 | VIX: 17.14 | IV_Current: 5.8%
+P&L: $261.0 / $465.0 (56.1% Captured)
+Strike: $280.0 | Delta: -0.5544 | DTE: 20 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL at 293.15, VIX 17.14 (ideal zone), earnings 90 days away (safe). Current delta -0.5544 for strike 295P, within caution zone. No immediate action required.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-11 11:33 IST | Phase: CSP_ACTIVE
+AAPL: $293.32 | VIX: 17.19 | IV_Current: 1.6%
+P&L: $210.0 / $465.0 (45.2% Captured)
+Strike: $280.0 | Delta: -0.1456 | DTE: 25 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL at 293.32, VIX 17.19 (ideal zone), earnings 90 days away (safe). Current delta -0.1456 (below 0.20, safe zone). No conditions met for closing or rolling. Holding position.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-11 11:42 IST | Phase: CSP_ACTIVE
+AAPL: $293.32 | VIX: 17.19 | IV_Current: 1.6%
+P&L: $210.0 / $465.0 (45.2% Captured)
+Strike: $280.0 | Delta: -0.1456 | DTE: 25 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL at 293.32, VIX 17.19 (ideal zone), earnings 90 days away (safe). Current delta -0.1456 (below 0.20, safe zone). No conditions met for closing or rolling. Holding position.
+

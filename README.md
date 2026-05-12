@@ -1,6 +1,6 @@
 # 🏛️ Hermes — AAPL Wheel Strategy AI Trading Agent
 
-> An institutional-grade, autonomous AI trading agent that executes the **Options Wheel Strategy** on AAPL. It uses **GPT-4o** as its decision brain, **Interactive Brokers (IBKR)** as its execution arm, and a hardened **10-Token State Machine** with Hard Shields as its safety backbone.
+> An institutional-grade, autonomous AI trading agent that executes the **Options Wheel Strategy** on AAPL. It uses **GPT-4o** as its decision brain, a **Local Mathematical Simulation Engine (yfinance + Black-Scholes)** as its execution arm, and a hardened **10-Token State Machine** with Hard Shields as its safety backbone.
 
 ---
 
@@ -26,7 +26,7 @@ Hermes is a fully autonomous AI trading agent that:
 - Reads live **Price, VIX, Implied Volatility, Delta, DTE, and News**.
 - Sends all data to **GPT-4o** alongside its strategic rulebook.
 - GPT-4o outputs **exactly one** of 10 allowed Decision Tokens.
-- The bot executes or simulates the trade via IBKR.
+- The bot organically simulates trades and calculates Options Greeks locally without needing a broker connection.
 - Logs every decision permanently to `.hermes/MEMORY.md`.
 - Sends a real-time alert to **Telegram**.
 
@@ -34,28 +34,32 @@ Hermes is a fully autonomous AI trading agent that:
 
 ---
 
-## ⚙️ How It Works
+## ⚙️ The Dual-Microservice Architecture
+
+Hermes operates using two completely independent services that never interfere with each other, connected only by an immutable SQLite database (`hermes_brain.db`).
+
+### Service A: The Trading Engine (The Pulse)
+Runs automatically every 30 minutes via Cron. Wakes up, executes the math, saves the history, sends a push alert, and dies to save RAM.
 
 ```text
-┌──────────────────────────────────────────────────────────────────┐
-│                       HERMES PULSE CYCLE                         │
-│            (Runs automatically every hour, market hours)         │
-└──────────────────────────────────────────────────────────────────┘
-
   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-  │  PHASE 1    │───▶│  PHASE 2    │───▶│  PHASE 3    │───▶│   MEMORY    │
-  │  THE EYE    │    │  THE BRAIN  │    │  THE HAND   │    │   LOGGING   │
-  │             │    │             │    │             │    │             │
-  │ Fetches:    │    │ GPT-4o      │    │ Validates   │    │ Appends to  │
-  │ • AAPL Price│    │ reads       │    │ decision vs │    │ MEMORY.md   │
-  │ • VIX Level │    │ AGENTS.md   │    │ Hard Shields│    │             │
-  │ • IV / Delta│    │ + SKILL_    │    │ Updates     │    │ Sends       │
-  │ • DTE       │    │ AAPL.md     │    │ state +     │    │ Telegram    │
-  │ • News      │    │ → 1 Token   │    │ portfolio   │    │ Alert       │
+  │  THE EYE    │───▶│  THE BRAIN  │───▶│  THE HAND   │───▶│ THE MEMORY  │
+  │ Fetches:    │    │ GPT-4o      │    │ Validates   │    │ Writes to   │
+  │ Price, VIX, │    │ reads rule- │    │ shields,    │    │ SQLite DB + │
+  │ IV, News    │    │ books       │    │ executes    │    │ JSONs       │
   └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-         │                  │                  │
-  get_ibkr_          call_brain_          sim_executor.py
-  analysis.py        direct.py            / executor.py
+```
+
+### Service B: The Interactive Assistant (The Chatbot)
+Runs 24/7 in the background (`telegram_listener.py`). It does not trade. It acts as a RAG (Retrieval-Augmented Generation) analyst, waiting for you to ask questions about your portfolio or past decisions.
+
+```text
+  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+  │ THE LISTENER│───▶│ THE ANALYST │───▶│ THE DATA    │───▶│ THE REPLY   │
+  │ Catches     │    │ assistant.py│    │ Reads JSONs │    │ Telegram    │
+  │ User Query  │    │ formats     │    │ & SQLite DB │    │ texts back  │
+  │ 24/7        │    │ strict RAG  │    │ History     │    │ instantly   │
+  └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
 ```
 
 ---
@@ -69,13 +73,16 @@ hermes-trading-agent/
 │   ├── sim_executor.py                    ← Simulation executor (paper trading)
 │   ├── executor.py                        ← Live executor (real IBKR trades)
 │   ├── get_ibkr_analysis.py               ← Market data fetcher (The Eye)
-│   └── call_brain_direct.py               ← GPT-4o interface (The Brain)
+│   ├── database.py                        ← SQLite Manager (The Institutional Memory)
+│   ├── assistant.py                       ← RAG Smart Analyst (The Voice)
+│   └── telegram_listener.py               ← 24/7 Chatbot Poller (The Ears)
 │
 ├── 📂 scripts/                            ← The "Hands" (Operational Tools)
 │   ├── run_pulse_sim.sh                   ← Manually run one simulation pulse
 │   ├── run_pulse.sh                       ← Manually run one live pulse
 │   ├── setup_cron.sh                      ← Enable 24/7 automated schedule
-│   └── stop_cron.sh                       ← Stop the automated schedule
+│   ├── stop_cron.sh                       ← Stop the automated schedule
+│   └── assistant.sh                       ← Hardened shell wrapper for the AI Assistant
 │
 ├── 📂 data/                               ← The "Money Memory" (NOT on GitHub)
 │   ├── portfolio.json                     ← Current cash, shares, P&L
@@ -322,6 +329,19 @@ crontab -l
 bash scripts/stop_cron.sh
 ```
 
+### Enable the Interactive Telegram Chatbot
+
+To enable 24/7 two-way communication with your bot, run the listener in the background using PM2 or Nohup:
+
+```bash
+# Using standard Python background process
+nohup bash -c "source .venv/bin/activate && python3 core/telegram_listener.py" &
+
+# Or using PM2 (Recommended for VPS)
+pm2 start core/telegram_listener.py --interpreter .venv/bin/python --name hermes-listener
+pm2 save
+```
+
 ### Check Live Logs
 
 ```bash
@@ -388,6 +408,7 @@ These files are **permanently excluded from GitHub** to protect your money and s
 data/portfolio.json      ← Your account balance
 data/trade_state.json    ← Your open position state
 data/trades_log.csv      ← Your trading history
+data/hermes_brain.db     ← Your SQLite pulse and memory database
 .hermes/.env             ← ALL API keys
 .hermes/MEMORY.md        ← Your decision history
 logs/                    ← All log files

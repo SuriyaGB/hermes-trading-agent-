@@ -8,6 +8,7 @@ data/trades_log.csv
 .eye_cache.json
 logs/
 hermes_cache.sqlite
+data/hermes_brain.db
 __pycache__/
 *.pyc
 *.pyo

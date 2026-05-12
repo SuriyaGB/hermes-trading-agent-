@@ -1,0 +1,178 @@
+{
+  "account_status": "CSP_ACTIVE",
+  "price_seen": 292.21,
+  "vix_seen": 18.23,
+  "iv_current": 25.2,
+  "option_chain": [
+    {
+      "strike": 345.0,
+      "bid": 52.45,
+      "ask": 55.2,
+      "mid": 53.83,
+      "delta": -0.8743,
+      "iv": 51.5
+    },
+    {
+      "strike": 330.0,
+      "bid": 37.45,
+      "ask": 40.5,
+      "mid": 38.98,
+      "delta": -0.8401,
+      "iv": 43.3
+    },
+    {
+      "strike": 325.0,
+      "bid": 32.5,
+      "ask": 35.4,
+      "mid": 33.95,
+      "delta": -0.8318,
+      "iv": 39.2
+    },
+    {
+      "strike": 320.0,
+      "bid": 27.55,
+      "ask": 31.2,
+      "mid": 29.38,
+      "delta": -0.7911,
+      "iv": 39.2
+    },
+    {
+      "strike": 315.0,
+      "bid": 22.9,
+      "ask": 26.1,
+      "mid": 24.5,
+      "delta": -0.775,
+      "iv": 34.7
+    },
+    {
+      "strike": 310.0,
+      "bid": 18.8,
+      "ask": 21.35,
+      "mid": 20.08,
+      "delta": -0.7421,
+      "iv": 31.3
+    },
+    {
+      "strike": 305.0,
+      "bid": 13.95,
+      "ask": 16.5,
+      "mid": 15.22,
+      "delta": -0.7028,
+      "iv": 27.2
+    },
+    {
+      "strike": 300.0,
+      "bid": 10.8,
+      "ask": 12.8,
+      "mid": 11.8,
+      "delta": -0.6219,
+      "iv": 26.4
+    },
+    {
+      "strike": 295.0,
+      "bid": 8.85,
+      "ask": 9.35,
+      "mid": 9.1,
+      "delta": -0.5295,
+      "iv": 25.2
+    },
+    {
+      "strike": 290.0,
+      "bid": 6.4,
+      "ask": 6.75,
+      "mid": 6.58,
+      "delta": -0.4264,
+      "iv": 25.2
+    },
+    {
+      "strike": 285.0,
+      "bid": 4.25,
+      "ask": 4.75,
+      "mid": 4.5,
+      "delta": -0.3282,
+      "iv": 25.5
+    },
+    {
+      "strike": 280.0,
+      "bid": 3.0,
+      "ask": 3.45,
+      "mid": 3.23,
+      "delta": -0.248,
+      "iv": 26.7
+    },
+    {
+      "strike": 275.0,
+      "bid": 2.07,
+      "ask": 2.23,
+      "mid": 2.15,
+      "delta": -0.1744,
+      "iv": 26.8
+    },
+    {
+      "strike": 270.0,
+      "bid": 1.41,
+      "ask": 1.58,
+      "mid": 1.5,
+      "delta": -0.1259,
+      "iv": 28.1
+    },
+    {
+      "strike": 265.0,
+      "bid": 0.91,
+      "ask": 1.04,
+      "mid": 0.98,
+      "delta": -0.086,
+      "iv": 28.8
+    },
+    {
+      "strike": 260.0,
+      "bid": 0.69,
+      "ask": 0.82,
+      "mid": 0.75,
+      "delta": -0.0657,
+      "iv": 31.0
+    },
+    {
+      "strike": 255.0,
+      "bid": 0.5,
+      "ask": 0.59,
+      "mid": 0.54,
+      "delta": -0.0471,
+      "iv": 32.5
+    },
+    {
+      "strike": 250.0,
+      "bid": 0.15,
+      "ask": 0.74,
+      "mid": 0.45,
+      "delta": -0.0503,
+      "iv": 38.0
+    },
+    {
+      "strike": 245.0,
+      "bid": 0.24,
+      "ask": 0.42,
+      "mid": 0.33,
+      "delta": -0.0306,
+      "iv": 37.5
+    },
+    {
+      "strike": 240.0,
+      "bid": 0.2,
+      "ask": 0.36,
+      "mid": 0.28,
+      "delta": -0.0252,
+      "iv": 40.0
+    }
+  ],
+  "warnings": [],
+  "earnings_days": 81,
+  "recent_news": [
+    "Tech stocks today: AI chipmaker Cerebras to stage blockbuster IPO, Nvidia's Jensen Huang goes to China",
+    "The $1 trillion club's new members are powering the AI boom: Chart of the Day",
+    "AI Wins Have Alphabet Poised to Become World\u2019s Biggest Company"
+  ],
+  "strike_held": 280.0,
+  "chosen_expiry": "20260605",
+  "chosen_dte": 25
+}

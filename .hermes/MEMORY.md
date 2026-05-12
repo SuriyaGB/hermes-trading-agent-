@@ -222,3 +222,51 @@ Strike: $280.0 | Delta: -0.1456 | DTE: 25 | Earn: 90d
 News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
 Reason: AAPL at 293.32, VIX 17.19 (ideal zone), earnings 90 days away (safe). Current delta -0.1456 (below 0.20, safe zone). No conditions met for closing or rolling. Holding position.
 
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-11 19:00 IST | Phase: CSP_ACTIVE
+AAPL: $293.32 | VIX: 18.23 | IV: 1.6%
+P&L: $210.0 / $465.0 (45.2% Captured)
+Strike: $280.0 | Delta: -0.1591 | DTE: 25 | Earn: 90d
+News: Apple (AAPL) shares gain after Wedbush raises target to $400 on A...
+Reason: AAPL price at 293.32 with current Strike held at 280.0. DTE at 25. No close condition met with recent news not affecting current strategy. Maintaining CSP_ACTIVE phase.
+
+🤖 AAPL Pulse: SELL_COVERED_CALL
+2026-05-11 19:02 IST | Phase: CSP_ACTIVE
+AAPL: $292.42 | VIX: 18.25 | IV: 0.4%
+P&L: $210.0 / $465.0 (45.2% Captured)
+Strike: $280.0 | Delta: -0.1755 | DTE: 25 | Earn: 90d
+News: News fetch failed: 'title'...
+Reason: AAPL at 292.42, VIX at 18.25 (ideal zone), earnings 90 days away (safe). Current strike at 280.0, Delta -0.1755 is under 0.30 threshold. 25 DTE optimal time. Executing SELL_COVERED_CALL.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-11 19:05 IST | Phase: CSP_ACTIVE
+AAPL: $291.11 | VIX: 18.26 | IV: 1.6%
+P&L: $210.0 / $465.0 (45.2% Captured)
+Strike: $280.0 | Delta: -0.201 | DTE: 25 | Earn: 90d
+News: Tech stocks today: AI chipmaker Cerebras to stage blockbuster IPO...
+Reason: AAPL at 291.11, VIX 18.26 (ideal zone), earnings 90 days away (safe). Current Put at 0.201 Delta, 25 DTE, with no immediate close condition met. Execute HOLD_PUT_POSITION.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-11 19:18 IST | Phase: CSP_ACTIVE
+AAPL: $290.87 | VIX: 18.28 | IV: N/A
+P&L: $210.0 / $465.0 (45.2% Captured)
+Strike: $280.0 | Delta: -0.2061 | DTE: 25 | Earn: 81d
+News: Tech stocks today: AI chipmaker Cerebras to stage blockbuster IPO...
+Reason: 
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-11 19:24 IST | Phase: CSP_ACTIVE
+AAPL: $290.82 | VIX: 18.36 | IV: N/A
+P&L: $210.0 / $465.0 (45.2% Captured)
+Strike: $280.0 | Delta: -0.2081 | DTE: 25 | Earn: 81d
+News: Tech stocks today: AI chipmaker Cerebras to stage blockbuster IPO...
+Reason: AAPL at 290.82, VIX at 18.36 (ideal zone), strike held 280.0 with delta -0.2081, chosen expiry in 25 days; no early close signal met.
+
+🤖 AAPL Pulse: HOLD_PUT_POSITION
+2026-05-11 19:35 IST | Phase: CSP_ACTIVE
+AAPL: $292.21 | VIX: 18.23 | IV: 25.2%
+P&L: $142.0 / $465.0 (30.5% Captured)
+Strike: $280.0 | Delta: -0.248 | DTE: 25 | Earn: 81d
+News: Tech stocks today: AI chipmaker Cerebras to stage blockbuster IPO...
+Reason: AAPL price at 292.21 is above the held strike of 280.0, VIX at 18.23 is within the ideal zone, 25 DTE is within safe Theta decay range, and there are no earnings or significant news signals to adjust position.
+

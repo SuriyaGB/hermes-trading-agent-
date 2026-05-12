@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluid Mechanics & Heat Transfer</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Roboto:wght@300;400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        MathJax = { tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] } };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: #121212;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .presentation {
+            width: 100vw;
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+        }
+
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            scroll-snap-align: start;
+            padding: 4rem 6rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Vibrant Abstract Backgrounds replacing static images */
+        .bg-main {
+            background: linear-gradient(135deg, #0B192C 0%, #1A365D 100%);
+            color: #fff;
+        }
+
+        .bg-main::after {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.1) 0%, transparent 70%);
+            top: -200px;
+            right: -200px;
+            border-radius: 50%;
+        }
+
+        .bg-fluid {
+            background: linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%);
+            color: #0C4A6E;
+        }
+
+        .bg-fluid::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.3) 10px, rgba(255, 255, 255, 0.3) 20px);
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .bg-heat {
+            background: linear-gradient(135deg, #FFF1F2 0%, #FECDD3 100%);
+            color: #881337;
+        }
+
+        .bg-heat::after {
+            content: '';
+            position: absolute;
+            bottom: -100px;
+            left: -100px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(244, 63, 94, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .bg-dark {
+            background: linear-gradient(135deg, #111827 0%, #1F2937 100%);
+            color: #F3F4F6;
+        }
+
+        .bg-dark::before {
+            content: '';
+            position: absolute;
+            right: 10%;
+            top: 20%;
+            width: 300px;
+            height: 300px;
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+        }
+
+        .bg-section {
+            background: linear-gradient(135deg, #4338CA 0%, #312E81 100%);
+            color: white;
+            text-align: center;
+        }
+
+        /* Typography & Layout */
+        .title-main {
+            font-size: 4.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            line-height: 1.1;
+            letter-spacing: -1px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.8rem;
+            font-weight: 400;
+            color: #93C5FD;
+            margin-bottom: 2rem;
+        }
+
+        .footer-text {
+            margin-top: auto;
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.6);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .slide-header {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            border-left: 8px solid currentColor;
+            padding-left: 1.5rem;
+        }
+
+        .slide-subheader {
+            font-size: 1.5rem;
+            opacity: 0.8;
+            margin-bottom: 2.5rem;
+            padding-left: 2rem;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            font-size: 1.3rem;
+            line-height: 1.6;
+        }
+
+        .content-grid.two-col {
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+        }
+
+        .bullet-list {
+            list-style: none;
+            padding-left: 1rem;
+        }
+
+        .bullet-list li {
+            margin-bottom: 1.2rem;
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .bullet-list li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: inherit;
+            font-weight: bold;
+        }
+
+        /* Components */
+        .highlight-box {
+            background: rgba(255, 255, 255, 0.9);
+            color: #1e293b;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-left: 6px solid #3B82F6;
+        }
+
+        .bg-dark .highlight-box {
+            background: rgba(30, 41, 59, 0.8);
+            color: #F8FAFC;
+            border-color: #60A5FA;
+        }
+
+        .formula-box {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.5rem;
+            margin-top: 1.5rem;
+            border: 1px dashed currentColor;
+        }
+
+        .bg-dark .formula-box,
+        .bg-main .formula-box {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .pin-note {
+            font-size: 1.1rem;
+            margin-top: 1rem;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        .pin-note::before {
+            content: '📌 ';
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 1.1rem;
+        }
+
+        .bg-dark table,
+        .bg-main table {
+            background: rgba(30, 41, 59, 0.6);
+            color: white;
+        }
+
+        th,
+        td {
+            padding: 1.2rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .bg-dark th,
+        .bg-dark td {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.05);
+            font-weight: 700;
+        }
+
+        .bg-dark th {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .citation {
+            font-size: 0.8rem;
+            vertical-align: super;
+            opacity: 0.7;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="presentation">
+
+        <section class="slide bg-main">
+            <div>
+                <h1 class="title-main">FLUID MECHANICS & HEAT TRANSFER <span class="citation">[cite: 1]</span></h1>
+                <p class="subtitle">Core Concepts — A Comprehensive Engineering Overview <span class="citation">[cite:
+                        2]</span></p>
+                <div style="font-size: 1.5rem; margin-bottom: 4rem; opacity: 0.9;">
+                    Fluid Dynamics • Heat Transfer • Boundary Layer • Computational Approaches <span
+                        class="citation">[cite: 3]</span>
+                </div>
+            </div>
+            <div class="footer-text">
+                <span>Ravichandran K | AI & Engineering Series <span class="citation">[cite: 4, 5]</span></span>
+                <span>May 2026 <span class="citation">[cite: 4]</span></span>
+            </div>
+        </section>
+
+        <section class="slide bg-dark">
+            <h2 class="slide-header">What We'll Cover <span class="citation">[cite: 6]</span></h2>
+            <div class="content-grid two-col" style="margin-top: 2rem;">
+                <div class="highlight-box">
+                    <h3><i class="fa-solid fa-water"></i> 01. Navier-Stokes Equations <span class="citation">[cite: 7,
+                            8, 9]</span></h3>
+                    <p>Continuity · Momentum · Energy <span class="citation">[cite: 10]</span></p>
+                </div>
+                <div class="highlight-box" style="border-color: #EF4444;">
+                    <h3><i class="fa-solid fa-fire"></i> 02. Modes of Heat Transfer <span class="citation">[cite: 11,
+                            12, 13]</span></h3>
+                    <p>Fourier · Newton · Stefan-Boltzmann <span class="citation">[cite: 14]</span></p>
+                </div>
+                <div class="highlight-box" style="border-color: #F59E0B;">
+                    <h3><i class="fa-solid fa-sun"></i> 03. Radiation & Its Types <span class="citation">[cite: 15, 16,
+                            17]</span></h3>
+                    <p>Characteristics & Properties <span class="citation">[cite: 18]</span></p>
+                </div>
+                <div class="highlight-box" style="border-color: #8B5CF6;">
+                    <h3><i class="fa-solid fa-tornado"></i> 04. Boundary Layer Flow <span class="citation">[cite: 19,
+                            20, 21]</span></h3>
+                    <p>Thickness · Separation · Laminar vs Turbulent <span class="citation">[cite: 22]</span></p>
+                </div>
+                <div class="highlight-box" style="border-color: #10B981; grid-column: 1 / -1;">
+                    <h3><i class="fa-solid fa-drafting-compass"></i> 05. Eulerian vs Lagrangian <span
+                            class="citation">[cite: 23, 24, 25]</span></h3>
+                    <p>Two Frameworks of Fluid Description <span class="citation">[cite: 26]</span></p>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide bg-section">
+            <h3 style="font-size: 2rem; color: #93C5FD; margin-bottom: 1rem;">SECTION 01 <span class="citation">[cite:
+                    27]</span></h3>
+            <h1 class="title-main"><i class="fa-solid fa-water"></i> Navier-Stokes Equations <span
+                    class="citation">[cite: 28]</span></h1>
+            <p class="subtitle" style="color: white;">Governing Equations of Fluid Motion <span class="citation">[cite:
+                    29]</span></p>
+            <p style="font-style: italic; font-size: 1.5rem;">"The mathematical foundation of all fluid dynamics" <span
+                    class="citation">[cite: 30]</span></p>
+        </section>
+
+        <section class="slide bg-fluid">
+            <h2 class="slide-header">What Are the Navier-Stokes Equations? <span class="citation">[cite: 31]</span></h2>
+            <p class="slide-subheader">History · Significance · Applications <span class="citation">[cite: 32]</span>
+            </p>
+            <ul class="bullet-list">
+                <li>Developed by Claude-Louis Navier (1822) and George Gabriel Stokes (1845) <span
+                        class="citation">[cite: 33]</span></li>
+                <li>A system of Partial Differential Equations (PDEs) describing motion of viscous fluids <span
+                        class="citation">[cite: 34]</span></li>
+                <li>Apply Newton's Second Law ($F = ma$) to every infinitesimal fluid parcel <span
+                        class="citation">[cite: 35]</span></li>
+                <li>Fundamental to CFD, weather modeling, aerospace, ocean engineering & biomedical flows <span
+                        class="citation">[cite: 36]</span></li>
+                <li>One of the 7 Millennium Prize Problems — no closed-form general solution proven yet <span
+                        class="citation">[cite: 37]</span></li>
+                <li>Solved numerically via methods: FVM (Finite Volume), FEM, FDM in modern CFD codes <span
+                        class="citation">[cite: 38]</span></li>
+            </ul>
+        </section>
+
+        <section class="slide bg-fluid">
+            <h2 class="slide-header">Continuity Equation <span class="citation">[cite: 39]</span></h2>
+            <p class="slide-subheader">Conservation of Mass <span class="citation">[cite: 40]</span></p>
+            <div class="content-grid two-col">
+                <div>
+                    <ul class="bullet-list">
+                        <li>Principle: Mass cannot be created or destroyed within a fluid system <span
+                                class="citation">[cite: 41]</span></li>
+                        <li>Incompressible flow (constant density): $\nabla \cdot V = 0$ <span class="citation">[cite:
+                                42]</span></li>
+                        <li>Compressible flow (variable density): $\frac{\partial \rho}{\partial t} + \nabla \cdot (\rho
+                            V) = 0$ <span class="citation">[cite: 43]</span></li>
+                        <li>Physical meaning: what flows IN must flow OUT — mass is conserved at every point <span
+                                class="citation">[cite: 44]</span></li>
+                        <li>In pipe flow: $A_1V_1 = A_2V_2$ (smaller pipe → faster flow) <span class="citation">[cite:
+                                45]</span></li>
+                    </ul>
+                </div>
+                <div class="highlight-box">
+                    <div class="formula-box">
+                        <strong>Compressible:</strong> $\frac{\partial \rho}{\partial t} + \nabla \cdot (\rho V) = 0$
+                        <br><br>
+                        <strong>Incompressible:</strong> $\nabla \cdot V = 0$ <span class="citation">[cite: 46]</span>
+                    </div>
+                    <div class="pin-note">$\rho$ = density | $V$ = velocity vector | $t$ = time <span
+                            class="citation">[cite: 47]</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide bg-fluid">
+            <h2 class="slide-header">Momentum Equation <span class="citation">[cite: 48]</span></h2>
+            <p class="slide-subheader">Newton's 2nd Law for Fluids <span class="citation">[cite: 49]</span></p>
+            <div class="content-grid">
+                <ul class="bullet-list">
+                    <li>Inertial forces (LHS) = Pressure gradient + Viscous forces + Body forces (RHS) <span
+                            class="citation">[cite: 50]</span></li>
+                    <li>Left side: rate of change of momentum of a fluid parcel <span class="citation">[cite: 52]</span>
+                    </li>
+                    <li>$-\nabla P$ : Pressure gradient drives flow from high → low pressure <span
+                            class="citation">[cite: 53]</span></li>
+                    <li>$\mu \nabla^2 V$ : Viscous (friction) forces resist deformation of fluid <span
+                            class="citation">[cite: 54]</span></li>
+                    <li>$\rho g$ : Body forces (gravity, Coriolis in geophysical flows) <span class="citation">[cite:
+                            55]</span></li>
+                    <li>Non-linear term $V \cdot \nabla V$ makes analytical solutions nearly impossible <span
+                            class="citation">[cite: 56]</span></li>
+                </ul>
+                <div class="highlight-box">
+                    <div class="formula-box">
+                        $$\rho \left(\frac{\partial V}{\partial t} + V \cdot \nabla V\right) = -\nabla P + \mu \nabla^2
+                        V + \rho g$$ <span class="citation">[cite: 51, 57]</span>
+                    </div>
+                    <div class="pin-note">$\mu$ = dynamic viscosity | $P$ = pressure | $g$ = gravitational acceleration
+                        <span class="citation">[cite: 58]</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide bg-heat">
+            <h2 class="slide-header">Energy Equation <span class="citation">[cite: 59]</span></h2>
+            <p class="slide-subheader">1st Law of Thermodynamics for Flowing Fluids <span class="citation">[cite:
+                    60]</span></p>
+            <div class="content-grid two-col">
+                <div>
+                    <ul class="bullet-list">
+                        <li>Describes conservation of energy in a moving, heat-conducting fluid <span
+                                class="citation">[cite: 61]</span></li>
+                        <li>$DT/Dt$ : Material derivative — total rate of temperature change following fluid <span
+                                class="citation">[cite: 63]</span></li>
+                        <li>$k \nabla^2 T$ : Thermal diffusion (Fourier conduction within the fluid) <span
+                                class="citation">[cite: 64]</span></li>
+                        <li>$\Phi$ (Viscous dissipation): Kinetic energy converted to heat by viscosity <span
+                                class="citation">[cite: 65]</span></li>
+                        <li>$Q_{source}$: Internal heat generation (e.g. chemical reaction) <span
+                                class="citation">[cite: 66]</span></li>
+                        <li>Links velocity field (momentum) with temperature field <span class="citation">[cite:
+                                67]</span></li>
+                    </ul>
+                </div>
+                <div class="highlight-box" style="border-color: #E11D48;">
+                    <div class="formula-box">
+                        $$\rho c_p \frac{DT}{Dt} = k \nabla^2 T + \Phi + Q_{source}$$ <span class="citation">[cite: 62,
+                            68]</span>
+                    </div>
+                    <div class="pin-note">$c_p$ = specific heat | $k$ = thermal conductivity | $\Phi$ = viscous
+                        dissipation <span class="citation">[cite: 69]</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide bg-dark">
+            <h2 class="slide-header">The Three Pillars of Fluid Flow <span class="citation">[cite: 70]</span></h2>
+            <p class="slide-subheader">NS Equations at a Glance <span class="citation">[cite: 71]</span></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Property <span class="citation">[cite: 72]</span></th>
+                        <th>Continuity <span class="citation">[cite: 73]</span></th>
+                        <th>Momentum <span class="citation">[cite: 74]</span></th>
+                        <th>Energy <span class="citation">[cite: 75]</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Principle <span class="citation">[cite: 76]</span></td>
+                        <td>Conservation of Mass <span class="citation">[cite: 77]</span></td>
+                        <td>Newton's 2nd Law <span class="citation">[cite: 78]</span></td>
+                        <td>1st Law of Thermodynamics <span class="citation">[cite: 79]</span></td>
+                    </tr>
+                    <tr>
+                        <td>Equation <span class="citation">[cite: 80]</span></td>
+                        <td>$\nabla \cdot V = 0$ <span class="citation">[cite: 81]</span></td>
+                        <td>$\rho \frac{DV}{Dt} = -\nabla P + \mu \nabla^2 V + \rho g$ <span class="citation">[cite:
+                                82]</span></td>
+                        <td>$\rho c_p \frac{DT}{Dt} = k \nabla^2 T + \Phi$ <span class="citation">[cite: 83]</span></td>
+                    </tr>
+                    <tr>
+                        <td>Key variable <span class="citation">[cite: 84]</span></td>
+                        <td>Velocity field $V$ <span class="citation">[cite: 85]</span></td>
+                        <td>Pressure $P$, Velocity $V$ <span class="citation">[cite: 86]</span></td>
+                        <td>Temperature $T$ <span class="citation">[cite: 87]</span></td>
+                    </tr>
+                    <tr>
+                        <td>Difficulty <span class="citation">[cite: 92]</span></td>
+                        <td>Linear — easy to solve <span class="citation">[cite: 93]</span></td>
+                        <td>Non-linear — very hard <span class="citation">[cite: 94]</span></td>
+                        <td>Coupled to momentum eqn <span class="citation">[cite: 95]</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="slide bg-section" style="background: linear-gradient(135deg, #9F1239 0%, #4C0519 100%);">
+            <h3 style="font-size: 2rem; color: #FDA4AF; margin-bottom: 1rem;">SECTION 02 <span class="citation">[cite:
+                    96]</span></h3>
+            <h1 class="title-main"><i class="fa-solid fa-fire"></i> Modes of Heat Transfer <span class="citation">[cite:
+                    97]</span></h1>
+            <p class="subtitle" style="color: white;">How Energy Moves Through Matter and Space <span
+                    class="citation">[cite: 98]</span></p>
+        </section>
+
+        <section class="slide bg-heat">
+            <h2 class="slide-header">Conduction — Heat Through Solids <span class="citation">[cite: 99]</span></h2>
+            <p class="slide-subheader">Fourier's Law | No bulk motion required <span class="citation">[cite: 100]</span>
+            </p>
+            <div class="content-grid two-col">
+                <div>
+                    <ul class="bullet-list">
+                        <li>Transfer through direct molecular vibration — no bulk fluid movement <span
+                                class="citation">[cite: 101]</span></li>
+                        <li>Occurs primarily in solids; also in liquids & gases (to a lesser extent) <span
+                                class="citation">[cite: 102]</span></li>
+                        <li>Negative sign: heat always flows from HOT → COLD (2nd Law) <span class="citation">[cite:
+                                105]</span></li>
+                        <li>Examples: metal rod in flame, heat spreading through a wall, CPU heat sink <span
+                                class="citation">[cite: 106]</span></li>
+                        <li>Thermal conductivities: Copper 385 | Steel 50 | Glass 1.0 | Air 0.026 W/m·K <span
+                                class="citation">[cite: 107]</span></li>
+                    </ul>
+                </div>
+                <div class="highlight-box" style="border-color: #E11D48;">
+                    <div class="formula-box">
+                        $$Q = -kA \frac{dT}{dx}$$ <span class="citation">[cite: 103, 108]</span>
+                        <br><span style="font-size: 1.2rem;">Heat Flux: $q = \frac{Q}{A} = -k \frac{dT}{dx}$ [W/m²]
+                            <span class="citation">[cite: 108]</span></span>
+                    </div>
+                    <div class="pin-note">Higher $k$ = better conductor | Lower $k$ = better insulator <span
+                            class="citation">[cite: 109]</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide bg-heat">
+            <h2 class="slide-header">Fourier's Law — Deep Dive <span class="citation">[cite: 110]</span></h2>
+            <p class="slide-subheader">Mathematical Foundation of Conductive Heat Transfer <span class="citation">[cite:
+                    111]</span></p>
+            <ul class="bullet-list">
+                <li>Proposed by Jean-Baptiste Joseph Fourier in 1822 (Théorie Analytique de la Chaleur) <span
+                        class="citation">[cite: 112]</span></li>
+                <li>In 3D: $\vec{q} = -k\nabla T$ (heat flux vector points opposite to temperature gradient) <span
+                        class="citation">[cite: 114]</span></li>
+                <li>For a flat wall (thickness $L$): $Q = kA(T_1-T_2)/L \rightarrow$ thermal resistance $R = L/(kA)$
+                    <span class="citation">[cite: 115]</span></li>
+                <li>Composite walls (insulation): $R_{total} = R_1 + R_2 + R_3$ (series resistance) <span
+                        class="citation">[cite: 116]</span></li>
+                <li>Applications: building insulation, electronic heat sinks, furnace wall design <span
+                        class="citation">[cite: 117]</span></li>
+                <li>Thermal diffusivity: $\alpha = k/(\rho c_p)$ — how fast temperature changes spread <span
+                        class="citation">[cite: 118]</span></li>
+            </ul>
+            <div class="formula-box" style="display: flex; justify-content: space-around;">
+                <span>$q = -k\nabla T$ <span class="citation">[cite: 119]</span></span>
+                <span>$R = L/(kA)$ <span class="citation">[cite: 119]</span></span>
+                <span>$\alpha = k/(\rho c_p)$ <span class="citation">[cite: 119]</span></span>
+            </div>
+        </section>
+
+        <section class="slide bg-fluid">
+            <h2 class="slide-header">Convection — Heat Through Fluid Motion <span class="citation">[cite: 121]</span>
+            </h2>
+            <p class="slide-subheader">Newton's Law of Cooling | Forced & Natural Convection <span
+                    class="citation">[cite: 122]</span></p>
+            <div class="content-grid two-col">
+                <div>
+                    <ul class="bullet-list">
+                        <li>Heat transfer via BULK movement of fluid (liquid or gas) <span class="citation">[cite:
+                                123]</span></li>
+                        <li>$h$ = convective heat transfer coefficient (W/m²·K) — depends on fluid, flow, geometry <span
+                                class="citation">[cite: 125]</span></li>
+                        <li>FORCED Convection: external mechanism (fan, pump) drives fluid — higher $h$ values <span
+                                class="citation">[cite: 126]</span></li>
+                        <li>NATURAL (Free) Convection: driven by buoyancy — density differences <span
+                                class="citation">[cite: 127]</span></li>
+                        <li>Examples: car radiator, air conditioning, blood circulation <span class="citation">[cite:
+                                129]</span></li>
+                    </ul>
+                </div>
+                <div class="highlight-box">
+                    <div class="formula-box">
+                        $$Q = hA(T_w - T_\infty)$$ <span class="citation">[cite: 124, 130]</span>
+                    </div>
+                    <div class="pin-note">$T_w$ = wall temperature | $T_\infty$ = bulk fluid temperature <span
+                            class="citation">[cite: 131]</span><br>
+                        $h$ varies: 5 (free air) → 100,000 W/m²K (boiling) <span class="citation">[cite: 128,
+                            130]</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide bg-fluid">
+            <h2 class="slide-header">Natural Convection — Driven by Buoyancy <span class="citation">[cite: 132]</span>
+            </h2>
+            <p class="slide-subheader">Grashof Number · Rayleigh Number · Circulation Loops <span
+                    class="citation">[cite: 133]</span></p>
+            <ul class="bullet-list">
+                <li>Heated fluid expands, density decreases → rises (buoyant); cooler fluid sinks → circulation loop
+                    <span class="citation">[cite: 134]</span></li>
+                <li>No external pump/fan — driven purely by gravity + density difference <span class="citation">[cite:
+                        135]</span></li>
+                <li>Grashof Number: $Gr = g\beta(T_s-T_\infty)L^3 / \nu^2$ <span class="citation">[cite: 136]</span>
+                </li>
+                <li>$\beta$ = thermal expansion coefficient | $\nu$ = kinematic viscosity | $L$ = characteristic length
+                    <span class="citation">[cite: 137]</span></li>
+                <li>High $Gr \rightarrow$ convection dominates | Low $Gr \rightarrow$ conduction dominates <span
+                        class="citation">[cite: 138]</span></li>
+                <li>Rayleigh Number: $Ra = Gr \times Pr$ (Prandtl number $Pr = \nu/\alpha$) <span
+                        class="citation">[cite: 139]</span></li>
+                <li>Real examples: atmospheric circulation, sea breezes, room heating, lava lamps <span
+                        class="citation">[cite: 140]</span></li>
+            </ul>
+            <div class="formula-box" style="display: flex; justify-content: space-around;">
+                <span>$Gr = \frac{g\beta(T_s-T_\infty)L^3}{\nu^2}$ <span class="citation">[cite: 141]</span></span>
+                <span>$Ra = Gr \times Pr$ <span class="citation">[cite: 141]</span></span>
+            </div>
+        </section>
+
+        <section class="slide bg-dark">
+            <h2 class="slide-header" style="color: #FBBF24;">Radiation — Heat Without a Medium <span
+                    class="citation">[cite: 154]</span></h2>
+            <p class="slide-subheader">Stefan-Boltzmann Law | Electromagnetic Heat Transfer <span
+                    class="citation">[cite: 155]</span></p>
+            <div class="content-grid two-col">
+                <div>
+                    <ul class="bullet-list">
+                        <li>Transfer via electromagnetic waves (photons) — requires NO medium (works in vacuum) <span
+                                class="citation">[cite: 156]</span></li>
+                        <li>Can travel at speed of light — e.g. solar energy crossing 150 million km to Earth <span
+                                class="citation">[cite: 157]</span></li>
+                        <li>$\epsilon$ = Emissivity: 0 (perfect reflector) → 1 (ideal blackbody) <span
+                                class="citation">[cite: 160]</span></li>
+                        <li>$T$ must be in KELVIN — a body at 2× the temperature radiates $2^4 = 16\times$ more energy
+                            <span class="citation">[cite: 161]</span></li>
+                        <li>Net radiation between surfaces: $Q = \epsilon\sigma A(T_1^4 - T_2^4)$ <span
+                                class="citation">[cite: 162]</span></li>
+                    </ul>
+                </div>
+                <div class="highlight-box" style="border-color: #FBBF24;">
+                    <div class="formula-box">
+                        $$Q = \epsilon\sigma AT^4$$ <span class="citation">[cite: 158, 163]</span>
+                    </div>
+                    <div class="pin-note">$\sigma = 5.67 \times 10^{-8} \text{ W/m}^2\text{K}^4$ <span
+                            class="citation">[cite: 159, 163]</span><br>
+                        Radiation dominant at high temperatures <span class="citation">[cite: 164]</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide bg-section" style="background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);">
+            <h3 style="font-size: 2rem; color: #93C5FD; margin-bottom: 1rem;">SECTION 04 <span class="citation">[cite:
+                    233]</span></h3>
+            <h1 class="title-main"><i class="fa-solid fa-tornado"></i> Boundary Layer Flow <span class="citation">[cite:
+                    234]</span></h1>
+            <p class="subtitle" style="color: white;">Where Fluid Meets Surface — The Thin Viscous Region <span
+                    class="citation">[cite: 235]</span></p>
+        </section>
+
+        <section class="slide bg-fluid">
+            <h2 class="slide-header">The Boundary Layer Concept <span class="citation">[cite: 236]</span></h2>
+            <p class="slide-subheader">Ludwig Prandtl 1904 · No-Slip Condition · Viscous Effects <span
+                    class="citation">[cite: 237]</span></p>
+            <ul class="bullet-list">
+                <li>Introduced by Ludwig Prandtl at Heidelberg Congress, 1904 — revolutionized fluid mechanics <span
+                        class="citation">[cite: 238]</span></li>
+                <li>Thin region adjacent to solid surface where viscous effects dominate <span class="citation">[cite:
+                        239]</span></li>
+                <li>NO-SLIP CONDITION: fluid particles at wall have zero velocity ($u_{wall} = 0$) <span
+                        class="citation">[cite: 240]</span></li>
+                <li>Velocity transitions from 0 (at wall) to $U_\infty$ (free-stream) across the boundary layer <span
+                        class="citation">[cite: 241]</span></li>
+                <li>Thickness $\delta$: defined as location where $u = 0.99 \times U_\infty$ <span
+                        class="citation">[cite: 242]</span></li>
+                <li>Outside boundary layer: inviscid (potential flow) region — viscosity negligible <span
+                        class="citation">[cite: 243]</span></li>
+                <li>Prandtl's insight: divide flow into two regions → enables analytical solutions <span
+                        class="citation">[cite: 244]</span></li>
+            </ul>
+            <div class="formula-box">
+                No-slip: $u(y=0) = 0$ &nbsp;&nbsp;|&nbsp;&nbsp; BL thickness: $\delta$ where $u(\delta) = 0.99 U_\infty$
+                <span class="citation">[cite: 245]</span>
+            </div>
+        </section>
+
+        <section class="slide bg-fluid">
+            <h2 class="slide-header">Boundary Layer Separation <span class="citation">[cite: 284]</span></h2>
+            <p class="slide-subheader">Adverse Pressure Gradient · Stall · Wake · Prevention <span
+                    class="citation">[cite: 285]</span></p>
+            <div class="content-grid">
+                <ul class="bullet-list">
+                    <li>Occurs when BL detaches from surface due to ADVERSE PRESSURE GRADIENT ($dP/dx > 0$) <span
+                            class="citation">[cite: 286]</span></li>
+                    <li>Low-energy fluid near wall cannot overcome rising pressure → flow reverses direction <span
+                            class="citation">[cite: 287]</span></li>
+                    <li>CONSEQUENCES: increased pressure drag, loss of lift (airfoil stall), wake formation, vibration
+                        <span class="citation">[cite: 289]</span></li>
+                    <li>Triggered by: sharp corners, sudden expansions, bluff bodies, high angle of attack <span
+                            class="citation">[cite: 290]</span></li>
+                    <li>PREVENTION: streamlined body shapes, vortex generators, surface suction slots <span
+                            class="citation">[cite: 291]</span></li>
+                    <li>Turbulent BL separates LATER than laminar (better mixing re-energizes near-wall fluid) <span
+                            class="citation">[cite: 292]</span></li>
+                </ul>
+                <div class="highlight-box" style="border-color: #EF4444;">
+                    <div class="formula-box">
+                        Separation point: wall shear stress $\tau_w = \mu \left(\frac{\partial u}{\partial
+                        y}\right)_{wall} = 0$ <span class="citation">[cite: 288, 293]</span>
+                    </div>
+                    <div class="pin-note">Wing stall ($\alpha > \alpha_{crit}$) is boundary layer separation at high
+                        angles of attack <span class="citation">[cite: 294]</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide bg-section" style="background: linear-gradient(135deg, #065F46 0%, #064E3B 100%);">
+            <h3 style="font-size: 2rem; color: #A7F3D0; margin-bottom: 1rem;">SECTION 05 <span class="citation">[cite:
+                    295]</span></h3>
+            <h1 class="title-main"><i class="fa-solid fa-drafting-compass"></i> Eulerian vs. Lagrangian <span
+                    class="citation">[cite: 296]</span></h1>
+            <p class="subtitle" style="color: white;">Two Mathematical Frameworks to Describe Fluid Motion <span
+                    class="citation">[cite: 297]</span></p>
+        </section>
+
+        <section class="slide bg-dark">
+            <h2 class="slide-header" style="color: #34D399;">Describing Fluid Flow <span class="citation">[cite:
+                    298]</span></h2>
+            <p class="slide-subheader">Fixed Observer (Eulerian) vs. Particle Follower (Lagrangian) <span
+                    class="citation">[cite: 299]</span></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Aspect <span class="citation">[cite: 300]</span></th>
+                        <th>Eulerian Approach <span class="citation">[cite: 301]</span></th>
+                        <th>Lagrangian Approach <span class="citation">[cite: 302]</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Perspective <span class="citation">[cite: 303]</span></td>
+                        <td>Fixed point in space (control volume) <span class="citation">[cite: 304]</span></td>
+                        <td>Follows individual fluid particle <span class="citation">[cite: 305]</span></td>
+                    </tr>
+                    <tr>
+                        <td>Reference Frame <span class="citation">[cite: 306]</span></td>
+                        <td>Fixed/stationary coordinates <span class="citation">[cite: 307]</span></td>
+                        <td>Moving with the particle <span class="citation">[cite: 308]</span></td>
+                    </tr>
+                    <tr>
+                        <td>Time derivative <span class="citation">[cite: 312]</span></td>
+                        <td>Partial $\partial/\partial t$ at fixed location <span class="citation">[cite: 313]</span>
+                        </td>
+                        <td>Material $D/Dt$ following particle <span class="citation">[cite: 314]</span></td>
+                    </tr>
+                    <tr>
+                        <td>Analogy <span class="citation">[cite: 318]</span></td>
+                        <td>Traffic camera at fixed road point <span class="citation">[cite: 319]</span></td>
+                        <td>GPS tracker inside a moving vehicle <span class="citation">[cite: 320]</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="slide bg-main">
+            <h1 class="title-main" style="font-size: 3.5rem;">Key Takeaways <span class="citation">[cite: 345]</span>
+            </h1>
+            <div class="content-grid two-col" style="margin-top: 2rem;">
+                <div class="highlight-box" style="background: rgba(255,255,255,0.1); color: white;">
+                    <h3>🌊 Navier-Stokes Equations <span class="citation">[cite: 346, 347]</span></h3>
+                    <p>3 coupled PDEs govern ALL fluid motion: Continuity (mass) · Momentum (force) · Energy (heat)
+                        <span class="citation">[cite: 348]</span></p>
+                </div>
+                <div class="highlight-box"
+                    style="background: rgba(255,255,255,0.1); color: white; border-color: #EF4444;">
+                    <h3>🔥 Modes of Heat Transfer <span class="citation">[cite: 349, 350]</span></h3>
+                    <p>Conduction (Fourier) · Convection (Newton) · Radiation (Stefan-Boltzmann) <span
+                            class="citation">[cite: 351]</span></p>
+                </div>
+                <div class="highlight-box"
+                    style="background: rgba(255,255,255,0.1); color: white; border-color: #8B5CF6;">
+                    <h3>🌪️ Boundary Layer <span class="citation">[cite: 355, 356]</span></h3>
+                    <p>Thin viscous region (Prandtl 1904) · Separation → stall, drag; prevent with streamlining <span
+                            class="citation">[cite: 357]</span></p>
+                </div>
+                <div class="highlight-box"
+                    style="background: rgba(255,255,255,0.1); color: white; border-color: #10B981;">
+                    <h3>📐 Eulerian vs Lagrangian <span class="citation">[cite: 358, 359]</span></h3>
+                    <p>Fixed observer vs particle follower · Bridge: Material derivative $D/Dt = \partial/\partial t +
+                        V\cdot\nabla$ <span class="citation">[cite: 360]</span></p>
+                </div>
+            </div>
+            <div style="margin-top: 4rem; text-align: center;">
+                <h2 style="font-size: 2.5rem;">Thank You <span class="citation">[cite: 361]</span></h2>
+                <p>Questions & Discussion <span class="citation">[cite: 362]</span></p>
+                <p style="opacity: 0.7; font-size: 1rem; margin-top: 1rem;">Presented by Ravichandran K | GBRIT AI &
+                    Engineering Series <span class="citation">[cite: 364, 365]</span></p>
+            </div>
+        </section>
+
+    </div>
+
+</body>
+
+</html>

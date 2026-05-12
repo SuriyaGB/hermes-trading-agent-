@@ -6,18 +6,17 @@
 
 ## 📌 Table of Contents
 
-- [The Tri-Force Architecture](#️-the-tri-force-architecture-trader--chatbot--dashboard)
-- [How It Is Wired Together (The Data Flow)](#-how-it-is-wired-together-the-data-flow)
-- [The 5-Page Institutional Dashboard](#-the-5-page-institutional-dashboard)
-- [Project Structure](#-project-structure)
-- [The Strategic Brain](#-the-strategic-brain)
-- [The 10 Decision Tokens](#-the-10-decision-tokens)
-- [The 4 Account States](#-the-4-account-states)
-- [The Wheel Cycle](#-the-wheel-cycle)
-- [The Hard Shields](#️-the-hard-shields)
-- [Setup Instructions](#-setup-instructions)
-- [Running the Bot](#️-running-the-bot)
-- [Security](#-security)
+- [What Is This?](#what-is-this)
+- [How It Works](#how-it-works)
+- [Project Structure](#project-structure)
+- [The Strategic Brain](#the-strategic-brain)
+- [The 10 Decision Tokens](#the-10-decision-tokens)
+- [The 4 Account States](#the-4-account-states)
+- [The Hard Shields](#the-hard-shields)
+- [The Wheel Cycle](#the-wheel-cycle)
+- [Setup Instructions](#setup-instructions)
+- [Running the Bot](#running-the-bot)
+- [Security](#security)
 
 ---
 
@@ -35,9 +34,9 @@ Hermes is a fully autonomous AI trading agent that:
 
 ---
 
-## ⚙️ The Tri-Force Architecture (Trader + Chatbot + Dashboard)
+## ⚙️ The Dual-Microservice Architecture
 
-Hermes operates using three completely independent services that never interfere with each other, connected ONLY by an immutable SQLite database (`hermes_brain.db`) and secure JSON state files. The golden rule: Only the Trading Engine writes data; everything else is Read-Only.
+Hermes operates using two completely independent services that never interfere with each other, connected only by an immutable SQLite database (`hermes_brain.db`).
 
 ### Service A: The Trading Engine (The Pulse)
 Runs automatically every 30 minutes via Cron. Wakes up, executes the math, saves the history, sends a push alert, and dies to save RAM.
@@ -45,14 +44,14 @@ Runs automatically every 30 minutes via Cron. Wakes up, executes the math, saves
 ```text
   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
   │  THE EYE    │───▶│  THE BRAIN  │───▶│  THE HAND   │───▶│ THE MEMORY  │
-  │ Fetches:    │    │ GPT-4o      │    │ Validates   │    │ executes    │
+  │ Fetches:    │    │ GPT-4o      │    │ Validates   │    │ Writes to   │
   │ Price, VIX, │    │ reads rule- │    │ shields,    │    │ SQLite DB + │
   │ IV, News    │    │ books       │    │ executes    │    │ JSONs       │
   └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
 ```
 
 ### Service B: The Interactive Assistant (The Chatbot)
-Runs 24/7 in the background (`telegram_listener.py`). It does not trade. It acts as a RAG analyst, waiting for you to ask questions about your portfolio or past decisions.
+Runs 24/7 in the background (`telegram_listener.py`). It does not trade. It acts as a RAG (Retrieval-Augmented Generation) analyst, waiting for you to ask questions about your portfolio or past decisions.
 
 ```text
   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
@@ -63,53 +62,8 @@ Runs 24/7 in the background (`telegram_listener.py`). It does not trade. It acts
   └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
 ```
 
-### Service C: The Web Dashboard (Vercel Frontend + VPS API)
-A completely **stateless** 5-page Next.js dashboard hosted on Vercel. It connects to a FastAPI running on your VPS. It reads your VPS files and streams live execution data and Options Greeks directly to your browser without risking state corruption.
-
-```text
-  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-  │ THE BROWSER │───▶│ VERCEL UI   │───▶│ VPS API     │───▶│ THE DATA    │
-  │ Next.js UI  │    │ HTTP Request│    │ core/api.py │    │ Reads JSONs │
-  │ Live Charts │    │ Port 8000   │    │ 24/7 PM2    │    │ & SQLite DB │
-  └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-```
-
 ---
 
-## 🔌 How It Is Wired Together (The Data Flow)
-
-The genius of this system is its completely decoupled memory structure. It uses an asynchronous, file-based data pipeline.
-
-```text
-  [MARKET OPEN]                                               [USER DEVICE]
-        │                                                          │
-        ▼                                                          ▼
-┌───────────────┐     WRITES TO      ┌──────────────────┐    ┌─────────────┐
-│  CRON JOB     │ ─────────────────▶ │  THE BRAIN       │ ◀──│  VERCEL     │
-│ (Bash Script) │                    │ (VPS Hard Drive) │    │  DASHBOARD  │
-└───────────────┘                    │                  │    └─────────────┘
-        │                            │ hermes_brain.db  │          │
-        ▼                            │ portfolio.json   │          ▼
-┌───────────────┐     READS FROM     │ trade_state.json │    ┌─────────────┐
-│ TELEGRAM BOT  │ ◀───────────────── │ trades_log.csv   │ ◀──│  FAST API   │
-│ (PM2 24/7)    │                    └──────────────────┘    │ (PM2 24/7)  │
-└───────────────┘                                            └─────────────┘
-```
-**The Absolute Golden Rule:** The Cron Job (The Trader) is the ONLY process with permission to write or edit data. The Telegram Bot and the Vercel FastAPI are strictly **READ-ONLY**. This architectural separation guarantees that you will never accidentally corrupt your portfolio state or execute a rogue trade simply by opening the dashboard or asking the bot a question.
-
----
-
-## 💻 The 5-Page Institutional Dashboard
-
-The Next.js frontend (`frontend/`) automatically builds these 5 web pages on the fly based entirely on your VPS data feeds:
-
-1. **Command Centre (`/`)**: Live HUD showing your Current Phase, Delta/VIX Guards, and the latest AI reasoning log.
-2. **Income Tracker (`/income`)**: A dynamic graph mapping your true Account Balance Growth and premium collection jumps.
-3. **Pulse History (`/history`)**: A terminal-style audit table of every historical AI decision, color-coded by action.
-4. **Market View (`/market`)**: Dual-axis analytics charting macro forces (AAPL vs VIX) and Options Greeks (Delta & DTE).
-5. **Bot Health (`/health`)**: System telemetry monitoring your Python server connection, SQLite row count, and Earnings Blackout shields.
-
----
 ## 📁 Project Structure
 
 ```text
@@ -118,18 +72,10 @@ hermes-trading-agent/
 ├── 📂 core/                               ← The "Internal Organs" (Python Engine)
 │   ├── sim_executor.py                    ← Simulation executor (paper trading)
 │   ├── executor.py                        ← Live executor (real IBKR trades)
-│   ├── api.py                             ← FastAPI Bridge (Serves data to Vercel)
 │   ├── get_ibkr_analysis.py               ← Market data fetcher (The Eye)
 │   ├── database.py                        ← SQLite Manager (The Institutional Memory)
 │   ├── assistant.py                       ← RAG Smart Analyst (The Voice)
 │   └── telegram_listener.py               ← 24/7 Chatbot Poller (The Ears)
-│
-├── 📂 frontend/                           ← The Next.js Web Dashboard
-│   ├── src/app/page.js                    ← Command Centre (Live HUD)
-│   ├── src/app/income/page.js             ← Income Tracker (Balance Growth)
-│   ├── src/app/history/page.js            ← Pulse History (Audit Table)
-│   ├── src/app/market/page.js             ← Market View (AAPL vs VIX/Greeks)
-│   └── src/app/health/page.js             ← Bot Health & Shield Telemetry
 │
 ├── 📂 scripts/                            ← The "Hands" (Operational Tools)
 │   ├── run_pulse_sim.sh                   ← Manually run one simulation pulse
@@ -284,8 +230,8 @@ Stored in `data/trade_state.json`:
 # Python 3.11+
 python3 --version
 
-# Install all required packages (FastAPI, OpenAI, yfinance, etc.)
-pip install -r requirements.txt
+# Required packages
+pip install openai yfinance pandas python-dotenv requests ib_insync
 ```
 
 ### Step 1 — Clone the Repository
@@ -351,96 +297,58 @@ JSON
 bash scripts/run_pulse_sim.sh
 ```
 
-**How to verify it worked:**
-1. **Telegram:** You should have received a real-time push notification from the bot.
-2. **Database:** Open `data/trades_log.csv` and ensure a new row was added.
-3. **Dashboard:** Open your Vercel Dashboard (or local `http://localhost:3000/history`). The pulse should appear instantly in the Pulse History audit log.
-
 ***
 
-## ▶️ Running the Bot (Local vs VPS)
+## ▶️ Running the Bot
 
-You have two entirely different ways to run this system depending on your current phase.
+### Manual Single Pulse (Simulation)
 
-### 💻 1. Running Locally (On Your Laptop / PC)
-
-When testing on your personal computer, you do NOT use PM2 or Cron. You must run the servers manually using two separate terminal windows.
-
-**Terminal 1 (The Python API):**
 ```bash
-# Activate virtual environment
-source .venv/bin/activate
-# Run the API in development mode
-uvicorn core.api:app --host 0.0.0.0 --port 8000 --reload
+bash scripts/run_pulse_sim.sh
 ```
 
-**Terminal 2 (The Next.js Dashboard):**
+### Manual Single Pulse (Live Trading)
+
 ```bash
-cd frontend
-# Install node modules if you haven't yet
-npm install
-# Start the React development server
-npm run dev
-```
-*(You can now view your dashboard at http://localhost:3000)*
-
----
-
-### ☁️ 2. Running on a VPS (Production Master Deployment)
-
-When you move this code to your Virtual Private Server (VPS), you must use Process Managers (PM2) so the servers stay awake forever when you close the SSH terminal.
-
-**Start the 24/7 FastAPI Server (For Vercel):**
-```bash
-# Start the FastAPI (Bridge for Vercel)
-pm2 start "source .venv/bin/activate && uvicorn core.api:app --host 0.0.0.0 --port 8000" --name hermes-api
-pm2 save
-
-# Important: Make sure your VPS firewall allows port 8000!
-sudo ufw allow 8000
+bash scripts/run_pulse.sh
 ```
 
-**Start the 24/7 Interactive Telegram Chatbot:**
-```bash
-# Runs the RAG Telegram assistant permanently
-pm2 start core/telegram_listener.py --interpreter .venv/bin/python --name hermes-telegram
-pm2 save
-```
+### Enable 24/7 Automated Schedule
 
-**Deploying the Dashboard to Vercel:**
-1. Push this repository to GitHub.
-2. Log into [Vercel.com](https://vercel.com) and import the repository.
-3. Set the **Root Directory** to `frontend/`.
-4. Click Deploy. Vercel will build the 5-page React application and give you a live URL.
-
-**Arm the Autonomous Cron Job Trader:**
 ```bash
-# Sets up the cron jobs for market hours
+# Sets up cron jobs for market hours
 bash scripts/setup_cron.sh
 
 # Verify cron is running
 crontab -l
 ```
 
-> **Cron Timing Architecture (IST):** 
-> The `setup_cron.sh` configures the trader to run exclusively during US Market hours (7:30 PM to 1:30 AM IST). 
-> Because this spans past midnight, it is intelligently split into two separate cron jobs to avoid system date conflicts:
-> - **Job 1:** Runs every 30 minutes from 7:30 PM up to 11:30 PM (Monday-Friday).
-> - **Job 2:** Runs every 30 minutes from 12:00 AM up to 1:30 AM (Tuesday-Saturday). 
-> *(Note: 12:00 AM is midnight, which technically marks the start of the next calendar day. That is why Job 2 runs on Tue-Sat to cover the Monday-Friday US market sessions).*
+### Stop the Automated Schedule
 
-**Stop the Automated Schedule:**
 ```bash
 bash scripts/stop_cron.sh
 ```
 
-### Check Live Logs on VPS
+### Enable the Interactive Telegram Chatbot
+
+To enable 24/7 two-way communication with your bot, run the listener in the background using PM2 or Nohup:
 
 ```bash
-# Watch the bot's cron execution in real time
+# Using standard Python background process
+nohup bash -c "source .venv/bin/activate && python3 core/telegram_listener.py" &
+
+# Or using PM2 (Recommended for VPS)
+pm2 start core/telegram_listener.py --interpreter .venv/bin/python --name hermes-listener
+pm2 save
+```
+
+### Check Live Logs
+
+```bash
+# Watch the bot in real time
 tail -f logs/pulse_cron.log
 
-# See last 50 decisions directly from the markdown memory
+# See last 50 decisions
 tail -50 .hermes/MEMORY.md
 ```
 

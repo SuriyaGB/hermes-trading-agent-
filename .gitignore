@@ -20,6 +20,7 @@ __pycache__/
 
 # Runtime Logs
 .hermes/MEMORY.md
+.hermes/sessions/
 .hermes_output.log
 pulse_cron.log
 synthetic_result.log

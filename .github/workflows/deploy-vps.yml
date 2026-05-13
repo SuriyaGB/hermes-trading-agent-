@@ -1,0 +1,45 @@
+name: Deploy Backend to VPS (Auto & Manual)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # This enables manual triggering
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Hostinger VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }} # Usually 22
+          script: |
+            # Navigate to your project directory based on your VPS setup
+            cd /root/hermes-trading-agent-
+            
+            # Pull the latest changes from GitHub
+            git pull origin main
+            
+            # Activate Python virtual environment
+            source .venv/bin/activate
+            
+            # Install any new dependencies
+            pip install -r requirements.txt
+            
+            # Make sure all bash scripts have execute permissions
+            chmod +x scripts/*.sh
+            
+            # Restart the backend service using PM2 (adjust name if different)
+            # You can check your PM2 list via 'pm2 list' on your VPS
+            pm2 restart all || echo "PM2 restart failed, maybe nothing to restart"
+            
+            # Setup the USA Market Hours automated cron jobs
+            bash scripts/setup_cron.sh

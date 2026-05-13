@@ -9,7 +9,7 @@ export default function PulseHistory() {
   useEffect(() => {
     const fetchPulses = async () => {
       try {
-        const apiUrl = `http://${window.location.hostname}:8000`;
+        const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL ;
         const res = await fetch(`${apiUrl}/api/pulses?limit=100`);
         const data = await res.json();
         setPulses(data);

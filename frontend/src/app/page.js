@@ -13,8 +13,7 @@ export default function CommandCentre() {
     const fetchData = async () => {
       try {
         // Dynamically get the IP address you are viewing the dashboard from
-        const apiUrl = `http://${window.location.hostname}:8000`;
-        
+	const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;        
         const portRes = await fetch(`${apiUrl}/api/portfolio`);
         const portData = await portRes.json();
         setPortfolio(portData);

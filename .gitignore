@@ -24,3 +24,10 @@ __pycache__/
 .hermes_output.log
 pulse_cron.log
 synthetic_result.log
+.hermes/state.db
+.hermes/state.db-shm
+.hermes/state.db-wal
+.hermes/MEMORY.md
+cloudflared-linux-amd64.deb
+frontend/.env.local
+frontend/node_modules/

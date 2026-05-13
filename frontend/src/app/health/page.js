@@ -10,7 +10,7 @@ export default function BotHealth() {
   useEffect(() => {
     const fetchHealth = async () => {
       try {
-        const apiUrl = `http://${window.location.hostname}:8000`;
+        const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL ;
         
         // 1. Fetch API Health
         try {

@@ -1,33 +1,31 @@
-# Environment & Virtual Machine
-.venv/
+# =========================
+# SECRETS & KEYS (NEVER PUSH)
+# =========================
 .env
-data/portfolio.json
-data/trade_state.json
-data/trade_state_history.jsonl
-data/trades_log.csv
-.eye_cache.json
-logs/
-hermes_cache.sqlite
-data/hermes_brain.db
+.hermes/.env
+*.key
+frontend/.env.local
+
+# =========================
+# ENVIRONMENTS & DEPENDENCIES
+# =========================
+.venv/
+frontend/node_modules/
+cloudflared-linux-amd64.deb
+
+# =========================
+# TEMPORARY PYTHON FILES
+# =========================
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 
-# Environment/secrets
-.env
-*.key
-.hermes/.env
+# =========================
+# SQLITE TEMPORARY FILES
+# =========================
+*.db-shm
+*.db-wal
+hermes_cache.sqlite
 
-# Runtime Logs
-.hermes/MEMORY.md
-.hermes/sessions/
-.hermes_output.log
-pulse_cron.log
-synthetic_result.log
-.hermes/state.db
-.hermes/state.db-shm
-.hermes/state.db-wal
-.hermes/MEMORY.md
-cloudflared-linux-amd64.deb
-frontend/.env.local
-frontend/node_modules/
+

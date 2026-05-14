@@ -27,19 +27,31 @@ fi
 
 # ─────────────────────────────────────────────
 # GATE 2 — BUG #2 FIX: Market Hours Check (UTC)
-# US Options Market: 13:30 to 20:00 UTC
-# Outside this window → skip, don't waste API calls
 # ─────────────────────────────────────────────
-CURRENT_HOUR=$(date -u +%H)
-CURRENT_MIN=$(date -u +%M)
+# Market Hours Gate (NYSE: 13:30 - 20:00 UTC)
+# User Strategy: 14:00 UTC (7:30 PM IST) to 20:00 UTC (1:30 AM IST)
+# Mon-Fri UTC covers the entire US trading week safely.
+# ─────────────────────────────────────────────
+DAY_OF_WEEK=$(date -u +%u) # 1=Mon, 5=Fri, 6=Sat, 7=Sun
+CURRENT_HOUR=$((10#$(date -u +%H)))
+CURRENT_MIN=$((10#$(date -u +%M)))
 CURRENT_TOTAL_MINS=$(( CURRENT_HOUR * 60 + CURRENT_MIN ))
 
-MARKET_OPEN_MINS=$(( 13 * 60 + 30 ))   # 13:30 UTC
-MARKET_CLOSE_MINS=$(( 20 * 60 + 0 ))   # 20:00 UTC
+# Market Open Gate: 14:00 UTC (7:30 PM IST)
+MARKET_OPEN_MINS=$(( 14 * 60 + 0 ))
+# Market Close Gate: 20:00 UTC (1:30 AM IST)
+MARKET_CLOSE_MINS=$(( 20 * 60 + 0 ))
 
+# 1. Weekend Check
+if [ "$DAY_OF_WEEK" -gt 5 ]; then
+    echo "[HERMES] Market closed on weekends (UTC). Skipping pulse."
+    exit 0
+fi
+
+# 2. Hours Check
 if [ "$CURRENT_TOTAL_MINS" -lt "$MARKET_OPEN_MINS" ] || [ "$CURRENT_TOTAL_MINS" -ge "$MARKET_CLOSE_MINS" ]; then
     CURRENT_UTC=$(date -u +"%H:%M UTC")
-    echo "[HERMES] Market closed at ${CURRENT_UTC}. US options: 13:30-20:00 UTC. Skipping pulse."
+    echo "[HERMES] Market closed at ${CURRENT_UTC}. Strategy hours: 14:00-20:00 UTC (7:30 PM - 1:30 AM IST). Skipping."
     exit 0
 fi
 

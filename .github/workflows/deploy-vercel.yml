@@ -1,14 +1,12 @@
-name: Deploy Frontend to Vercel (Auto & Manual)
+name: Deploy Frontend to Vercel (Manual Only)
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch: # This enables manual triggering
+  workflow_dispatch:
 
 jobs:
   deploy-vercel:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4

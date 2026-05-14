@@ -16,12 +16,20 @@ DATA_DIR       = PROJECT_ROOT / 'data'
 STATE_PATH     = DATA_DIR / 'trade_state.json'
 PORTFOLIO_PATH = DATA_DIR / 'portfolio.json'
 MEMORY_PATH    = PROJECT_ROOT / '.hermes' / 'MEMORY.md'
+EYE_CACHE_PATH = PROJECT_ROOT / '.eye_cache.json'
+STATE_HISTORY_PATH = PROJECT_ROOT / 'trade_state_history.jsonl'
+TRADES_CSV_PATH    = DATA_DIR / 'trades_log.csv'
+
+MIN_PREMIUM_YIELD_PCT = 1.0
+
+SELL_DECISIONS  = {"SELL_NEW_PUT", "SELL_NEW_CALL"}
+CLOSE_DECISIONS = {"CLOSE_FOR_PROFIT", "CLOSE_FOR_LOSS"}
 
 def sim_log(msg: str):
-    print(f"[EXECUTOR] {msg}", flush=True)
+    ts = datetime.now().strftime('%H:%M:%S')
+    print(f"[EXECUTOR {ts}] {msg}", flush=True)
 
 def extract_decision(raw_input: str) -> dict | None:
-    """Institutional JSON Extractor (Robust)."""
     candidates = []
     depth = 0
     start = -1
@@ -42,124 +50,149 @@ def extract_decision(raw_input: str) -> dict | None:
         except: continue
     return None
 
-def build_memory_summary(decision: dict, state: dict, portfolio: dict, eye_data: dict) -> str:
-    action = decision.get('decision', 'UNKNOWN')
-    
-    # Context recovery
-    price = decision.get('price_seen') or eye_data.get('price_seen', 'N/A')
-    vix = decision.get('vix_seen') or eye_data.get('vix_seen', 'N/A')
-    iv_now = decision.get('iv_current') or eye_data.get('iv_current', 'N/A')
-    earn = decision.get('earnings_days') or eye_data.get('earnings_days', 'N/A')
-    # Robust Reasoning Fetching
-    reason = decision.get('reason') or decision.get('reasoning') or decision.get('ai_reasoning') or "No technical reasoning provided by Brain."
-    
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M IST')
-    phase = state.get('current_phase', 'UNKNOWN')
-    warnings = eye_data.get('warnings', [])
-    
-    # Warning block
-    warn_text = ""
-    if warnings:
-        warn_text = "⚠️ FALLBACK WARNINGS:\n"
-        for w in warnings:
-            warn_text += f"- {w}\n"
-        warn_text += "───────────────────\n"
+def send_telegram(text: str):
+    token   = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id or "your_" in token:
+        sim_log("Telegram not configured — skipping.")
+        return
+    try:
+        url  = f"https://api.telegram.org/bot{token}/sendMessage"
+        data = urllib.parse.urlencode({"chat_id": chat_id, "text": text}).encode("utf-8")
+        req  = urllib.request.Request(url, data=data)
+        with urllib.request.urlopen(req, timeout=10):
+            sim_log("Telegram alert sent.")
+    except Exception as e:
+        # BUG #1 FIX: Fail-safe
+        sim_log(f"⚠️ TELEGRAM FAILED (Side effect ignored): {e}")
 
-    # P&L Logic
-    pnl_line = ""
-    opt_pos = None
-    for p in portfolio.get("positions", []):
-        if p.get("type") == "Option":
-            opt_pos = p
-            break
-            
-    if opt_pos:
-        mid = None
-        chain = eye_data.get("option_chain", [])
-        held_strike = opt_pos.get("strike")
-        target = next((x for x in chain if abs(x.get("strike") - held_strike) < 0.1), None)
-        if target: mid = target.get("mid")
+def _append_state_history(state: dict):
+    try:
+        snapshot = dict(state)
+        snapshot["last_pulse_timestamp"] = datetime.now().isoformat()
+        with open(STATE_HISTORY_PATH, 'a') as f:
+            f.write(json.dumps(snapshot) + '\n')
+    except: pass
+
+def _append_trades_csv(action, symbol, strike, expiry, price, pnl, pulse_id):
+    try:
+        import csv
+        file_exists = TRADES_CSV_PATH.exists()
+        with open(TRADES_CSV_PATH, 'a', newline='') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(["timestamp", "pulse_id", "symbol", "action", "strike", "expiry", "price", "pnl_realized"])
+            writer.writerow([datetime.now().strftime('%Y-%m-%d %H:%M:%S'), pulse_id, symbol, action, strike, expiry, price, pnl])
+    except: pass
+
+def load_json(path: Path) -> dict:
+    try:
+        with open(path, 'r') as f: return json.load(f)
+    except: return {}
+
+def write_json(path: Path, data: dict):
+    with open(path, 'w') as f: json.dump(data, f, indent=2)
+
+def apply_yield_gate(decision_data: dict):
+    decision = decision_data.get('decision', '')
+    if decision not in SELL_DECISIONS: return decision_data, False, None
+    premium = decision_data.get('premium_to_collect')
+    strike = decision_data.get('strike_to_trade')
+    if premium is None or strike is None or strike == 0: return decision_data, False, None
+    
+    yield_pct = (premium / strike) * 100.0
+    if yield_pct < MIN_PREMIUM_YIELD_PCT:
+        reason = f"Yield {yield_pct:.2f}% < {MIN_PREMIUM_YIELD_PCT}% floor."
+        decision_data = dict(decision_data)
+        decision_data['decision'] = 'WAIT_FOR_ENTRY'
+        return decision_data, True, reason
+    return decision_data, False, None
+
+def execute_decision(decision_data, db, pulse_id):
+    decision = decision_data.get('decision', 'UNKNOWN')
+    
+    if decision in SELL_DECISIONS:
+        strike = decision_data.get('strike_to_trade')
+        premium = decision_data.get('premium_to_collect')
+        expiry = decision_data.get('dte_seen', 'N/A')
         
-        if mid is not None:
-            entry_cost = opt_pos.get("avg_cost", 0)
-            pnl_dollars = round((entry_cost - mid) * 100, 2)
-            max_profit = round(entry_cost * 100, 2)
-            pnl_pct = round((pnl_dollars / max_profit) * 100, 1) if max_profit > 0 else 0.0
-            pnl_line = f"P&L: ${pnl_dollars} / ${max_profit} ({pnl_pct}% Captured)\n"
-        else:
-            pnl_line = "P&L: [Stale Mid-Price - Waiting for Liquidity]\n"
+        portfolio = load_json(PORTFOLIO_PATH)
+        state = load_json(STATE_PATH)
+        
+        # Update Portfolio
+        portfolio["positions"].append({"type": "Option", "symbol": "AAPL", "strike": strike, "avg_cost": premium})
+        portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) + (premium * 100), 2)
+        
+        # Update State
+        state.update({"current_phase": "CSP_ACTIVE", "current_option_strike": strike})
+        
+        write_json(PORTFOLIO_PATH, portfolio)
+        write_json(STATE_PATH, state)
+        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "SELL_PUT", "strike": strike, "price": premium, "pnl": 0.0})
+        _append_state_history(state)
+        _append_trades_csv("SELL_PUT", "AAPL", strike, expiry, premium, 0.0, pulse_id)
+        return f"SOLD strike {strike}"
 
-    headlines = eye_data.get('recent_news', [])
-    top_news = headlines[0][:65] + "..." if headlines else "No relevant news"
-    
-    # Dashboard Assembly
-    summary = f"{warn_text}"
-    summary += f"🤖 AAPL Pulse: {action}\n"
-    summary += f"{timestamp} | Phase: {phase}\n"
-    iv_display = f"{iv_now}" if isinstance(iv_now, str) else f"{iv_now}%"
-    summary += f"AAPL: ${price} | VIX: {vix} | IV: {iv_display}\n"
-    if pnl_line: summary += pnl_line
-    
-    strike = opt_pos.get('strike') if opt_pos else 'none'
-    delta = decision.get('delta_seen') or (target.get('delta') if 'target' in locals() and target else 'N/A')
-    dte = decision.get('dte_seen') or eye_data.get('chosen_dte', 'N/A')
-    
-    summary += f"Strike: ${strike} | Delta: {delta} | DTE: {dte} | Earn: {earn}d\n"
-    summary += f"News: {top_news}\n"
-    summary += f"Reason: {reason}"
+    elif decision in CLOSE_DECISIONS:
+        portfolio = load_json(PORTFOLIO_PATH)
+        state = load_json(STATE_PATH)
+        
+        opt_pos = next((p for p in portfolio["positions"] if p.get("type") == "Option"), None)
+        pnl = 0.0
+        if opt_pos:
+            entry = opt_pos.get("avg_cost", 0)
+            close = decision_data.get("premium_to_collect", 0)
+            pnl = round((entry - close) * 100, 2)
+            portfolio["positions"] = [p for p in portfolio["positions"] if p != opt_pos]
+            portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) - (close * 100), 2)
+            portfolio["realized_pnl"] = round(portfolio.get("realized_pnl", 0) + pnl, 2)
+            
+        state.update({"current_phase": "CASH_ONLY", "current_option_strike": None})
+        
+        write_json(PORTFOLIO_PATH, portfolio)
+        write_json(STATE_PATH, state)
+        db.save_trade(pulse_id, {"symbol": "AAPL", "action": decision, "pnl": pnl})
+        _append_state_history(state)
+        _append_trades_csv(decision, "AAPL", None, None, None, pnl, pulse_id)
+        return f"CLOSED for {pnl}"
+        
+    return "No Action"
+
+def build_memory_summary(decision, state, portfolio, eye_data, action_result, ai_override, override_reason):
+    action = decision.get('decision')
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+    summary = f"🤖 AAPL Pulse: {action}\nTime: {timestamp}\nAction: {action_result}\n"
+    if ai_override: summary += f"⚠️ OVERRIDE: {override_reason}\n"
+    summary += f"Reason: {decision.get('reason', 'N/A')}"
     return summary
 
 async def main_executor():
-    sim_log("Starting Hand (Pure Simulation)...")
+    sim_log("═══ Hermes Executor Starting ═══")
     raw_brain_output = sys.stdin.read()
     decision_data = extract_decision(raw_brain_output)
-    if not decision_data: 
-        sim_log("ERROR: No decision found.")
-        return
-    
-    # 1. ARCHIVE TO DATABASE
+    if not decision_data: return
+
+    eye_data = load_json(EYE_CACHE_PATH)
     db = HermesDatabase()
-    eye_data = {}
-    eye_data_path = DATA_DIR / '.last_eye_data.json'
-    if eye_data_path.exists():
-        with open(eye_data_path, 'r') as f:
-            try: eye_data = json.load(f)
-            except: pass
-    
     pulse_id = db.save_pulse(eye_data, decision_data)
-    sim_log(f"Pulse archived to Database. ID: {pulse_id}")
-
-    # 2. LOAD STATE & PORTFOLIO
+    
+    decision_data, ai_override, override_reason = apply_yield_gate(decision_data)
+    
+    state = load_json(STATE_PATH)
+    portfolio = load_json(PORTFOLIO_PATH)
+    
+    action_result = execute_decision(decision_data, db, pulse_id)
+    
+    summary = build_memory_summary(decision_data, load_json(STATE_PATH), load_json(PORTFOLIO_PATH), eye_data, action_result, ai_override, override_reason)
+    
+    # Audit Trail First
     try:
-        with open(STATE_PATH, 'r') as f: state = json.load(f)
-        with open(PORTFOLIO_PATH, 'r') as f: portfolio = json.load(f)
-    except Exception as e:
-        sim_log(f"ERROR loading data files: {e}")
-        return
-
-    # 3. BUILD TELEGRAM SUMMARY
-    summary = build_memory_summary(decision_data, state, portfolio, eye_data)
-
-    # 4. SEND TELEGRAM ALERT
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    if token and chat_id and "your_" not in token:
-        try:
-            url = f"https://api.telegram.org/bot{token}/sendMessage"
-            data = urllib.parse.urlencode({"chat_id": chat_id, "text": summary}).encode("utf-8")
-            req = urllib.request.Request(url, data=data)
-            with urllib.request.urlopen(req, timeout=10) as response:
-                sim_log("Telegram alert sent.")
-        except Exception as e:
-            sim_log(f"ERROR: Telegram failed: {e}")
-
-    # 5. WRITE TO MEMORY.MD
-    try:
-        with open(MEMORY_PATH, 'a') as f: f.write(summary + "\n\n")
-        sim_log("Memory.md updated.")
+        with open(MEMORY_PATH, 'a') as f: f.write(f"--- PULSE #{pulse_id} ---\n{summary}\n\n")
     except: pass
-
-    sim_log("Execution Complete.")
+    
+    # Telegram Last (Hardened)
+    try: send_telegram(summary)
+    except Exception as e: sim_log(f"Telegram failed: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main_executor())

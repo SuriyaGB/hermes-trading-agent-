@@ -32,10 +32,28 @@ def call_openai(eye_data):
         )
 
     except Exception as e:
-        combined_rules = (
-            f"Follow wheel strategy rules. "
-            f"(Skill loading failed: {e})"
+        # BUG #4 FIX: Never silently continue with fallback rules.
+        # If the skill file is missing, fire a Telegram alert and abort.
+        error_msg = (
+            f"🚨 HERMES CRITICAL\n"
+            f"SKILL_AAPL.md failed to load.\n"
+            f"Error: {e}\n"
+            f"Pulse aborted. Check VPS file paths."
         )
+        print(f"[CRITICAL] {error_msg}", flush=True)
+        # Attempt emergency Telegram
+        try:
+            import urllib.parse
+            token   = os.getenv("TELEGRAM_BOT_TOKEN", "")
+            chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+            if token and chat_id and "your_" not in token:
+                url  = "https://api.telegram.org/bot" + token + "/sendMessage"
+                data = urllib.parse.urlencode({"chat_id": chat_id, "text": error_msg}).encode("utf-8")
+                req  = urllib.request.Request(url, data=data)
+                urllib.request.urlopen(req, timeout=10)
+        except Exception:
+            pass  # If Telegram also fails, we still abort
+        sys.exit(1)
 
     prompt = f"""
 MISSION: Run AAPL Wheel Pulse.
@@ -87,7 +105,30 @@ DECIDE: Output ONLY the final JSON object. No other text.
             return res_data['choices'][0]['message']['content']
 
     except Exception as e:
-        return f"Error: {e}"
+        # Concern 9 fix: Do NOT return a bare error string.
+        # Exit with code 1 so run_pulse_sim.sh aborts the pulse cleanly.
+        error_msg = (
+            f"🚨 HERMES: OpenAI API failed.\n"
+            f"Error: {e}\n"
+            f"Pulse aborted. Check API key and billing."
+        )
+        print(f"[CRITICAL] {error_msg}", flush=True)
+
+        # FIX 2: Send Telegram alert on OpenAI failure
+        try:
+            import urllib.parse
+            token   = os.getenv("TELEGRAM_BOT_TOKEN", "")
+            chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+            if token and chat_id and "your_" not in token:
+                url  = "https://api.telegram.org/bot" + token + "/sendMessage"
+                data = urllib.parse.urlencode({"chat_id": chat_id, "text": error_msg}).encode("utf-8")
+                req  = urllib.request.Request(url, data=data)
+                with urllib.request.urlopen(req, timeout=10):
+                    pass
+        except Exception:
+            pass  # If Telegram also fails, we still exit(1)
+
+        sys.exit(1)
 
 
 if __name__ == "__main__":

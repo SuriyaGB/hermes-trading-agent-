@@ -1,8 +1,8 @@
 <skill_file_metadata>
   symbol: AAPL
   strategy: Wheel
-  version: 4.1
-  last_hardened: 2026-05-08
+  version: 4.2
+  last_hardened: 2026-05-14
 </skill_file_metadata>
 
 <instruction_set_aapl>
@@ -74,12 +74,60 @@
      - BUCKET B: NEGATIVE NUDGE (Risky but survivable)
        Criteria: DOJ probes, regulatory fines, misses, or product recalls.
        Action: RE-PRICE RISK. Widen strike selection (lower delta).
-       CRITICAL CONSTRAINT: The new strike MUST still meet the 1.0% premium yield 
+       CRITICAL CONSTRAINT: The new strike MUST still meet the 1.0% premium yield
        requirement (min_premium). If no such strike exists → WAIT_FOR_ENTRY.
-       
+
      - BUCKET C: NOISE (Standard market activity)
        Criteria: Product launches, analyst upgrades, routine lawsuits.
        Action: IGNORE. Execute standard wheel strategy.
 </brain_reference_aapl>
+
+# ═══════════════════════════════════════════════════════════════
+# SECTION C — MANDATORY YIELD GATE (The Iron Math Law)
+# This is not a guideline. This is a mathematical checkpoint.
+# Python will block you if you fail it. Do not even try to bypass.
+# ═══════════════════════════════════════════════════════════════
+
+<mandatory_yield_check>
+  BEFORE outputting SELL_NEW_PUT, you MUST run this calculation:
+
+  STEP 1 — Calculate premium yield:
+    premium_yield_pct = (premium_to_collect / strike_to_trade) × 100
+
+  STEP 2 — Compare to floor:
+    If premium_yield_pct >= 1.0% → SELL is ALLOWED. Proceed.
+    If premium_yield_pct <  1.0% → SELL is FORBIDDEN. Output WAIT_FOR_ENTRY.
+
+  WORKED EXAMPLES (study these — they match yesterday's failures):
+
+    ❌ WRONG (what you did yesterday — every single pulse):
+       Strike $285, premium $2.40
+       yield = (2.40 / 285) × 100 = 0.84%
+       0.84% < 1.0% → MUST output WAIT_FOR_ENTRY, NOT SELL_NEW_PUT.
+
+    ❌ WRONG:
+       Strike $275, premium $1.47
+       yield = (1.47 / 275) × 100 = 0.53%
+       0.53% < 1.0% → WAIT_FOR_ENTRY required.
+
+    ✅ CORRECT:
+       Strike $285, premium $3.10
+       yield = (3.10 / 285) × 100 = 1.09%
+       1.09% >= 1.0% → SELL_NEW_PUT is permitted.
+
+    ✅ CORRECT:
+       Strike $275, premium $2.90
+       yield = (2.90 / 275) × 100 = 1.05%
+       1.05% >= 1.0% → SELL_NEW_PUT is permitted.
+
+  INCLUDE in your reason field:
+    "premium_yield = (X / Y) × 100 = Z%"
+    This is required so the Python gate can audit your math.
+
+  REMEMBER: Python will independently verify this calculation.
+  If you output SELL_NEW_PUT with yield < 1.0%, Python will
+  override your decision to WAIT_FOR_ENTRY and send a Telegram
+  alert flagging your failure. Avoid triggering this gate.
+</mandatory_yield_check>
 
 <!-- END OF SKILL_AAPL.md | Version 4.1 | TIMELLESS INSTRUCTIONS -->

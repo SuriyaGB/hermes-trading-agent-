@@ -35,9 +35,21 @@ class HermesDatabase:
                     ai_decision TEXT,
                     ai_reasoning TEXT,
                     raw_input_json TEXT,
-                    raw_output_json TEXT
+                    raw_output_json TEXT,
+                    ai_override INTEGER DEFAULT 0,
+                    override_reason TEXT
                 )
             ''')
+
+            # Migration: add columns if upgrading an existing DB
+            try:
+                conn.execute('ALTER TABLE pulse_history ADD COLUMN ai_override INTEGER DEFAULT 0')
+            except Exception:
+                pass  # column already exists
+            try:
+                conn.execute('ALTER TABLE pulse_history ADD COLUMN override_reason TEXT')
+            except Exception:
+                pass  # column already exists
 
             # 2. Option Chain Snapshots (The Micro-Data)
             conn.execute('''
@@ -72,17 +84,19 @@ class HermesDatabase:
             conn.execute('CREATE INDEX IF NOT EXISTS idx_trade_time ON trade_ledger(timestamp)')
             conn.commit()
 
-    def save_pulse(self, eye_data, brain_decision):
+    def save_pulse(self, eye_data, brain_decision, ai_override=False, override_reason=None):
         """
         Saves a full pulse event including the option chain.
+        ai_override: True if Python gate overrode the AI's decision.
+        override_reason: Human-readable string explaining why the gate fired.
         """
         with self._get_connection() as conn:
-            # Insert into pulse_history
             cursor = conn.execute('''
                 INSERT INTO pulse_history (
-                    aapl_price, vix_level, earnings_days, news_summary, 
-                    ai_decision, ai_reasoning, raw_input_json, raw_output_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    aapl_price, vix_level, earnings_days, news_summary,
+                    ai_decision, ai_reasoning, raw_input_json, raw_output_json,
+                    ai_override, override_reason
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 eye_data.get('price_seen'),
                 eye_data.get('vix_seen'),
@@ -91,7 +105,9 @@ class HermesDatabase:
                 brain_decision.get('decision'),
                 brain_decision.get('reason'),
                 json.dumps(eye_data),
-                json.dumps(brain_decision)
+                json.dumps(brain_decision),
+                1 if ai_override else 0,
+                override_reason
             ))
             pulse_id = cursor.lastrowid
 
@@ -105,7 +121,7 @@ class HermesDatabase:
                     eye_data.get('chosen_expiry', 'N/A'),
                     json.dumps(eye_data.get('option_chain', []))
                 ))
-            
+
             conn.commit()
             return pulse_id
 

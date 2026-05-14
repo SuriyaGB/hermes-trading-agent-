@@ -123,7 +123,11 @@ async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[st
     for exp in expiries:
         exp_date = datetime.strptime(exp, '%Y-%m-%d').date()
         dte = (exp_date - today).days
-        if 20 <= dte <= 50:
+        # BUG #7 FIX: MIN_DTE for new entry = 30 days (aligned with SKILL_AAPL.md).
+        # SKILL_AAPL PREFERRED DTE = 35 days. MIN_DTE rule = 21 (close trigger).
+        # We must never OPEN a new position at 22-28 DTE — that's too close to Gamma zone.
+        # Floor set to 30 to ensure we always open with at least 1 month of theta.
+        if 30 <= dte <= 50:
             target_expiry, target_dte = exp, dte
             break
     
@@ -162,12 +166,25 @@ async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[st
         
         sorted_by_dist = sorted(all_rows, key=lambda x: abs(x['strike'] - spot))
         atm_strikes = [x['strike'] for x in sorted_by_dist[:20]]
-        
+
         filtered = []
         for row in all_rows:
             if row['strike'] in atm_strikes or (held_strike and abs(row['strike'] - held_strike) < 0.1):
                 filtered.append(row)
         result["option_chain"] = sorted(filtered, key=lambda x: x['strike'], reverse=True)
+
+        # ── BUG #2 FIX: Detect closed market via all-zero bids ──────────────
+        zero_bid_count = sum(1 for row in all_rows if row.get('bid', 0) == 0.0)
+        if zero_bid_count == len(all_rows) and len(all_rows) > 0:
+            result["market_open"]          = False
+            result["market_closed_reason"] = "all_bids_zero"
+            add_warning(
+                f"MARKET CLOSED: all {zero_bid_count} options have bid=0.0. "
+                f"Using stale lastPrice. No orders can be placed."
+            )
+        else:
+            result["market_open"] = True
+
     except Exception as e:
         add_warning(f"Chain error: {e}")
 

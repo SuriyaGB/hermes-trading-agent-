@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, TrendingUp, History, LineChart, Activity } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, History, LineChart, Activity, Settings } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -14,6 +14,15 @@ export default function Sidebar() {
     { href: '/market', icon: LineChart, label: 'Market View' },
     { href: '/health', icon: Activity, label: 'Bot Health' },
   ];
+
+  const handleSettingsClick = () => {
+    const currentUrl = typeof window !== 'undefined' ? localStorage.getItem('API_BASE_URL') || '' : '';
+    const newUrl = window.prompt("Enter your Cloudflare Tunnel or Backend API URL:", currentUrl);
+    if (newUrl !== null) {
+      localStorage.setItem('API_BASE_URL', newUrl.trim().replace(/\/$/, ""));
+      window.location.reload();
+    }
+  };
 
   return (
     <div className="w-64 glass-panel border-r border-white/5 flex flex-col h-screen fixed left-0 top-0 p-4 rounded-none">
@@ -45,9 +54,14 @@ export default function Sidebar() {
       </nav>
       
       <div className="mt-auto px-2 py-4 border-t border-white/5">
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" style={{boxShadow: '0 0 8px #00E676'}}></div>
-          <span className="text-xs text-white/50 font-mono">SYSTEM ONLINE</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" style={{boxShadow: '0 0 8px #00E676'}}></div>
+            <span className="text-xs text-white/50 font-mono">SYSTEM ONLINE</span>
+          </div>
+          <button onClick={handleSettingsClick} className="text-white/50 hover:text-white transition-colors" title="Configure API URL">
+            <Settings size={16} />
+          </button>
         </div>
       </div>
     </div>

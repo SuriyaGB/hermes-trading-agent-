@@ -10,7 +10,7 @@ export default function IncomeTracker() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL ;
+        const apiUrl = (typeof window !== 'undefined' ? localStorage.getItem('API_BASE_URL') : null) || process.env.NEXT_PUBLIC_API_BASE_URL || "";
         const res = await fetch(`${apiUrl}/api/income_history`);
         const json = await res.json();
         

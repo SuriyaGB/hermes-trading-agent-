@@ -33,7 +33,6 @@ def call_openai(eye_data):
 
     except Exception as e:
         # BUG #4 FIX: Never silently continue with fallback rules.
-        # If the skill file is missing, fire a Telegram alert and abort.
         error_msg = (
             f"🚨 HERMES CRITICAL\n"
             f"SKILL_AAPL.md failed to load.\n"
@@ -43,14 +42,15 @@ def call_openai(eye_data):
         print(f"[CRITICAL] {error_msg}", flush=True)
         # Attempt emergency Telegram
         try:
-            import urllib.parse
+            import urllib.parse as urlparse
             token   = os.getenv("TELEGRAM_BOT_TOKEN", "")
             chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
             if token and chat_id and "your_" not in token:
-                url  = "https://api.telegram.org/bot" + token + "/sendMessage"
-                data = urllib.parse.urlencode({"chat_id": chat_id, "text": error_msg}).encode("utf-8")
-                req  = urllib.request.Request(url, data=data)
-                urllib.request.urlopen(req, timeout=10)
+                t_url = f"https://api.telegram.org/bot{token}/sendMessage"
+                payload = urlparse.urlencode({"chat_id": chat_id, "text": error_msg}).encode("utf-8")
+                req  = urllib.request.Request(t_url, data=payload)
+                with urllib.request.urlopen(req, timeout=10):
+                    pass
         except Exception:
             pass  # If Telegram also fails, we still abort
         sys.exit(1)
@@ -116,17 +116,17 @@ DECIDE: Output ONLY the final JSON object. No other text.
 
         # FIX 2: Send Telegram alert on OpenAI failure
         try:
-            import urllib.parse
+            import urllib.parse as urlparse
             token   = os.getenv("TELEGRAM_BOT_TOKEN", "")
             chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
             if token and chat_id and "your_" not in token:
-                url  = "https://api.telegram.org/bot" + token + "/sendMessage"
-                data = urllib.parse.urlencode({"chat_id": chat_id, "text": error_msg}).encode("utf-8")
-                req  = urllib.request.Request(url, data=data)
+                t_url = f"https://api.telegram.org/bot{token}/sendMessage"
+                payload = urlparse.urlencode({"chat_id": chat_id, "text": error_msg}).encode("utf-8")
+                req  = urllib.request.Request(t_url, data=payload)
                 with urllib.request.urlopen(req, timeout=10):
                     pass
-        except Exception:
-            pass  # If Telegram also fails, we still exit(1)
+        except Exception as t_err:
+            print(f"[DEBUG] Telegram alert failure: {t_err}")
 
         sys.exit(1)
 

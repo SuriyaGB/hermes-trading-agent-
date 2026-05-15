@@ -1,0 +1,4 @@
+timestamp,pulse_id,symbol,action,strike,expiry,price,pnl_realized
+2026-05-14 19:25:10,1,AAPL,SELL_PUT,280.0,N/A,3.1,0.0
+2026-05-14 19:25:10,2,AAPL,CLOSE_FOR_PROFIT,,,,155.0
+2026-05-14 20:11:15,4,AAPL,SELL_PUT,285.0,35,3.95,0.0

@@ -30,13 +30,3 @@ hermes_cache.sqlite
 
 
 
-# =========================
-# HERMES TRADE DATA & LOGS
-# =========================
-data/trade_state.json
-data/portfolio.json
-data/hermes_brain.db
-data/trades_log.csv
-trade_state_history.jsonl
-.hermes/MEMORY.md
-.eye_cache.json

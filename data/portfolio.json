@@ -1,0 +1,12 @@
+{
+  "total_cash": 250395.0,
+  "realized_pnl": 0.0,
+  "positions": [
+    {
+      "type": "Option",
+      "symbol": "AAPL",
+      "strike": 285.0,
+      "avg_cost": 3.95
+    }
+  ]
+}

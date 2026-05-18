@@ -17,8 +17,12 @@ export default function BotHealth() {
           const healthRes = await fetch(`${apiUrl}/api/health`, {
             headers: { 'ngrok-skip-browser-warning': 'true' }
           });
-          const healthData = await healthRes.json();
-          setHealth(healthData);
+          if (healthRes.ok) {
+            const healthData = await healthRes.json();
+            setHealth(healthData);
+          } else {
+            setHealth({ status: 'OFFLINE', message: 'Backend returned an error' });
+          }
         } catch {
           setHealth({ status: 'OFFLINE', message: 'Cannot connect to Python Backend' });
         }
@@ -27,15 +31,21 @@ export default function BotHealth() {
         const stateRes = await fetch(`${apiUrl}/api/status`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
-        const stateData = await stateRes.json();
-        setTradeState(stateData);
+        if (stateRes.ok) {
+          const stateData = await stateRes.json();
+          setTradeState(stateData);
+        }
 
         // 3. Fetch Pulse Count
         const pulseRes = await fetch(`${apiUrl}/api/pulses?limit=1000`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
-        const pulseData = await pulseRes.json();
-        setPulseCount(pulseData.length);
+        if (pulseRes.ok) {
+          const pulseData = await pulseRes.json();
+          if (Array.isArray(pulseData)) {
+            setPulseCount(pulseData.length);
+          }
+        }
         
       } catch (error) {
         console.error("Error fetching health data:", error);

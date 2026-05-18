@@ -14,19 +14,21 @@ export default function IncomeTracker() {
         const res = await fetch(`${apiUrl}/api/income_history`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
-        const json = await res.json();
-        
-        // Format the dynamically reconstructed account balance data
-        const formattedData = json.map(point => {
-          const d = new Date(point.timestamp);
-          return {
-            time: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), // For X-axis (e.g. "May 7")
-            fullTime: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }), // For Tooltip
-            balance: point.balance
-          };
-        });
-        
-        setData(formattedData);
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json)) {
+            // Format the dynamically reconstructed account balance data
+            const formattedData = json.map(point => {
+              const d = new Date(point.timestamp);
+              return {
+                time: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), // For X-axis (e.g. "May 7")
+                fullTime: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }), // For Tooltip
+                balance: point.balance
+              };
+            });
+            setData(formattedData);
+          }
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -38,14 +40,14 @@ export default function IncomeTracker() {
   }, []);
 
   const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
+    if (active && payload && payload.length && payload[0].payload) {
       // Find the fullTime string from the active payload payload[0].payload
-      const fullTime = payload[0].payload.fullTime;
+      const fullTime = payload[0].payload.fullTime || '';
       return (
         <div className="bg-black/90 border border-white/20 p-4 rounded-lg shadow-2xl backdrop-blur-md">
           <p className="text-white/70 text-xs font-mono mb-3 pb-2 border-b border-white/10">{fullTime}</p>
           <p className="text-xl font-light text-cyber-green">
-            ${payload[0].value.toLocaleString('en-US', {minimumFractionDigits: 2})}
+            ${(payload[0].value ?? 0).toLocaleString('en-US', {minimumFractionDigits: 2})}
           </p>
         </div>
       );

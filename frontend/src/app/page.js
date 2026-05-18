@@ -14,24 +14,33 @@ export default function CommandCentre() {
       try {
         // Dynamically get the IP address you are viewing the dashboard from
 	const apiUrl = (typeof window !== 'undefined' ? localStorage.getItem('API_BASE_URL') : null) || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "";        
+        
         const portRes = await fetch(`${apiUrl}/api/portfolio`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
-        const portData = await portRes.json();
-        setPortfolio(portData);
+        if (portRes.ok) {
+          const portData = await portRes.json();
+          if (portData && typeof portData.total_cash === 'number') {
+            setPortfolio(portData);
+          }
+        }
 
         const statRes = await fetch(`${apiUrl}/api/status`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
-        const statData = await statRes.json();
-        setStatus(statData);
+        if (statRes.ok) {
+          const statData = await statRes.json();
+          setStatus(statData);
+        }
 
         const pulseRes = await fetch(`${apiUrl}/api/pulses?limit=1`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
-        const pulseData = await pulseRes.json();
-        if (pulseData && pulseData.length > 0) {
-          setLastPulse(pulseData[0]);
+        if (pulseRes.ok) {
+          const pulseData = await pulseRes.json();
+          if (Array.isArray(pulseData) && pulseData.length > 0) {
+            setLastPulse(pulseData[0]);
+          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -62,14 +71,14 @@ export default function CommandCentre() {
         <div className="glass-panel p-6 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-cyber-green/5 rounded-full blur-3xl group-hover:bg-cyber-green/10 transition-all"></div>
           <p className="text-white/50 text-xs font-mono mb-2 tracking-widest">AVAILABLE CASH</p>
-          <h2 className="text-4xl font-light">${portfolio.total_cash.toLocaleString('en-US', {minimumFractionDigits: 2})}</h2>
+          <h2 className="text-4xl font-light">${(portfolio?.total_cash ?? 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</h2>
         </div>
         
         <div className="glass-panel p-6 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-cyber-green/5 rounded-full blur-3xl group-hover:bg-cyber-green/10 transition-all"></div>
           <p className="text-white/50 text-xs font-mono mb-2 tracking-widest">PREMIUM COLLECTED</p>
           <div className="flex items-center">
-            <h2 className="text-4xl font-light text-cyber-green">${portfolio.realized_pnl.toLocaleString('en-US', {minimumFractionDigits: 2})}</h2>
+            <h2 className="text-4xl font-light text-cyber-green">${(portfolio?.realized_pnl ?? 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</h2>
             <ArrowUpRight className="text-cyber-green ml-2 opacity-50" />
           </div>
         </div>
@@ -79,7 +88,7 @@ export default function CommandCentre() {
            <div className="flex items-center space-x-4 mt-2">
               <div className="px-4 py-2 bg-cyber-green/10 border border-cyber-green/30 rounded-full text-cyber-green font-mono text-sm flex items-center">
                 <div className="w-2 h-2 rounded-full bg-cyber-green mr-2 animate-pulse" style={{boxShadow: '0 0 8px #00E676'}}></div>
-                {status.current_phase}
+                {status?.current_phase || 'LOADING'}
               </div>
            </div>
         </div>

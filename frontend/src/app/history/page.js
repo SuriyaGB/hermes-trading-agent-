@@ -13,8 +13,12 @@ export default function PulseHistory() {
         const res = await fetch(`${apiUrl}/api/pulses?limit=100`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
-        const data = await res.json();
-        setPulses(data);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setPulses(data);
+          }
+        }
       } catch (error) {
         console.error("Error fetching pulse history:", error);
       } finally {

@@ -14,22 +14,24 @@ export default function MarketView() {
         const res = await fetch(`${apiUrl}/api/pulses`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
-        const json = await res.json();
-        
-        // Reverse array to put oldest on the left and newest on the right
-        const formattedData = json.reverse().map(pulse => {
-          const d = new Date(pulse.timestamp);
-          return {
-            time: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), 
-            fullTime: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }), 
-            price: pulse.aapl_price,
-            vix: pulse.vix_level,
-            delta: pulse.delta_current === '--' ? null : pulse.delta_current,
-            dte: pulse.dte_current === '--' ? null : pulse.dte_current
-          };
-        });
-        
-        setData(formattedData);
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json)) {
+            // Reverse array to put oldest on the left and newest on the right
+            const formattedData = [...json].reverse().map(pulse => {
+              const d = new Date(pulse.timestamp);
+              return {
+                time: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), 
+                fullTime: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }), 
+                price: pulse.aapl_price,
+                vix: pulse.vix_level,
+                delta: pulse.delta_current === '--' ? null : pulse.delta_current,
+                dte: pulse.dte_current === '--' ? null : pulse.dte_current
+              };
+            });
+            setData(formattedData);
+          }
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -41,17 +43,21 @@ export default function MarketView() {
   }, []);
 
   const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      const fullTime = payload[0].payload.fullTime;
+    if (active && payload && payload.length && payload[0].payload) {
+      const fullTime = payload[0].payload.fullTime || '';
       return (
         <div className="bg-black/90 border border-white/20 p-4 rounded-lg shadow-2xl backdrop-blur-md">
           <p className="text-white/70 text-xs font-mono mb-3 pb-2 border-b border-white/10">{fullTime}</p>
           {payload.map((entry, index) => {
             // Format numbers based on metric type
             let displayValue = entry.value;
-            if (entry.name === 'AAPL Price') displayValue = `$${entry.value.toFixed(2)}`;
-            if (entry.name === 'Delta Greek') displayValue = entry.value.toFixed(4);
-            if (entry.name === 'Days To Expiry') displayValue = `${entry.value} Days`;
+            if (typeof entry.value === 'number') {
+              if (entry.name === 'AAPL Price') displayValue = `$${entry.value.toFixed(2)}`;
+              if (entry.name === 'Delta Greek') displayValue = entry.value.toFixed(4);
+              if (entry.name === 'Days To Expiry') displayValue = `${entry.value} Days`;
+            } else {
+              displayValue = '--';
+            }
             
             return (
               <p key={index} className="text-sm font-mono tracking-wider mb-1" style={{ color: entry.color }}>

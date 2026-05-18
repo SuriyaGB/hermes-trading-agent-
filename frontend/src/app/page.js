@@ -14,15 +14,21 @@ export default function CommandCentre() {
       try {
         // Dynamically get the IP address you are viewing the dashboard from
 	const apiUrl = (typeof window !== 'undefined' ? localStorage.getItem('API_BASE_URL') : null) || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "";        
-        const portRes = await fetch(`${apiUrl}/api/portfolio`);
+        const portRes = await fetch(`${apiUrl}/api/portfolio`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
         const portData = await portRes.json();
         setPortfolio(portData);
 
-        const statRes = await fetch(`${apiUrl}/api/status`);
+        const statRes = await fetch(`${apiUrl}/api/status`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
         const statData = await statRes.json();
         setStatus(statData);
 
-        const pulseRes = await fetch(`${apiUrl}/api/pulses?limit=1`);
+        const pulseRes = await fetch(`${apiUrl}/api/pulses?limit=1`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
         const pulseData = await pulseRes.json();
         if (pulseData && pulseData.length > 0) {
           setLastPulse(pulseData[0]);

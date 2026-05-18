@@ -11,7 +11,9 @@ export default function MarketView() {
     const fetchData = async () => {
       try {
         const apiUrl = (typeof window !== 'undefined' ? localStorage.getItem('API_BASE_URL') : null) || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "";
-        const res = await fetch(`${apiUrl}/api/pulses`);
+        const res = await fetch(`${apiUrl}/api/pulses`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
         const json = await res.json();
         
         // Reverse array to put oldest on the left and newest on the right

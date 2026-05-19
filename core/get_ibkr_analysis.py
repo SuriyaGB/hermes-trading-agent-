@@ -151,7 +151,7 @@ async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[st
             
             # IMPROVED IV DETECTION
             iv_raw = float(row['impliedVolatility'])
-            if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001:
+            if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001 or (bid == 0.0 and ask == 0.0):
                 # Use Math Engine to solve for real IV
                 iv = solve_iv(mid, spot, strike, T, r, 'put')
             else:
@@ -200,11 +200,15 @@ async def fetch_analysis_data() -> Dict[str, Any]:
     
     portfolio = load_portfolio()
     held_strike = None
+    held_expiry = None
     for p in portfolio.get("positions", []):
         if p.get("type") == "Option":
             held_strike = p.get("strike")
+            held_expiry = p.get("expiry")
             data["account_status"] = "CSP_ACTIVE"
             data["strike_held"] = held_strike
+            if held_expiry:
+                data["expiry_held"] = held_expiry
             
     chain_result = await get_yf_option_chain(data["price_seen"], held_strike)
     data.update(chain_result)
@@ -214,6 +218,69 @@ async def fetch_analysis_data() -> Dict[str, Any]:
         atm = sorted(data["option_chain"], key=lambda x: abs(x['strike'] - data["price_seen"]))[0]
         data["iv_current"] = atm['iv']
     
+    # Calculate current DTE and Delta for the held option
+    delta_current = 0.0
+    dte_current = 99
+    
+    if data["account_status"] == "CSP_ACTIVE" and held_strike:
+        # If expiry is not in portfolio, try to search it from available expiries
+        if not held_expiry:
+            today = datetime.now().date()
+            for exp in ticker.options:
+                exp_date = datetime.strptime(exp, '%Y-%m-%d').date()
+                dte = (exp_date - today).days
+                if dte > 0:
+                    try:
+                        puts = ticker.option_chain(exp).puts
+                        if held_strike in puts['strike'].values:
+                            held_expiry = exp.replace('-', '')
+                            break
+                    except:
+                        continue
+        
+        if held_expiry:
+            # Format expiry string to YYYY-MM-DD
+            if '-' not in held_expiry and len(held_expiry) == 8:
+                expiry_formatted = f"{held_expiry[:4]}-{held_expiry[4:6]}-{held_expiry[6:]}"
+            else:
+                expiry_formatted = held_expiry
+            
+            try:
+                today = datetime.now().date()
+                exp_date = datetime.strptime(expiry_formatted, '%Y-%m-%d').date()
+                dte_current = (exp_date - today).days
+                
+                # Fetch option chain for held expiry
+                held_chain = ticker.option_chain(expiry_formatted).puts
+                match_row = held_chain[held_chain['strike'] == held_strike]
+                if not match_row.empty:
+                    row = match_row.iloc[0]
+                    bid, ask = float(row['bid']), float(row['ask'])
+                    mid = round((bid + ask) / 2, 2)
+                    if mid <= 0.0: mid = float(row['lastPrice'])
+                    
+                    r = get_risk_free_rate()
+                    T = dte_current / 365.25
+                    iv_raw = float(row['impliedVolatility'])
+                    if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001 or (bid == 0.0 and ask == 0.0):
+                        iv = solve_iv(mid, data["price_seen"], held_strike, T, r, 'put')
+                    else:
+                        iv = iv_raw
+                        
+                    delta_raw = calculate_delta(data["price_seen"], held_strike, T, r, iv, 'put')
+                    delta_current = round(delta_raw, 4)
+                else:
+                    # Fallback BS delta if not in chain (e.g. extremely far OTM/ITM)
+                    r = get_risk_free_rate()
+                    T = dte_current / 365.25
+                    sigma = get_vix_sigma()
+                    delta_raw = calculate_delta(data["price_seen"], held_strike, T, r, sigma, 'put')
+                    delta_current = round(delta_raw, 4)
+            except Exception as e:
+                add_warning(f"Error calculating held option metrics: {e}")
+                
+    data["delta_current"] = delta_current
+    data["dte_current"] = dte_current
     data["warnings"] = WARNINGS
     return data
 

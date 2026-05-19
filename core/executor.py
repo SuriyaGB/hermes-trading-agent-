@@ -115,6 +115,7 @@ def detect_assignment(portfolio, state):
             state["current_phase"] = "ASSIGNED"
             state["assignment_confirmed_once"] = False
             state["current_option_strike"] = None # Put is gone
+            state["current_option_expiry"] = None
         else:
             # 1st Pulse Seen
             sim_log("🔍 Assignment Detected (1/2 Pulses). Waiting for settlement verification.")
@@ -144,7 +145,6 @@ def validate_decision(decision_data, eye_data, state):
         dte = int(eye_data.get('dte_current', 99))
         if dte < 1:
             sim_log("🚨 DTE < 1: Emergency Close Attempt Triggered.")
-            # We explicitly override the decision and mark it as an emergency attempt
             decision_data['decision'] = 'CLOSE_FOR_PROFIT' 
             decision_data['is_emergency_close'] = True
             return decision_data, True
@@ -192,7 +192,7 @@ def build_memory_summary(decision, state, portfolio, eye_data, action_result, ai
     summary += f"Reason: {decision.get('reason', 'N/A')}"
     return summary
 
-def execute_decision(decision_data, db, pulse_id):
+def execute_decision(decision_data, db, pulse_id, eye_data=None):
     decision = decision_data.get('decision', 'UNKNOWN')
     portfolio = load_json(PORTFOLIO_PATH)
     state = load_json(STATE_PATH)
@@ -208,10 +208,22 @@ def execute_decision(decision_data, db, pulse_id):
         strike = decision_data.get('strike_to_trade')
         premium = decision_data.get('premium_to_collect')
         expiry = decision_data.get('dte_seen', 'N/A')
+        chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
         
-        portfolio["positions"].append({"type": "Option", "symbol": "AAPL", "strike": strike, "avg_cost": premium, "option_type": "PUT"})
+        portfolio["positions"].append({
+            "type": "Option", 
+            "symbol": "AAPL", 
+            "strike": strike, 
+            "avg_cost": premium, 
+            "option_type": "PUT",
+            "expiry": chosen_expiry
+        })
         portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) + (premium * 100), 2)
-        state.update({"current_phase": "CSP_ACTIVE", "current_option_strike": strike})
+        state.update({
+            "current_phase": "CSP_ACTIVE", 
+            "current_option_strike": strike,
+            "current_option_expiry": chosen_expiry
+        })
         
         write_json(PORTFOLIO_PATH, portfolio)
         write_json(STATE_PATH, state)
@@ -225,10 +237,22 @@ def execute_decision(decision_data, db, pulse_id):
         strike = decision_data.get('strike_to_trade')
         premium = decision_data.get('premium_to_collect')
         expiry = decision_data.get('dte_seen', 'N/A')
+        chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
         
-        portfolio["positions"].append({"type": "Option", "symbol": "AAPL", "strike": strike, "avg_cost": premium, "option_type": "CALL"})
+        portfolio["positions"].append({
+            "type": "Option", 
+            "symbol": "AAPL", 
+            "strike": strike, 
+            "avg_cost": premium, 
+            "option_type": "CALL",
+            "expiry": chosen_expiry
+        })
         portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) + (premium * 100), 2)
-        state.update({"current_phase": "CC_ACTIVE", "current_option_strike": strike})
+        state.update({
+            "current_phase": "CC_ACTIVE", 
+            "current_option_strike": strike,
+            "current_option_expiry": chosen_expiry
+        })
         
         write_json(PORTFOLIO_PATH, portfolio)
         write_json(STATE_PATH, state)
@@ -241,7 +265,6 @@ def execute_decision(decision_data, db, pulse_id):
     elif decision in CLOSE_DECISIONS:
         opt_pos = next((p for p in portfolio["positions"] if p.get("type") == "Option"), None)
         
-        # If DTE safety triggered but no position found, this is a failure
         if not opt_pos:
             if decision_data.get('is_emergency_close'):
                 raise ValueError("Emergency Close FAILED: No open option position found in portfolio.")
@@ -255,7 +278,11 @@ def execute_decision(decision_data, db, pulse_id):
         portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) - (close * 100), 2)
         portfolio["realized_pnl"] = round(portfolio.get("realized_pnl", 0) + pnl, 2)
             
-        state.update({"current_phase": "CASH_ONLY", "current_option_strike": None})
+        state.update({
+            "current_phase": "CASH_ONLY", 
+            "current_option_strike": None,
+            "current_option_expiry": None
+        })
         
         write_json(PORTFOLIO_PATH, portfolio)
         write_json(STATE_PATH, state)
@@ -281,10 +308,22 @@ def execute_decision(decision_data, db, pulse_id):
         new_strike = decision_data.get('open_details', {}).get('strike_to_trade')
         new_premium = decision_data.get('open_details', {}).get('premium_to_collect')
         new_expiry = decision_data.get('open_details', {}).get('dte_seen', 'N/A')
+        chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
         
-        portfolio["positions"].append({"type": "Option", "symbol": "AAPL", "strike": new_strike, "avg_cost": new_premium, "option_type": "PUT"})
+        portfolio["positions"].append({
+            "type": "Option", 
+            "symbol": "AAPL", 
+            "strike": new_strike, 
+            "avg_cost": new_premium, 
+            "option_type": "PUT",
+            "expiry": chosen_expiry
+        })
         portfolio["total_cash"] = round(portfolio["total_cash"] + (new_premium * 100), 2)
-        state.update({"current_phase": "CSP_ACTIVE", "current_option_strike": new_strike})
+        state.update({
+            "current_phase": "CSP_ACTIVE", 
+            "current_option_strike": new_strike,
+            "current_option_expiry": chosen_expiry
+        })
 
         write_json(PORTFOLIO_PATH, portfolio)
         write_json(STATE_PATH, state)
@@ -294,7 +333,6 @@ def execute_decision(decision_data, db, pulse_id):
         _append_trades_csv("ROLL_PUT", "AAPL", new_strike, new_expiry, new_premium, pnl, pulse_id)
         return f"ROLLED to strike {new_strike} (PnL: {pnl})"
         
-    # If we reach here, the decision is unknown to the executor
     raise ValueError(f"Unknown decision: {decision}")
 
 async def main_executor():
@@ -327,7 +365,7 @@ async def main_executor():
         ai_override = v_override or y_override
         override_reason = "DTE Safety" if v_override else y_reason
         
-        action_result = execute_decision(decision_data, db, pulse_id)
+        action_result = execute_decision(decision_data, db, pulse_id, eye_data)
         sim_log(f"Action Result: {action_result}")
         
         summary = build_memory_summary(decision_data, state, portfolio, eye_data, action_result, ai_override, override_reason)
@@ -347,7 +385,6 @@ async def main_executor():
         payload = build_critical_payload(decision_data, eye_data, error_msg, state)
         send_telegram(payload, is_critical=True)
         
-        # Abort the pulse with error code
         sys.exit(1)
 
 if __name__ == "__main__":

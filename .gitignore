@@ -28,5 +28,23 @@ __pycache__/
 *.db-wal
 hermes_cache.sqlite
 
+# =========================
+# RUNTIME LOGS
+# =========================
+logs/
+*.log
 
+# =========================
+# LIVE RUNTIME DATA
+# =========================
+data/
+*.db
+*.json
 
+# =========================
+# PM2 / CACHE / TEMP
+# =========================
+.cache/
+tmp/
+temp/
+*.pid

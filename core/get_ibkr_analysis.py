@@ -20,7 +20,7 @@ PORTFOLIO_PATH = DATA_DIR / 'portfolio.json'
 WARNINGS = []
 
 def add_warning(msg: str):
-    print(f"[WARNING] {msg}")
+    print(f"[WARNING] {msg}", file=sys.stderr)
     WARNINGS.append(msg)
 
 # ─────────────────────────────────────────────

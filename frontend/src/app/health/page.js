@@ -14,7 +14,7 @@ export default function BotHealth() {
         
         // 1. Fetch API Health
         try {
-          const healthRes = await fetch(`${apiUrl}/api/health`, {
+          const healthRes = await fetch(`${apiUrl}/api/health?t=${Date.now()}`, {
             headers: { 'ngrok-skip-browser-warning': 'true' }
           });
           if (healthRes.ok) {
@@ -28,7 +28,7 @@ export default function BotHealth() {
         }
 
         // 2. Fetch Trade State
-        const stateRes = await fetch(`${apiUrl}/api/status`, {
+        const stateRes = await fetch(`${apiUrl}/api/status?t=${Date.now()}`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
         if (stateRes.ok) {
@@ -37,7 +37,7 @@ export default function BotHealth() {
         }
 
         // 3. Fetch Pulse Count
-        const pulseRes = await fetch(`${apiUrl}/api/pulses?limit=1000`, {
+        const pulseRes = await fetch(`${apiUrl}/api/pulses?limit=1000&t=${Date.now()}`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
         if (pulseRes.ok) {

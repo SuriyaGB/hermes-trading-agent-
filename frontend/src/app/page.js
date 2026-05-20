@@ -15,7 +15,7 @@ export default function CommandCentre() {
         // Dynamically get the IP address you are viewing the dashboard from
 	const apiUrl = (typeof window !== 'undefined' ? localStorage.getItem('API_BASE_URL') : null) || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "";        
         
-        const portRes = await fetch(`${apiUrl}/api/portfolio`, {
+        const portRes = await fetch(`${apiUrl}/api/portfolio?t=${Date.now()}`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
         if (portRes.ok) {
@@ -25,7 +25,7 @@ export default function CommandCentre() {
           }
         }
 
-        const statRes = await fetch(`${apiUrl}/api/status`, {
+        const statRes = await fetch(`${apiUrl}/api/status?t=${Date.now()}`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
         if (statRes.ok) {
@@ -33,7 +33,7 @@ export default function CommandCentre() {
           setStatus(statData);
         }
 
-        const pulseRes = await fetch(`${apiUrl}/api/pulses?limit=1`, {
+        const pulseRes = await fetch(`${apiUrl}/api/pulses?limit=1&t=${Date.now()}`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
         if (pulseRes.ok) {

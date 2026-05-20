@@ -1,10 +1,7 @@
-name: Deploy Backend to VPS (Auto & Manual)
+name: Deploy Backend to VPS (Manual Only)
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch: # This enables manual triggering
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -20,26 +17,26 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT }} # Usually 22
+          port: ${{ secrets.VPS_PORT }}
+
           script: |
-            # Navigate to your project directory based on your VPS setup
+            # Navigate to project directory
             cd /root/hermes-trading-agent-
-            
-            # Pull the latest changes from GitHub
+
+            # Pull latest code
             git pull origin main
-            
-            # Activate Python virtual environment
+
+            # Activate virtual environment
             source .venv/bin/activate
-            
-            # Install any new dependencies
+
+            # Install dependencies
             pip install -r requirements.txt
-            
-            # Make sure all bash scripts have execute permissions
+
+            # Give execute permission
             chmod +x scripts/*.sh
-            
-            # Restart the backend service using PM2 (adjust name if different)
-            # You can check your PM2 list via 'pm2 list' on your VPS
-            pm2 restart all || echo "PM2 restart failed, maybe nothing to restart"
-            
-            # Setup the USA Market Hours automated cron jobs
+
+            # Restart backend
+            pm2 restart all || echo "PM2 restart failed"
+
+            # Setup cron jobs
             bash scripts/setup_cron.sh

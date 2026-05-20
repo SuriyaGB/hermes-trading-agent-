@@ -1,9 +1,6 @@
-name: Deploy Frontend to Vercel (Auto & Manual)
+name: Deploy Frontend to Vercel (Manual Only)
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:

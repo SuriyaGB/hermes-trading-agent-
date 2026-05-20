@@ -34,9 +34,8 @@ jobs:
 
             # Give execute permission
             chmod +x scripts/*.sh
-
             # Restart backend
             pm2 restart all || echo "PM2 restart failed"
 
-            # Setup cron jobs
-            bash scripts/setup_cron.sh
+            # Setup the USA Market Hours automated cron jobs (Disabled for safety, run manually if needed)
+            # bash scripts/setup_cron.sh

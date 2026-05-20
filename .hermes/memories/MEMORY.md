@@ -1,1 +1,0 @@
-VIX 17.08 and IV rank 70.98, ideal for current market conditions. AAPL's 200-day MA is 256.35; min_strike calculation ongoing.

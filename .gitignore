@@ -40,3 +40,7 @@ data/trades_log.csv
 trade_state_history.jsonl
 .hermes/MEMORY.md
 .eye_cache.json
+logs/
+*.log
+vps_data/
+

@@ -200,7 +200,7 @@ def execute_decision(decision_data, db, pulse_id, eye_data=None):
     # Defensive initialization of positions
     if "positions" not in portfolio: portfolio["positions"] = []
     
-    if decision == 'HOLD_PUT_POSITION' or decision == 'WAIT_FOR_ENTRY':
+    if decision in ['HOLD_PUT_POSITION', 'HOLD_CALL_POSITION', 'HOLD_ASSIGNED_EQUITY', 'WAIT_FOR_ENTRY']:
         return "No Action"
 
     # --- HANDLER: SELL_NEW_PUT ---
@@ -343,6 +343,97 @@ def execute_decision(decision_data, db, pulse_id, eye_data=None):
         _append_state_history(state)
         _append_trades_csv("ROLL_PUT", "AAPL", new_strike, new_expiry, new_premium, pnl, pulse_id)
         return f"ROLLED to strike {new_strike} (PnL: {pnl})"
+
+    # --- HANDLER: ROLL_CALL ---
+    elif decision == "ROLL_CALL":
+        # 1. Close current
+        opt_pos = next((p for p in portfolio["positions"] if p.get("type") == "Option"), None)
+        pnl = 0.0
+        if opt_pos:
+            entry = opt_pos.get("avg_cost", 0)
+            close = decision_data.get("close_details", {}).get("premium_to_pay")
+            if close is None:
+                # Fallback: search for active held strike mid price in option chain
+                close = 0.0
+                if eye_data and "option_chain" in eye_data:
+                    for row in eye_data["option_chain"]:
+                        if row.get("strike") == opt_pos.get("strike"):
+                            close = row.get("mid", 0.0)
+                            break
+            pnl = round((entry - close) * 100, 2)
+            portfolio["positions"] = [p for p in portfolio["positions"] if p != opt_pos]
+            portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) - (close * 100), 2)
+            portfolio["realized_pnl"] = round(portfolio.get("realized_pnl", 0) + pnl, 2)
+
+        # 2. Open new (robust reading from nested or flat fields)
+        new_strike = decision_data.get('open_details', {}).get('strike_to_trade') or decision_data.get('strike_to_trade')
+        new_premium = decision_data.get('open_details', {}).get('premium_to_collect') or decision_data.get('premium_to_collect')
+        new_expiry = decision_data.get('open_details', {}).get('dte_seen') or decision_data.get('dte_seen', 'N/A')
+        chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
+        
+        if new_strike is None or new_premium is None:
+            raise ValueError(f"ROLL_CALL details missing: new_strike={new_strike}, new_premium={new_premium}")
+        
+        portfolio["positions"].append({
+            "type": "Option", 
+            "symbol": "AAPL", 
+            "strike": new_strike, 
+            "avg_cost": new_premium, 
+            "option_type": "CALL",
+            "expiry": chosen_expiry
+        })
+        portfolio["total_cash"] = round(portfolio["total_cash"] + (new_premium * 100), 2)
+        state.update({
+            "current_phase": "CC_ACTIVE", 
+            "current_option_strike": new_strike,
+            "current_option_expiry": chosen_expiry
+        })
+
+        write_json(PORTFOLIO_PATH, portfolio)
+        write_json(STATE_PATH, state)
+        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "ROLL_CALL_CLOSE", "pnl": pnl})
+        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "ROLL_CALL_OPEN", "strike": new_strike, "price": new_premium})
+        _append_state_history(state)
+        _append_trades_csv("ROLL_CALL", "AAPL", new_strike, new_expiry, new_premium, pnl, pulse_id)
+        return f"ROLLED to strike {new_strike} (PnL: {pnl})"
+
+    # --- HANDLER: ABORT_DUE_TO_RISK ---
+    elif decision == "ABORT_DUE_TO_RISK":
+        # 1. Close any option positions
+        opt_pos = next((p for p in portfolio["positions"] if p.get("type") == "Option"), None)
+        if opt_pos:
+            close = decision_data.get("premium_to_collect", 0) # price to buy to close
+            if not close or close <= 0.0:
+                # Fallback: search for active held strike mid price in option chain
+                close = 0.0
+                if eye_data and "option_chain" in eye_data:
+                    for row in eye_data["option_chain"]:
+                        if row.get("strike") == opt_pos.get("strike"):
+                            close = row.get("mid", 0.0)
+                            break
+            portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) - (close * 100), 2)
+            portfolio["positions"] = [p for p in portfolio["positions"] if p != opt_pos]
+            
+        # 2. Close any stock positions
+        stock_pos = next((p for p in portfolio["positions"] if p.get("type") == "Stock"), None)
+        if stock_pos:
+            qty = stock_pos.get("quantity", 0)
+            spot = eye_data.get("price_seen", 0.0) if eye_data else 0.0
+            portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) + (qty * spot), 2)
+            portfolio["positions"] = [p for p in portfolio["positions"] if p != stock_pos]
+            
+        state.update({
+            "current_phase": "CASH_ONLY",
+            "current_option_strike": None,
+            "current_option_expiry": None,
+            "assignment_confirmed_once": False
+        })
+        
+        write_json(PORTFOLIO_PATH, portfolio)
+        write_json(STATE_PATH, state)
+        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "ABORT_DUE_TO_RISK"})
+        _append_state_history(state)
+        return "ABORTED ALL POSITIONS DUE TO RISK"
         
     raise ValueError(f"Unknown decision: {decision}")
 

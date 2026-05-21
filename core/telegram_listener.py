@@ -49,12 +49,24 @@ def handle_all_messages(message):
         if not final_answer:
             final_answer = "⚠️ The Assistant Brain returned an empty response."
 
-        # Update the 'Thinking' message with the final answer
+        # Split the message into chunks of 4000 characters to fit Telegram's limit
+        MAX_LENGTH = 4000
+        chunks = [final_answer[i:i+MAX_LENGTH] for i in range(0, len(final_answer), MAX_LENGTH)]
+
+        # Update the 'Thinking' message with the first chunk
         bot.edit_message_text(
             chat_id=message.chat.id,
             message_id=thinking_msg.message_id,
-            text=final_answer
+            text=chunks[0]
         )
+
+        # Send any remaining chunks as new follow-up messages
+        for chunk in chunks[1:]:
+            bot.send_message(
+                chat_id=message.chat.id,
+                text=chunk
+            )
+
         print("✅ Reply sent successfully.")
 
     except subprocess.CalledProcessError as e:

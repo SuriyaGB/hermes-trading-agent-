@@ -2,407 +2,459 @@
   "version": 1,
   "manifest": {
     "apple/apple-notes/SKILL.md": [
-      1777093612530809609,
+      1778646137151367550,
       2187
     ],
     "apple/apple-reminders/SKILL.md": [
-      1777093612530809609,
+      1778646137151367550,
       2548
     ],
     "apple/findmy/SKILL.md": [
-      1777093612530809609,
+      1778646137151367550,
       3748
     ],
     "apple/imessage/SKILL.md": [
-      1777093612530809609,
+      1778646137151367550,
       2442
     ],
     "autonomous-ai-agents/claude-code/SKILL.md": [
-      1777093612531654470,
+      1778646137151367550,
       34370
     ],
     "autonomous-ai-agents/codex/SKILL.md": [
-      1777093612531654470,
+      1778646137151367550,
       4101
     ],
     "autonomous-ai-agents/hermes-agent/SKILL.md": [
-      1777126114894712406,
+      1778646137151367550,
       28015
     ],
     "autonomous-ai-agents/opencode/SKILL.md": [
-      1777126114894569686,
+      1778646137152367302,
       7352
     ],
     "creative/architecture-diagram/SKILL.md": [
-      1777093612531803019,
+      1778646137152367302,
       6530
     ],
     "creative/ascii-art/SKILL.md": [
-      1777093612532107415,
+      1778646137152367302,
       10631
     ],
     "creative/ascii-video/SKILL.md": [
-      1777093612532334162,
+      1778646137152367302,
       14734
     ],
     "creative/baoyu-comic/SKILL.md": [
-      1777093612533636177,
+      1778646137153367054,
       14806
     ],
     "creative/baoyu-infographic/SKILL.md": [
-      1777093612534632543,
+      1778646137154366806,
       10633
     ],
     "creative/creative-ideation/SKILL.md": [
-      1777093612535162997,
+      1778646137155366558,
       6270
     ],
     "creative/design-md/SKILL.md": [
-      1777093612535590533,
+      1778646137155366558,
       7119
     ],
     "creative/excalidraw/SKILL.md": [
-      1777093612535689142,
+      1778646137155366558,
       7252
     ],
     "creative/manim-video/SKILL.md": [
-      1777093612535936854,
+      1778646137155366558,
       11983
     ],
     "creative/p5js/SKILL.md": [
-      1777093612536625472,
+      1778646137156366309,
       27372
     ],
     "creative/pixel-art/SKILL.md": [
-      1777093612537484763,
+      1778646137157366061,
       7750
     ],
     "creative/popular-web-designs/SKILL.md": [
-      1777093612537580590,
+      1778646137157366061,
       9444
     ],
     "creative/songwriting-and-ai-music/SKILL.md": [
-      1777093612540803134,
+      1778646137160365317,
       10344
     ],
     "data-science/jupyter-live-kernel/SKILL.md": [
-      1777093612541640299,
+      1778646137161365069,
       5571
     ],
     "devops/webhook-subscriptions/SKILL.md": [
-      1777093612541694414,
-      6972
+      1775552305581776168,
+      5704
     ],
     "dogfood/SKILL.md": [
-      1777093612541694414,
+      1778646137161365069,
       6294
     ],
     "email/himalaya/SKILL.md": [
-      1777093612541963355,
+      1778646137161365069,
       6003
     ],
     "gaming/minecraft-modpack-server/SKILL.md": [
-      1777093612542131366,
+      1778646137161365069,
       6662
     ],
     "gaming/pokemon-player/SKILL.md": [
-      1777093612542131366,
+      1778646137161365069,
       8818
     ],
     "github/codebase-inspection/SKILL.md": [
-      1777093612542310230,
+      1778646137161365069,
       3738
     ],
     "github/github-auth/SKILL.md": [
-      1777093612542310230,
+      1778646137161365069,
       7673
     ],
     "github/github-code-review/SKILL.md": [
-      1777093612542402676,
-      13661
+      1775552305582776165,
+      13639
     ],
     "github/github-issues/SKILL.md": [
-      1777093612542511290,
+      1778646137161365069,
       9352
     ],
     "github/github-pr-workflow/SKILL.md": [
-      1777093612542631709,
+      1778646137161365069,
       10085
     ],
     "github/github-repo-management/SKILL.md": [
-      1777093612542984285,
+      1775552305583776161,
       13776
     ],
+    "leisure/find-nearby/SKILL.md": [
+      1775552305584776158,
+      3088
+    ],
+    "mcp/mcporter/SKILL.md": [
+      1775552305584776158,
+      3152
+    ],
     "mcp/native-mcp/SKILL.md": [
-      1777093612545115379,
+      1778646137162364821,
       12542
     ],
     "media/gif-search/SKILL.md": [
-      1777093612545385487,
+      1778646137162364821,
       2687
     ],
     "media/heartmula/SKILL.md": [
-      1777093612545385487,
+      1778646137162364821,
       6402
     ],
     "media/songsee/SKILL.md": [
-      1777093612545385487,
+      1778646137162364821,
       2441
     ],
     "media/spotify/SKILL.md": [
-      1777093612545385487,
+      1778646137162364821,
       6551
     ],
     "media/youtube-content/SKILL.md": [
-      1777093612545385487,
+      1778646137162364821,
       3152
     ],
+    "mlops/cloud/modal/SKILL.md": [
+      1775552305584776158,
+      8580
+    ],
     "mlops/evaluation/lm-evaluation-harness/SKILL.md": [
-      1777093612545940753,
+      1778646137162364821,
       11920
     ],
     "mlops/evaluation/weights-and-biases/SKILL.md": [
-      1777093612546077807,
+      1778646137163364573,
       12479
     ],
     "mlops/huggingface-hub/SKILL.md": [
-      1777093612546400748,
+      1778646137163364573,
       3750
     ],
+    "mlops/inference/gguf/SKILL.md": [
+      1775552305586776152,
+      10345
+    ],
+    "mlops/inference/guidance/SKILL.md": [
+      1775552305586776152,
+      14540
+    ],
     "mlops/inference/llama-cpp/SKILL.md": [
-      1777093612546619767,
-      8845
+      1775552305586776152,
+      5937
     ],
     "mlops/inference/obliteratus/SKILL.md": [
-      1777093612546803211,
+      1778646137163364573,
       15366
     ],
     "mlops/inference/outlines/SKILL.md": [
-      1777093612547169660,
+      1778646137163364573,
       15976
     ],
     "mlops/inference/vllm/SKILL.md": [
-      1777093612547340899,
+      1778646137163364573,
       9051
     ],
     "mlops/models/audiocraft/SKILL.md": [
-      1777093612547755826,
+      1778646137164364325,
       16333
     ],
+    "mlops/models/clip/SKILL.md": [
+      1775552305588776146,
+      6909
+    ],
     "mlops/models/segment-anything/SKILL.md": [
-      1777093612547900611,
+      1778646137164364325,
       13488
     ],
+    "mlops/models/stable-diffusion/SKILL.md": [
+      1775552305588776146,
+      13014
+    ],
+    "mlops/models/whisper/SKILL.md": [
+      1775552305588776146,
+      7491
+    ],
     "mlops/research/dspy/SKILL.md": [
-      1777093612548195107,
+      1778646137164364325,
       15316
     ],
     "mlops/training/axolotl/SKILL.md": [
-      1777093612548484581,
+      1778646137164364325,
       4822
     ],
+    "mlops/training/grpo-rl-training/SKILL.md": [
+      1775552305590776139,
+      17225
+    ],
+    "mlops/training/peft/SKILL.md": [
+      1775552305590776139,
+      12235
+    ],
+    "mlops/training/pytorch-fsdp/SKILL.md": [
+      1775552305591776136,
+      160170
+    ],
     "mlops/training/trl-fine-tuning/SKILL.md": [
-      1777093612548828650,
+      1778646137165364077,
       12204
     ],
     "mlops/training/unsloth/SKILL.md": [
-      1777093612549500680,
+      1778646137166363828,
       2332
     ],
     "note-taking/obsidian/SKILL.md": [
-      1777093612557123066,
+      1778646137169363084,
       1264
     ],
     "productivity/google-workspace/SKILL.md": [
-      1777093612557173507,
-      10731
+      1775893825969905452,
+      7640
     ],
     "productivity/linear/SKILL.md": [
-      1777093612557295179,
+      1778646137169363084,
       11324
     ],
     "productivity/maps/SKILL.md": [
-      1777093612557295179,
+      1778646137169363084,
       6969
     ],
     "productivity/nano-pdf/SKILL.md": [
-      1777093612557574480,
+      1778646137170362836,
       1494
     ],
     "productivity/notion/SKILL.md": [
-      1777093612557574480,
+      1778646137170362836,
       5300
     ],
     "productivity/ocr-and-documents/SKILL.md": [
-      1777093612557819487,
+      1778646137170362836,
       5399
     ],
     "productivity/powerpoint/SKILL.md": [
-      1777093612557927249,
+      1778646137170362836,
       9194
     ],
     "red-teaming/godmode/SKILL.md": [
-      1777126114892970484,
+      1778646137173362092,
       20315
     ],
     "research/arxiv/SKILL.md": [
-      1777093612563056013,
+      1778646137173362092,
       10212
     ],
     "research/blogwatcher/SKILL.md": [
-      1777093612563165703,
+      1778646137173362092,
       5169
     ],
     "research/llm-wiki/SKILL.md": [
-      1777093612563165703,
-      20182
+      1775552305603776098,
+      17298
     ],
     "research/polymarket/SKILL.md": [
-      1777093612563165703,
+      1778646137173362092,
       3046
     ],
     "research/research-paper-writing/SKILL.md": [
-      1777093612563803429,
-      103609
+      1775552305604776095,
+      101860
     ],
     "smart-home/openhue/SKILL.md": [
-      1777093612569352125,
+      1778646137179360603,
       2770
     ],
+    "social-media/xitter/SKILL.md": [
+      1775552305610776076,
+      6140
+    ],
     "social-media/xurl/SKILL.md": [
-      1777093612569403515,
+      1778646137179360603,
       14143
     ],
     "software-development/plan/SKILL.md": [
-      1777093612569479601,
+      1778646137179360603,
       2069
     ],
     "software-development/requesting-code-review/SKILL.md": [
-      1777093612569479601,
+      1778646137179360603,
       8606
     ],
     "software-development/subagent-driven-development/SKILL.md": [
-      1777093612569479601,
+      1778646137179360603,
       9843
     ],
     "software-development/systematic-debugging/SKILL.md": [
-      1777093612569479601,
+      1778646137179360603,
       10538
     ],
     "software-development/test-driven-development/SKILL.md": [
-      1777093612569479601,
+      1778646137179360603,
       9625
     ],
     "software-development/writing-plans/SKILL.md": [
-      1777093612569479601,
+      1778646137179360603,
       7309
     ],
     "apple/DESCRIPTION.md": [
-      1777093612530780257,
+      1778646137151367550,
       152
     ],
     "autonomous-ai-agents/DESCRIPTION.md": [
-      1777093612530809609,
+      1778646137151367550,
       211
     ],
     "creative/DESCRIPTION.md": [
-      1777093612531803019,
+      1778646137152367302,
       116
     ],
     "data-science/DESCRIPTION.md": [
-      1777093612540803134,
+      1778646137161365069,
       137
     ],
     "diagramming/DESCRIPTION.md": [
-      1777093612541694414,
+      1778646137161365069,
       159
     ],
     "domain/DESCRIPTION.md": [
-      1777093612541823603,
+      1778646137161365069,
       1142
     ],
     "email/DESCRIPTION.md": [
-      1777093612541823603,
+      1778646137161365069,
       101
     ],
     "feeds/DESCRIPTION.md": [
-      1777093612542051189,
+      1778646137161365069,
       115
     ],
     "gaming/DESCRIPTION.md": [
-      1777093612542051189,
+      1778646137161365069,
       129
     ],
     "gifs/DESCRIPTION.md": [
-      1777093612542131366,
+      1778646137161365069,
       109
     ],
     "github/DESCRIPTION.md": [
-      1777093612542131366,
+      1778646137161365069,
       167
     ],
     "inference-sh/DESCRIPTION.md": [
-      1777093612543803173,
+      1778646137162364821,
       706
     ],
     "mcp/DESCRIPTION.md": [
-      1777093612544803186,
+      1778646137162364821,
       216
     ],
     "media/DESCRIPTION.md": [
-      1777093612545115379,
+      1778646137162364821,
       139
     ],
     "mlops/DESCRIPTION.md": [
-      1777093612545777678,
+      1778646137162364821,
       162
     ],
+    "mlops/cloud/DESCRIPTION.md": [
+      1775552305584776158,
+      92
+    ],
     "mlops/evaluation/DESCRIPTION.md": [
-      1777093612545913701,
+      1778646137162364821,
       126
     ],
     "mlops/inference/DESCRIPTION.md": [
-      1777093612546400748,
+      1778646137163364573,
       161
     ],
     "mlops/models/DESCRIPTION.md": [
-      1777093612547612287,
+      1778646137164364325,
       253
     ],
     "mlops/research/DESCRIPTION.md": [
-      1777093612548108370,
+      1778646137164364325,
       113
     ],
     "mlops/training/DESCRIPTION.md": [
-      1777093612548353087,
+      1778646137164364325,
       150
     ],
     "mlops/vector-databases/DESCRIPTION.md": [
-      1777093612556803340,
+      1778646137169363084,
       125
     ],
     "note-taking/DESCRIPTION.md": [
-      1777093612556803340,
+      1778646137169363084,
       146
     ],
     "productivity/DESCRIPTION.md": [
-      1777093612557123066,
+      1778646137169363084,
       114
     ],
     "productivity/ocr-and-documents/DESCRIPTION.md": [
-      1777093612557774276,
+      1778646137170362836,
       147
     ],
     "research/DESCRIPTION.md": [
-      1777093612562978899,
+      1778646137173362092,
       179
     ],
     "smart-home/DESCRIPTION.md": [
-      1777093612569241403,
+      1778646137179360603,
       123
     ],
     "social-media/DESCRIPTION.md": [
-      1777093612569352125,
+      1778646137179360603,
       151
     ]
   },
@@ -845,6 +897,32 @@
       }
     },
     {
+      "skill_name": "find-nearby",
+      "category": "leisure",
+      "frontmatter_name": "find-nearby",
+      "description": "Find nearby places (restaurants, cafes, bars, pharmacies,...",
+      "platforms": [],
+      "conditions": {
+        "fallback_for_toolsets": [],
+        "requires_toolsets": [],
+        "fallback_for_tools": [],
+        "requires_tools": []
+      }
+    },
+    {
+      "skill_name": "mcporter",
+      "category": "mcp",
+      "frontmatter_name": "mcporter",
+      "description": "Use the mcporter CLI to list, configure, auth, and call M...",
+      "platforms": [],
+      "conditions": {
+        "fallback_for_toolsets": [],
+        "requires_toolsets": [],
+        "fallback_for_tools": [],
+        "requires_tools": []
+      }
+    },
+    {
       "skill_name": "native-mcp",
       "category": "mcp",
       "frontmatter_name": "native-mcp",
@@ -923,6 +1001,19 @@
       }
     },
     {
+      "skill_name": "modal",
+      "category": "mlops/cloud",
+      "frontmatter_name": "modal-serverless-gpu",
+      "description": "Serverless GPU cloud platform for running ML workloads. U...",
+      "platforms": [],
+      "conditions": {
+        "fallback_for_toolsets": [],
+        "requires_toolsets": [],
+        "fallback_for_tools": [],
+        "requires_tools": []
+      }
+    },
+    {
       "skill_name": "lm-evaluation-harness",
       "category": "mlops/evaluation",
       "frontmatter_name": "evaluating-llms-harness",
@@ -962,10 +1053,36 @@
       }
     },
     {
+      "skill_name": "gguf",
+      "category": "mlops/inference",
+      "frontmatter_name": "gguf-quantization",
+      "description": "GGUF format and llama.cpp quantization for efficient CPU/...",
+      "platforms": [],
+      "conditions": {
+        "fallback_for_toolsets": [],
+        "requires_toolsets": [],
+        "fallback_for_tools": [],
+        "requires_tools": []
+      }
+    },
+    {
+      "skill_name": "guidance",
+      "category": "mlops/inference",
+      "frontmatter_name": "guidance",
+      "description": "Control LLM output with regex and grammars, guarantee val...",
+      "platforms": [],
+      "conditions": {
+        "fallback_for_toolsets": [],
+        "requires_toolsets": [],
+        "fallback_for_tools": [],
+        "requires_tools": []
+      }
+    },
+    {
       "skill_name": "llama-cpp",
       "category": "mlops/inference",
       "frontmatter_name": "llama-cpp",
-      "description": "llama.cpp local GGUF inference + HF Hub model discovery.",
+      "description": "Runs LLM inference on CPU, Apple Silicon, and consumer GP...",
       "platforms": [],
       "conditions": {
         "fallback_for_toolsets": [],
@@ -1027,10 +1144,49 @@
       }
     },
     {
+      "skill_name": "clip",
+      "category": "mlops/models",
+      "frontmatter_name": "clip",
+      "description": "OpenAI's model connecting vision and language. Enables ze...",
+      "platforms": [],
+      "conditions": {
+        "fallback_for_toolsets": [],
+        "requires_toolsets": [],
+        "fallback_for_tools": [],
+        "requires_tools": []
+      }
+    },
+    {
       "skill_name": "segment-anything",
       "category": "mlops/models",
       "frontmatter_name": "segment-anything-model",
       "description": "Foundation model for image segmentation with zero-shot tr...",
+      "platforms": [],
+      "conditions": {
+        "fallback_for_toolsets": [],
+        "requires_toolsets": [],
+        "fallback_for_tools": [],
+        "requires_tools": []
+      }
+    },
+    {
+      "skill_name": "stable-diffusion",
+      "category": "mlops/models",
+      "frontmatter_name": "stable-diffusion-image-generation",
+      "description": "State-of-the-art text-to-image generation with Stable Dif...",
+      "platforms": [],
+      "conditions": {
+        "fallback_for_toolsets": [],
+        "requires_toolsets": [],
+        "fallback_for_tools": [],
+        "requires_tools": []
+      }
+    },
+    {
+      "skill_name": "whisper",
+      "category": "mlops/models",
+      "frontmatter_name": "whisper",
+      "description": "OpenAI's general-purpose speech recognition model. Suppor...",
       "platforms": [],
       "conditions": {
         "fallback_for_toolsets": [],
@@ -1057,6 +1213,45 @@
       "category": "mlops/training",
       "frontmatter_name": "axolotl",
       "description": "Expert guidance for fine-tuning LLMs with Axolotl - YAML ...",
+      "platforms": [],
+      "conditions": {
+        "fallback_for_toolsets": [],
+        "requires_toolsets": [],
+        "fallback_for_tools": [],
+        "requires_tools": []
+      }
+    },
+    {
+      "skill_name": "grpo-rl-training",
+      "category": "mlops/training",
+      "frontmatter_name": "grpo-rl-training",
+      "description": "Expert guidance for GRPO/RL fine-tuning with TRL for reas...",
+      "platforms": [],
+      "conditions": {
+        "fallback_for_toolsets": [],
+        "requires_toolsets": [],
+        "fallback_for_tools": [],
+        "requires_tools": []
+      }
+    },
+    {
+      "skill_name": "peft",
+      "category": "mlops/training",
+      "frontmatter_name": "peft-fine-tuning",
+      "description": "Parameter-efficient fine-tuning for LLMs using LoRA, QLoR...",
+      "platforms": [],
+      "conditions": {
+        "fallback_for_toolsets": [],
+        "requires_toolsets": [],
+        "fallback_for_tools": [],
+        "requires_tools": []
+      }
+    },
+    {
+      "skill_name": "pytorch-fsdp",
+      "category": "mlops/training",
+      "frontmatter_name": "pytorch-fsdp",
+      "description": "Expert guidance for Fully Sharded Data Parallel training ...",
       "platforms": [],
       "conditions": {
         "fallback_for_toolsets": [],
@@ -1295,6 +1490,22 @@
       }
     },
     {
+      "skill_name": "xitter",
+      "category": "social-media",
+      "frontmatter_name": "xitter",
+      "description": "Interact with X/Twitter via the x-cli terminal client usi...",
+      "platforms": [
+        "linux",
+        "macos"
+      ],
+      "conditions": {
+        "fallback_for_toolsets": [],
+        "requires_toolsets": [],
+        "fallback_for_tools": [],
+        "requires_tools": []
+      }
+    },
+    {
       "skill_name": "xurl",
       "category": "social-media",
       "frontmatter_name": "xurl",
@@ -1404,6 +1615,7 @@
     "mcp": "Skills for working with MCP (Model Context Protocol) servers, tools, and integrations. Documents the built-in native MCP client — configure servers in config.yaml for automatic tool discovery.",
     "media": "Skills for working with media content — YouTube transcripts, GIF search, music generation, and audio visualization.",
     "mlops": "Knowledge and Tools for Machine Learning Operations - tools and frameworks for training, fine-tuning, deploying, and optimizing ML/AI models",
+    "mlops/cloud": "GPU cloud providers and serverless compute platforms for ML workloads.",
     "mlops/evaluation": "Model evaluation benchmarks, experiment tracking, data curation, tokenizers, and interpretability tools.",
     "mlops/inference": "Model serving, quantization (GGUF/GPTQ), structured output, inference optimization, and model surgery tools for deploying and running LLMs.",
     "mlops/models": "Specific model architectures and tools — image segmentation (Segment Anything / SAM) and audio generation (AudioCraft / MusicGen). Additional model skills (CLIP, Stable Diffusion, Whisper, LLaVA) are available as optional skills.",

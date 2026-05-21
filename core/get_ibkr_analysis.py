@@ -123,10 +123,6 @@ async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[st
     for exp in expiries:
         exp_date = datetime.strptime(exp, '%Y-%m-%d').date()
         dte = (exp_date - today).days
-        # BUG #7 FIX: MIN_DTE for new entry = 30 days (aligned with SKILL_AAPL.md).
-        # SKILL_AAPL PREFERRED DTE = 35 days. MIN_DTE rule = 21 (close trigger).
-        # We must never OPEN a new position at 22-28 DTE — that's too close to Gamma zone.
-        # Floor set to 30 to ensure we always open with at least 1 month of theta.
         if 30 <= dte <= 50:
             target_expiry, target_dte = exp, dte
             break
@@ -173,7 +169,6 @@ async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[st
                 filtered.append(row)
         result["option_chain"] = sorted(filtered, key=lambda x: x['strike'], reverse=True)
 
-        # ── BUG #2 FIX: Detect closed market via all-zero bids ──────────────
         zero_bid_count = sum(1 for row in all_rows if row.get('bid', 0) == 0.0)
         if zero_bid_count == len(all_rows) and len(all_rows) > 0:
             result["market_open"]          = False
@@ -189,6 +184,37 @@ async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[st
         add_warning(f"Chain error: {e}")
 
     return result
+
+def recover_expiry_from_db(held_strike: float) -> str | None:
+    try:
+        import sqlite3
+        db_path = Path(__file__).parent.parent / 'data' / 'hermes_brain.db'
+        if not db_path.exists(): return None
+        conn = sqlite3.connect(db_path)
+        cursor = conn.execute(
+            "SELECT raw_input_json, raw_output_json, ai_decision FROM pulse_history ORDER BY id DESC"
+        )
+        for row in cursor.fetchall():
+            input_data = json.loads(row[0]) if row[0] else {}
+            output_data = json.loads(row[1]) if row[1] else {}
+            decision = row[2]
+            
+            if decision == "SELL_NEW_PUT" and output_data.get("strike_to_trade") == held_strike:
+                exp = input_data.get("chosen_expiry")
+                if exp:
+                    conn.close()
+                    return exp
+            elif decision == "ROLL_PUT":
+                open_strike = output_data.get("open_details", {}).get("strike_to_trade") or output_data.get("strike_to_trade")
+                if open_strike == held_strike:
+                    exp = input_data.get("chosen_expiry")
+                    if exp:
+                        conn.close()
+                        return exp
+        conn.close()
+    except Exception as e:
+        print(f"[RECOVER] Error recovering expiry: {e}", file=sys.stderr)
+    return None
 
 async def fetch_analysis_data() -> Dict[str, Any]:
     data = {"account_status": "CASH_ONLY", "price_seen": 0.0, "vix_seen": 17.0, "iv_current": "N/A", "option_chain": [], "warnings": []}
@@ -223,8 +249,15 @@ async def fetch_analysis_data() -> Dict[str, Any]:
     dte_current = 99
     
     if data["account_status"] == "CSP_ACTIVE" and held_strike:
-        # If expiry is not in portfolio, try to search it from available expiries
-        if not held_expiry:
+        # 1. Try to recover the expiry from database trade logs
+        if not held_expiry or held_expiry == "N/A":
+            recovered = recover_expiry_from_db(held_strike)
+            if recovered:
+                held_expiry = recovered
+                add_warning(f"Auto-healed held option expiry from DB history: strike {held_strike} -> expiry {held_expiry}.")
+                
+        # 2. Fallback to option chain search if database recovery failed
+        if not held_expiry or held_expiry == "N/A":
             today = datetime.now().date()
             for exp in ticker.options:
                 exp_date = datetime.strptime(exp, '%Y-%m-%d').date()
@@ -238,7 +271,7 @@ async def fetch_analysis_data() -> Dict[str, Any]:
                     except:
                         continue
         
-        if held_expiry:
+        if held_expiry and held_expiry != "N/A":
             # Format expiry string to YYYY-MM-DD
             if '-' not in held_expiry and len(held_expiry) == 8:
                 expiry_formatted = f"{held_expiry[:4]}-{held_expiry[4:6]}-{held_expiry[6:]}"

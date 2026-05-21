@@ -298,17 +298,28 @@ def execute_decision(decision_data, db, pulse_id, eye_data=None):
         pnl = 0.0
         if opt_pos:
             entry = opt_pos.get("avg_cost", 0)
-            close = decision_data.get("close_details", {}).get("premium_to_pay", 0)
+            close = decision_data.get("close_details", {}).get("premium_to_pay")
+            if close is None:
+                # Fallback: search for active held strike mid price in option chain
+                close = 0.0
+                if eye_data and "option_chain" in eye_data:
+                    for row in eye_data["option_chain"]:
+                        if row.get("strike") == opt_pos.get("strike"):
+                            close = row.get("mid", 0.0)
+                            break
             pnl = round((entry - close) * 100, 2)
             portfolio["positions"] = [p for p in portfolio["positions"] if p != opt_pos]
             portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) - (close * 100), 2)
             portfolio["realized_pnl"] = round(portfolio.get("realized_pnl", 0) + pnl, 2)
 
-        # 2. Open new
-        new_strike = decision_data.get('open_details', {}).get('strike_to_trade')
-        new_premium = decision_data.get('open_details', {}).get('premium_to_collect')
-        new_expiry = decision_data.get('open_details', {}).get('dte_seen', 'N/A')
+        # 2. Open new (robust reading from nested or flat fields)
+        new_strike = decision_data.get('open_details', {}).get('strike_to_trade') or decision_data.get('strike_to_trade')
+        new_premium = decision_data.get('open_details', {}).get('premium_to_collect') or decision_data.get('premium_to_collect')
+        new_expiry = decision_data.get('open_details', {}).get('dte_seen') or decision_data.get('dte_seen', 'N/A')
         chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
+        
+        if new_strike is None or new_premium is None:
+            raise ValueError(f"ROLL_PUT details missing: new_strike={new_strike}, new_premium={new_premium}")
         
         portfolio["positions"].append({
             "type": "Option", 

@@ -44,12 +44,44 @@ def query_memory(limit=5):
         print(f"[ERROR] Database access failed: {e}")
     return memory
 
+def query_history_summary():
+    """Queries aggregated database stats to give the AI full awareness of the inception date and lifetime metrics."""
+    summary = {}
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        
+        # Calculate total pulses, start date, and last update date
+        row = conn.execute("SELECT count(*) as total_pulses, min(timestamp) as start_date, max(timestamp) as end_date FROM pulse_history").fetchone()
+        if row:
+            summary = {
+                "total_pulses": row["total_pulses"],
+                "inception_date": row["start_date"],
+                "last_pulse_date": row["end_date"]
+            }
+            
+        # Count distinct decision types to show distribution of holds, rolls, sells
+        decisions = conn.execute("SELECT ai_decision, count(*) as count FROM pulse_history GROUP BY ai_decision").fetchall()
+        summary['decision_distribution'] = {r['ai_decision']: r['count'] for r in decisions}
+        
+        # Fetch details of the very first pulse (inception details)
+        first_row = conn.execute("SELECT timestamp, aapl_price, vix_level, earnings_days, ai_decision, ai_reasoning, ai_override, override_reason FROM pulse_history ORDER BY id ASC LIMIT 1").fetchone()
+        if first_row:
+            summary['first_pulse_details'] = dict(first_row)
+        
+        conn.close()
+    except Exception as e:
+        print(f"[ERROR] Database summary access failed: {e}")
+        summary = {"error": str(e)}
+    return summary
+
 def ask_hermes(query: str):
     """The main interface for the Interactive Assistant."""
     
     # 1. Gather Data
     current = get_current_context()
-    history = query_memory(limit=10) # Last 10 pulses for context
+    history = query_memory(limit=10)             # Last 10 pulses for micro-context
+    history_summary = query_history_summary()     # Full summary stats for macro-context
     
     # 2. Build the System Prompt (The Intelligence)
     prompt = f"""
@@ -59,7 +91,10 @@ def ask_hermes(query: str):
     [CONTEXT: LIVE PORTFOLIO]
     {json.dumps(current, indent=2)}
     
-    [CONTEXT: RECENT DATABASE MEMORY]
+    [CONTEXT: DATABASE HISTORY SUMMARY]
+    {json.dumps(history_summary, indent=2)}
+    
+    [CONTEXT: RECENT DATABASE MEMORY (LAST 10 PULSES)]
     {json.dumps(history, indent=2)}
     
     USER QUESTION: {query}

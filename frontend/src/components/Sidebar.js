@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import { LayoutDashboard, TrendingUp, History, LineChart, Activity, Settings, X, Check, Link2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
+import { getApiUrl } from '../utils/api';
+
 export default function Sidebar() {
   const pathname = usePathname();
   const [showModal, setShowModal] = useState(false);
@@ -12,8 +14,9 @@ export default function Sidebar() {
   const [savedUrl, setSavedUrl] = useState('');
 
   useEffect(() => {
+    const resolvedUrl = getApiUrl();
     const stored = localStorage.getItem('API_BASE_URL') || '';
-    setSavedUrl(stored || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || '');
+    setSavedUrl(resolvedUrl);
     setUrlInput(stored);
   }, []);
 

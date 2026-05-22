@@ -3,6 +3,7 @@ import sqlite3
 import csv
 import os
 from pathlib import Path
+from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -24,12 +25,54 @@ DATA_DIR = BASE_DIR / "data"
 
 @app.get("/api/portfolio")
 def get_portfolio():
-    """Returns the current cash, premium, and open positions."""
+    """Returns the current cash, premium, and open positions, enriched with unrealized PnL metrics from SQLite."""
     path = DATA_DIR / "portfolio.json"
     if not path.exists():
         raise HTTPException(status_code=404, detail="Portfolio not found")
     with open(path, "r") as f:
-        return json.load(f)
+        portfolio = json.load(f)
+        
+    # Enrich active option positions with real-time unrealized PnL from SQLite
+    db_path = DATA_DIR / "hermes_brain.db"
+    if db_path.exists():
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            # Fetch the raw_input_json of the latest pulse
+            row = cursor.execute("SELECT raw_input_json FROM pulse_history ORDER BY id DESC LIMIT 1").fetchone()
+            conn.close()
+            
+            if row and row[0]:
+                raw_data = json.loads(row[0])
+                option_chain = raw_data.get("option_chain", [])
+                
+                # Build option chain lookup by strike
+                chain_by_strike = {item["strike"]: item for item in option_chain if "strike" in item}
+                
+                for pos in portfolio.get("positions", []):
+                    if pos.get("type") == "Option":
+                        strike = float(pos.get("strike", 0))
+                        avg_cost = float(pos.get("avg_cost", 0))
+                        
+                        # Find matching strike in the option chain of the latest pulse
+                        if strike in chain_by_strike:
+                            chain_item = chain_by_strike[strike]
+                            mid_price = chain_item.get("mid")
+                            
+                            if mid_price is not None:
+                                pos["current_price"] = mid_price
+                                # For short options (which we sell): profit is avg_cost - mid_price
+                                if pos.get("option_type") == "PUT" or pos.get("option_type") == "CALL":
+                                    pos["unrealized_pnl"] = round((avg_cost - mid_price) * 100, 2)
+                                    pos["unrealized_pnl_percent"] = round(((avg_cost - mid_price) / avg_cost) * 100, 2)
+                                else:
+                                    # For long options (bought)
+                                    pos["unrealized_pnl"] = round((mid_price - avg_cost) * 100, 2)
+                                    pos["unrealized_pnl_percent"] = round(((mid_price - avg_cost) / avg_cost) * 100, 2)
+        except Exception as e:
+            print(f"Error enriching portfolio with unrealized PnL: {e}")
+            
+    return portfolio
 
 @app.get("/api/status")
 def get_status():
@@ -135,11 +178,11 @@ def get_health():
 
 @app.get("/api/income_history")
 def get_income_history():
-    """Dynamically reconstructs account balance history using trades log and portfolio."""
+    """Dynamically reconstructs account balance history using trades log and portfolio daily sequence."""
     portfolio_path = DATA_DIR / "portfolio.json"
     trades_path = DATA_DIR / "trades_log.csv"
     
-    if not portfolio_path.exists() or not trades_path.exists():
+    if not portfolio_path.exists():
         return []
         
     with open(portfolio_path, "r") as f:
@@ -147,29 +190,53 @@ def get_income_history():
         
     current_cash = port_data.get("total_cash", 250000.0)
     
-    history = []
-    baseline_cash = 250000.0  # The initial starting balance
-    has_jumped = False
+    # We initialize the starting balance at the beginning of history (May 14, 2026)
+    start_date = datetime(2026, 5, 14).date()
+    end_date = datetime.now().date()
     
-    with open(trades_path, "r") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            action = row['action']
-            timestamp = row['timestamp']
+    # Reconstruct trade events by date
+    trades_by_date = {}
+    if trades_path.exists():
+        try:
+            with open(trades_path, "r") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    action = row.get('action', '')
+                    timestamp_str = row.get('timestamp', '')
+                    try:
+                        price = float(row.get('price', 0.0))
+                    except ValueError:
+                        price = 0.0
+                        
+                    # Parse date portion only (e.g. YYYY-MM-DD)
+                    if timestamp_str:
+                        date_key = datetime.strptime(timestamp_str.split(' ')[0], "%Y-%m-%d").date()
+                        if date_key not in trades_by_date:
+                            trades_by_date[date_key] = []
+                        trades_by_date[date_key].append((action, price))
+        except Exception as e:
+            print(f"Error parsing trades log: {e}")
             
-            # When the put is opened, the premium hits the account
-            # We check the entire row string because the CSV headers are misaligned
-            if action == 'SELL_NEW_PUT' and 'OPENED' in str(row.values()):
-                baseline_cash = current_cash
-                has_jumped = True
-                
-            history.append({
-                "timestamp": timestamp, 
-                "balance": baseline_cash
-            })
-                
-    # If the history is empty, just return the current state
-    if not history:
-        history.append({"timestamp": port_data.get("last_update", ""), "balance": current_cash})
+    history = []
+    running_cash = 250000.0
+    
+    # Generate daily sequence from May 14 to today
+    current_date = start_date
+    while current_date <= end_date:
+        # Apply any trade cash flows that occurred on this day
+        if current_date in trades_by_date:
+            for action, price in trades_by_date[current_date]:
+                if action == 'SELL_PUT' or action == 'SELL_CALL':
+                    running_cash += price * 100
+                elif action == 'BUY_CLOSE' or action == 'BUY_TO_CLOSE':
+                    running_cash -= price * 100
+                elif action == 'ROLL_PUT' or action == 'ROLL_CALL':
+                    running_cash += price * 100
+                    
+        history.append({
+            "timestamp": current_date.strftime("%Y-%m-%d"),
+            "balance": round(running_cash, 2)
+        })
+        current_date += timedelta(days=1)
         
     return history

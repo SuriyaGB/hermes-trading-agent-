@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { LineChart as LineChartIcon, BarChart2, Activity, Globe, Zap } from 'lucide-react';
 
+import { getApiUrl } from '../../utils/api';
+
 export default function MarketView() {
   const [data, setData] = useState([]);
   const [chartType, setChartType] = useState('Area');
@@ -10,7 +12,7 @@ export default function MarketView() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const apiUrl = (typeof window !== 'undefined' ? localStorage.getItem('API_BASE_URL') : null) || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "";
+        const apiUrl = getApiUrl();
         const res = await fetch(`${apiUrl}/api/pulses?t=${Date.now()}`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
@@ -132,8 +134,8 @@ export default function MarketView() {
                  <YAxis yAxisId="left" stroke="rgba(255,255,255,0.3)" tick={{fill: '#00E676', fontSize: 12, fontFamily: 'monospace'}} domain={['auto', 'auto']} tickFormatter={(value) => `$${value}`} />
                  <YAxis yAxisId="right" orientation="right" stroke="rgba(255,255,255,0.3)" tick={{fill: '#FFEA00', fontSize: 12, fontFamily: 'monospace'}} domain={['auto', 'auto']} />
                  <Tooltip content={<CustomTooltip />} />
-                 <Area yAxisId="left" type="monotone" dataKey="price" stroke="#00E676" fillOpacity={1} fill="url(#colorPrice)" strokeWidth={2} name="AAPL Price" />
-                 <Area yAxisId="right" type="monotone" dataKey="vix" stroke="#FFEA00" fillOpacity={1} fill="url(#colorVix)" strokeWidth={2} name="VIX Level" />
+                 <Area yAxisId="left" type="monotone" connectNulls={true} dataKey="price" stroke="#00E676" fillOpacity={1} fill="url(#colorPrice)" strokeWidth={2} name="AAPL Price" />
+                 <Area yAxisId="right" type="monotone" connectNulls={true} dataKey="vix" stroke="#FFEA00" fillOpacity={1} fill="url(#colorVix)" strokeWidth={2} name="VIX Level" />
                </AreaChart>
              ) : chartType === 'Line' ? (
                <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 0 }}>
@@ -142,8 +144,8 @@ export default function MarketView() {
                  <YAxis yAxisId="left" stroke="rgba(255,255,255,0.3)" tick={{fill: '#00E676', fontSize: 12, fontFamily: 'monospace'}} domain={['auto', 'auto']} tickFormatter={(value) => `$${value}`} />
                  <YAxis yAxisId="right" orientation="right" stroke="rgba(255,255,255,0.3)" tick={{fill: '#FFEA00', fontSize: 12, fontFamily: 'monospace'}} domain={['auto', 'auto']} />
                  <Tooltip content={<CustomTooltip />} />
-                 <Line yAxisId="left" type="monotone" dataKey="price" stroke="#00E676" strokeWidth={3} dot={false} name="AAPL Price" />
-                 <Line yAxisId="right" type="monotone" dataKey="vix" stroke="#FFEA00" strokeWidth={2} dot={false} name="VIX Level" />
+                 <Line yAxisId="left" type="monotone" connectNulls={true} dataKey="price" stroke="#00E676" strokeWidth={3} dot={false} name="AAPL Price" />
+                 <Line yAxisId="right" type="monotone" connectNulls={true} dataKey="vix" stroke="#FFEA00" strokeWidth={2} dot={false} name="VIX Level" />
                </LineChart>
              ) : (
                <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 0 }}>
@@ -152,8 +154,8 @@ export default function MarketView() {
                  <YAxis yAxisId="left" stroke="rgba(255,255,255,0.3)" tick={{fill: '#00E676', fontSize: 12, fontFamily: 'monospace'}} domain={['auto', 'auto']} tickFormatter={(value) => `$${value}`} />
                  <YAxis yAxisId="right" orientation="right" stroke="rgba(255,255,255,0.3)" tick={{fill: '#FFEA00', fontSize: 12, fontFamily: 'monospace'}} domain={['auto', 'auto']} />
                  <Tooltip content={<CustomTooltip />} />
-                 <Bar yAxisId="left" dataKey="price" fill="#00E676" radius={[4, 4, 0, 0]} name="AAPL Price" />
-                 <Bar yAxisId="right" dataKey="vix" fill="#FFEA00" radius={[4, 4, 0, 0]} name="VIX Level" />
+                 <Bar yAxisId="left" connectNulls={true} dataKey="price" fill="#00E676" radius={[4, 4, 0, 0]} name="AAPL Price" />
+                 <Bar yAxisId="right" connectNulls={true} dataKey="vix" fill="#FFEA00" radius={[4, 4, 0, 0]} name="VIX Level" />
                </BarChart>
              )}
            </ResponsiveContainer>
@@ -178,8 +180,8 @@ export default function MarketView() {
                <YAxis yAxisId="left" stroke="rgba(255,255,255,0.3)" tick={{fill: '#A855F7', fontSize: 12, fontFamily: 'monospace'}} domain={['auto', 'auto']} />
                <YAxis yAxisId="right" orientation="right" stroke="rgba(255,255,255,0.3)" tick={{fill: '#3B82F6', fontSize: 12, fontFamily: 'monospace'}} domain={['auto', 'auto']} />
                <Tooltip content={<CustomTooltip />} />
-               <Line yAxisId="left" type="monotone" dataKey="delta" stroke="#A855F7" strokeWidth={3} dot={true} name="Delta Greek" />
-               <Line yAxisId="right" type="monotone" dataKey="dte" stroke="#3B82F6" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Days To Expiry" />
+               <Line yAxisId="left" type="monotone" connectNulls={true} dataKey="delta" stroke="#A855F7" strokeWidth={3} dot={true} name="Delta Greek" />
+               <Line yAxisId="right" type="monotone" connectNulls={true} dataKey="dte" stroke="#3B82F6" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Days To Expiry" />
              </LineChart>
            </ResponsiveContainer>
          ) : (

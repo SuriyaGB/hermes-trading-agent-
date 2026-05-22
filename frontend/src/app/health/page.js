@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { Activity, Server, Database, ShieldAlert, CheckCircle2, Clock } from 'lucide-react';
 
+import { getApiUrl } from '../../utils/api';
+
 export default function BotHealth() {
   const [health, setHealth] = useState({ status: 'LOADING' });
   const [tradeState, setTradeState] = useState({});
@@ -10,7 +12,7 @@ export default function BotHealth() {
   useEffect(() => {
     const fetchHealth = async () => {
       try {
-        const apiUrl = (typeof window !== 'undefined' ? localStorage.getItem('API_BASE_URL') : null) || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "";
+        const apiUrl = getApiUrl();
         
         // 1. Fetch API Health
         try {

@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { History, Terminal, Search } from 'lucide-react';
 
+import { getApiUrl } from '../../utils/api';
+
 export default function PulseHistory() {
   const [pulses, setPulses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -9,7 +11,7 @@ export default function PulseHistory() {
   useEffect(() => {
     const fetchPulses = async () => {
       try {
-        const apiUrl = (typeof window !== 'undefined' ? localStorage.getItem('API_BASE_URL') : null) || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "";
+        const apiUrl = getApiUrl();
         const res = await fetch(`${apiUrl}/api/pulses?limit=100&t=${Date.now()}`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });

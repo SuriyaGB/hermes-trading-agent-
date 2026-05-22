@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, BarChart2, Activity } from 'lucide-react';
 
+import { getApiUrl } from '../../utils/api';
+
 export default function IncomeTracker() {
   const [data, setData] = useState([]);
   const [chartType, setChartType] = useState('Area');
@@ -10,7 +12,7 @@ export default function IncomeTracker() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const apiUrl = (typeof window !== 'undefined' ? localStorage.getItem('API_BASE_URL') : null) || process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "";
+        const apiUrl = getApiUrl();
         const res = await fetch(`${apiUrl}/api/income_history?t=${Date.now()}`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
@@ -19,10 +21,11 @@ export default function IncomeTracker() {
           if (Array.isArray(json)) {
             // Format the dynamically reconstructed account balance data
             const formattedData = json.map(point => {
+              // Parse timestamp safely
               const d = new Date(point.timestamp);
               return {
-                time: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), // For X-axis (e.g. "May 7")
-                fullTime: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }), // For Tooltip
+                time: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }), // For X-axis (e.g. "May 14")
+                fullTime: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }), // For Tooltip
                 balance: point.balance
               };
             });
@@ -109,7 +112,7 @@ export default function IncomeTracker() {
                  <XAxis dataKey="time" stroke="rgba(255,255,255,0.3)" tick={{fill: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'monospace'}} />
                  <YAxis stroke="rgba(255,255,255,0.3)" tick={{fill: '#00E676', fontSize: 12, fontFamily: 'monospace'}} domain={['dataMin - 100', 'dataMax + 100']} tickFormatter={(value) => `$${value.toLocaleString()}`} />
                  <Tooltip content={<CustomTooltip />} />
-                 <Area type="stepAfter" dataKey="balance" stroke="#00E676" fillOpacity={1} fill="url(#colorBalance)" strokeWidth={3} name="Account Balance" />
+                 <Area type="monotone" dataKey="balance" stroke="#00E676" fillOpacity={1} fill="url(#colorBalance)" strokeWidth={3} name="Account Balance" />
                </AreaChart>
              ) : chartType === 'Line' ? (
                <LineChart data={data} margin={{ top: 20, right: 30, left: 40, bottom: 0 }}>
@@ -117,7 +120,7 @@ export default function IncomeTracker() {
                  <XAxis dataKey="time" stroke="rgba(255,255,255,0.3)" tick={{fill: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'monospace'}} />
                  <YAxis stroke="rgba(255,255,255,0.3)" tick={{fill: '#00E676', fontSize: 12, fontFamily: 'monospace'}} domain={['dataMin - 100', 'dataMax + 100']} tickFormatter={(value) => `$${value.toLocaleString()}`} />
                  <Tooltip content={<CustomTooltip />} />
-                 <Line type="stepAfter" dataKey="balance" stroke="#00E676" strokeWidth={4} dot={false} name="Account Balance" />
+                 <Line type="monotone" dataKey="balance" stroke="#00E676" strokeWidth={4} dot={false} name="Account Balance" />
                </LineChart>
              ) : (
                <BarChart data={data} margin={{ top: 20, right: 30, left: 40, bottom: 0 }}>

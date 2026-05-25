@@ -144,6 +144,21 @@ def get_sma_200(symbol: str = "AAPL", spot_fallback: float = 0.0) -> float:
         add_warning(f"Error calculating 200 SMA: {e}")
     return round(spot_fallback * 0.90, 2)
 
+def get_sma_50(symbol: str = "AAPL", spot_fallback: float = 0.0) -> float:
+    try:
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period="3mo")
+        if len(hist) >= 50:
+            sma_50 = hist['Close'].rolling(window=50).mean().iloc[-1]
+            return round(float(sma_50), 2)
+        elif len(hist) > 0:
+            sma_50 = hist['Close'].mean()
+            return round(float(sma_50), 2)
+    except Exception as e:
+        add_warning(f"Error calculating 50 SMA: {e}")
+    return round(spot_fallback * 0.95, 2)
+
+
 def get_daily_change(ticker: yf.Ticker, last_price: float) -> float:
     try:
         prev_close = ticker.info.get('previousClose')
@@ -306,8 +321,10 @@ async def fetch_analysis_data() -> Dict[str, Any]:
     recent_news = get_recent_news("AAPL")
     
     sma_200 = get_sma_200("AAPL", price_seen)
+    sma_50 = get_sma_50("AAPL", price_seen)
     if os.getenv("SIM_MODE") == "1":
         sma_200 = float(os.getenv("FORCE_SMA", sma_200))
+        sma_50 = float(os.getenv("FORCE_SMA_50", sma_50))
     daily_change_pct = get_daily_change(ticker, price_seen)
     
     portfolio = load_portfolio()
@@ -411,6 +428,7 @@ async def fetch_analysis_data() -> Dict[str, Any]:
             "daily_change_pct": daily_change_pct,
             "vix": vix,
             "200_sma": sma_200,
+            "50_sma": sma_50,
             "iv_current": iv_current,
             "day_classification": day_classification
         }

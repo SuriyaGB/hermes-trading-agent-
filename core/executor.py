@@ -307,9 +307,14 @@ def validate_single_decision(dec, eye_data, portfolio):
 
     if decision == "SELL_NEW_PUT":
         strike = dec.get("strike_to_trade")
+        current_price = eye_data.get("price_seen", 0.0)
         sma_200 = eye_data.get("market_regime", {}).get("200_sma", 0.0)
-        if strike and sma_200 and strike >= sma_200:
-            raise ValueError(f"Policy Block: Put strike {strike} is at or above the 200 SMA support floor ({sma_200}). Entry blocked.")
+        sma_50 = eye_data.get("market_regime", {}).get("50_sma", 0.0)
+        
+        if current_price and sma_200 and current_price < sma_200:
+            raise ValueError(f"Trend gate: AAPL price ({current_price}) below 200 SMA ({sma_200}) — no new puts in downtrend")
+        if strike and sma_50 and strike >= sma_50:
+            raise ValueError(f"Policy Block: Strike {strike} is at or above the 50 SMA support floor ({sma_50}). Entry blocked.")
 
     if decision == "SELL_NEW_PUT":
         summary = eye_data.get("portfolio_summary", {})

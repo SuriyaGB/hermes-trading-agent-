@@ -15,12 +15,15 @@ PROJECT_ROOT   = Path(__file__).parent.parent
 DATA_DIR       = PROJECT_ROOT / 'data'
 STATE_PATH     = DATA_DIR / 'trade_state.json'
 PORTFOLIO_PATH = DATA_DIR / 'portfolio.json'
+TRACKER_PATH   = DATA_DIR / 'intraday_tracker.json'
 MEMORY_PATH    = PROJECT_ROOT / '.hermes' / 'MEMORY.md'
 EYE_CACHE_PATH = PROJECT_ROOT / '.eye_cache.json'
 STATE_HISTORY_PATH = PROJECT_ROOT / 'trade_state_history.jsonl'
 TRADES_CSV_PATH    = DATA_DIR / 'trades_log.csv'
 
 MIN_PREMIUM_YIELD_PCT = 1.0
+if os.getenv("SIM_MODE") == "1":
+    MIN_PREMIUM_YIELD_PCT = float(os.getenv("FORCE_YIELD", "1.0"))
 
 SELL_DECISIONS  = {"SELL_NEW_PUT", "SELL_NEW_CALL"}
 CLOSE_DECISIONS = {"CLOSE_FOR_PROFIT", "CLOSE_FOR_LOSS"}
@@ -45,8 +48,11 @@ def extract_decision(raw_input: str) -> dict | None:
     for candidate in reversed(candidates):
         try:
             data = json.loads(candidate)
-            if isinstance(data, dict) and 'decision' in data:
-                return data
+            if isinstance(data, dict):
+                if 'decisions' in data and isinstance(data['decisions'], list):
+                    return data
+                elif 'decision' in data:
+                    return {"decisions": [data]}
         except: continue
     return None
 
@@ -96,118 +102,273 @@ def load_json(path: Path) -> dict:
 def write_json(path: Path, data: dict):
     with open(path, 'w') as f: json.dump(data, f, indent=2)
 
-def detect_assignment(portfolio, state):
-    """
-    Implements the 2-pulse verification rule for assignment detection.
-    Prevents state-flipping during settlement lag.
-    """
+def reset_and_load_tracker() -> dict:
+    today_str = datetime.now().strftime('%Y-%m-%d')
+    tracker = load_json(TRACKER_PATH)
+    if not tracker or tracker.get("date") != today_str:
+        tracker = {
+            "date": today_str,
+            "contracts_written_today": 0,
+            "first_strike": None,
+            "first_premium": None
+        }
+        write_json(TRACKER_PATH, tracker)
+    return tracker
+
+# ─────────────────────────────────────────────
+# SIMULATION EXPIRATION & ASSIGNMENT
+# ─────────────────────────────────────────────
+def check_simulation_expirations(portfolio, eye_data, db, pulse_id) -> bool:
     positions = portfolio.get("positions", [])
-    shares = next((p for p in positions if p.get("type") == "Stock" and p.get("symbol") == "AAPL"), None)
-    share_count = shares.get("quantity", 0) if shares else 0
+    updated_positions = []
+    changed = False
     
-    current_phase = state.get("current_phase", "CASH_ONLY")
-    confirmed_once = state.get("assignment_confirmed_once", False)
-    
-    if current_phase == "CSP_ACTIVE" and share_count >= 100:
-        if confirmed_once:
-            # 2nd Pulse Confirmed -> Transition
-            sim_log("✅ Assignment Verified (2/2 Pulses). Transitioning to ASSIGNED.")
-            state["current_phase"] = "ASSIGNED"
-            state["assignment_confirmed_once"] = False
-            state["current_option_strike"] = None # Put is gone
-            state["current_option_expiry"] = None
-        else:
-            # 1st Pulse Seen
-            sim_log("🔍 Assignment Detected (1/2 Pulses). Waiting for settlement verification.")
-            state["assignment_confirmed_once"] = True
-    else:
-        # Reset if shares disappear or we aren't in CSP phase
-        if confirmed_once:
-            sim_log("ℹ️ Assignment verification reset (shares cleared or phase changed).")
-        state["assignment_confirmed_once"] = False
+    current_price = eye_data.get("price_seen", 0.0)
+    if current_price <= 0.0:
+        return False
         
+    for p in positions:
+        if p.get("type") == "Option":
+            expiry = p.get("expiry")
+            dte = 99
+            if expiry:
+                expiry_formatted = expiry
+                if '-' not in expiry and len(expiry) == 8:
+                    expiry_formatted = f"{expiry[:4]}-{expiry[4:6]}-{expiry[6:]}"
+                try:
+                    today = datetime.now().date()
+                    exp_date = datetime.strptime(expiry_formatted, '%Y-%m-%d').date()
+                    dte = (exp_date - today).days
+                except:
+                    pass
+            
+            if dte <= 0:
+                changed = True
+                strike = float(p.get("strike", 0.0))
+                opt_type = p.get("option_type", "PUT").upper()
+                
+                if opt_type == "PUT":
+                    if current_price < strike:
+                        sim_log(f"🔔 Simulation Assignment Triggered! PUT strike {strike} expired ITM (Price: {current_price}).")
+                        stock_pos = next((pos for pos in updated_positions if pos.get("type") == "Stock" and pos.get("symbol") == "AAPL"), None)
+                        if stock_pos:
+                            old_qty = stock_pos.get("quantity", 0)
+                            old_avg = stock_pos.get("avg_cost", 0.0)
+                            new_qty = old_qty + 100
+                            new_avg = round(((old_qty * old_avg) + (100 * strike)) / new_qty, 2)
+                            stock_pos["quantity"] = new_qty
+                            stock_pos["avg_cost"] = new_avg
+                        else:
+                            updated_positions.append({
+                                "type": "Stock",
+                                "symbol": "AAPL",
+                                "quantity": 100,
+                                "avg_cost": strike
+                            })
+                        portfolio["total_cash"] = round(portfolio.get("total_cash", 250000.0) - (strike * 100), 2)
+                        
+                        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "ASSIGNMENT_PUT", "strike": strike, "price": strike, "pnl": 0.0})
+                        _append_trades_csv("ASSIGNMENT_PUT", "AAPL", strike, expiry, strike, 0.0, pulse_id)
+                        send_telegram(f"🔔 Put Option Strike {strike} assigned. Purchased 100 AAPL shares at {strike} (Market: {current_price}).")
+                    else:
+                        sim_log(f"💨 Option PUT strike {strike} expired worthless (Price: {current_price}).")
+                        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "EXPIRED_PUT", "strike": strike, "price": 0.0, "pnl": 0.0})
+                        _append_trades_csv("EXPIRED_PUT", "AAPL", strike, expiry, 0.0, 0.0, pulse_id)
+                        send_telegram(f"💨 Put Option Strike {strike} expired worthless (Market: {current_price}).")
+                        
+                elif opt_type == "CALL":
+                    if current_price > strike:
+                        sim_log(f"🔔 Simulation Assignment Triggered! CALL strike {strike} expired ITM (Price: {current_price}).")
+                        stock_pos = next((pos for pos in updated_positions if pos.get("type") == "Stock" and pos.get("symbol") == "AAPL"), None)
+                        pnl = 0.0
+                        if stock_pos and stock_pos.get("quantity", 0) >= 100:
+                            pnl = round((strike - stock_pos["avg_cost"]) * 100, 2)
+                            stock_pos["quantity"] -= 100
+                            if stock_pos["quantity"] <= 0:
+                                updated_positions.remove(stock_pos)
+                        
+                        portfolio["total_cash"] = round(portfolio.get("total_cash", 250000.0) + (strike * 100), 2)
+                        portfolio["realized_pnl"] = round(portfolio.get("realized_pnl", 0.0) + pnl, 2)
+                        
+                        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "ASSIGNMENT_CALL", "strike": strike, "price": strike, "pnl": pnl})
+                        _append_trades_csv("ASSIGNMENT_CALL", "AAPL", strike, expiry, strike, pnl, pulse_id)
+                        send_telegram(f"🔔 Call Option Strike {strike} assigned. AAPL shares called away at {strike} (PnL: {pnl}).")
+                    else:
+                        sim_log(f"💨 Option CALL strike {strike} expired worthless (Price: {current_price}).")
+                        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "EXPIRED_CALL", "strike": strike, "price": 0.0, "pnl": 0.0})
+                        _append_trades_csv("EXPIRED_CALL", "AAPL", strike, expiry, 0.0, 0.0, pulse_id)
+                        send_telegram(f"💨 Call Option Strike {strike} expired worthless (Market: {current_price}).")
+            else:
+                updated_positions.append(p)
+        else:
+            updated_positions.append(p)
+            
+    if changed:
+        portfolio["positions"] = updated_positions
+    return changed
+
+def update_macro_state(portfolio, state):
+    positions = portfolio.get("positions", [])
+    has_shares = False
+    has_put = False
+    has_call = False
+    shares_pos = next((p for p in positions if p.get("type") == "Stock" and p.get("symbol") == "AAPL"), None)
+    if shares_pos and shares_pos.get("quantity", 0) >= 100:
+        has_shares = True
+        
+    for p in positions:
+        if p.get("type") == "Option":
+            if p.get("option_type") == "PUT":
+                has_put = True
+            elif p.get("option_type") == "CALL":
+                has_call = True
+                
+    if has_shares and has_call:
+        state["current_phase"] = "CC_ACTIVE"
+    elif has_shares:
+        state["current_phase"] = "ASSIGNED"
+    elif has_put:
+        state["current_phase"] = "CSP_ACTIVE"
+    else:
+        state["current_phase"] = "CASH_ONLY"
+        
+    state["assignment_confirmed_once"] = False
+    
+    # Store first option strike/expiry for backward compatibility
+    opt = next((p for p in positions if p.get("type") == "Option"), None)
+    if opt:
+        state["current_option_strike"] = opt.get("strike")
+        state["current_option_expiry"] = opt.get("expiry")
+    else:
+        state["current_option_strike"] = None
+        state["current_option_expiry"] = None
     return state
 
-def validate_decision(decision_data, eye_data, state):
-    decision = decision_data.get('decision')
-    phase = state.get('current_phase', 'CASH_ONLY')
+# ─────────────────────────────────────────────
+# POSITION MATCHING HELPERS
+# ─────────────────────────────────────────────
+def find_matching_option(positions, key=None, strike=None, expiry=None, opt_type=None):
+    for p in positions:
+        if p.get("type") != "Option": continue
+        if key:
+            p_strike = int(p.get("strike", 0))
+            p_exp = p.get("expiry", "").replace('-', '')
+            p_type = p.get("option_type", "PUT").upper()
+            p_key = f"{p_type}_{p_strike}_{p_exp}"
+            if p_key == key.replace('-', ''):
+                return p
+        if strike is not None and abs(p.get("strike", 0.0) - float(strike)) < 0.1:
+            p_exp = p.get("expiry", "").replace('-', '')
+            target_exp = expiry.replace('-', '') if expiry else None
+            if not target_exp or p_exp == target_exp:
+                if not opt_type or p.get("option_type", "PUT").upper() == opt_type.upper():
+                    return p
+    return None
+
+# ─────────────────────────────────────────────
+# VALIDATION GATES (Smart Guard)
+# ─────────────────────────────────────────────
+def validate_single_decision(dec, eye_data, portfolio):
+    decision = dec.get('decision')
+    state = load_json(STATE_PATH)
     
-    # 1. STRATEGIC POLICY GATE (Delta Guard)
     if decision == "ROLL_PUT":
-        delta = abs(float(eye_data.get('delta_current', 0)))
-        dte = int(eye_data.get('dte_current', 99))
-        # POLICY: Roll only if Delta > 0.45 or we are near expiration (< 21 days)
-        if delta < 0.45 and dte >= 21:
-            raise ValueError(f"Policy Block: ROLL rejected (Delta {delta} < 0.45 AND DTE {dte} >= 21).")
+        key = dec.get("position_key")
+        close_strike = dec.get("close_strike")
+        matched = None
+        for p in eye_data.get("active_positions", []):
+            if p.get("type") == "Option":
+                if key and p.get("position_key") == key:
+                    matched = p
+                    break
+                elif close_strike and abs(p.get("strike", 0.0) - close_strike) < 0.1:
+                    matched = p
+                    break
+        if matched:
+            delta = abs(float(matched.get('delta', 0.0)))
+            dte = int(matched.get('dte', 99))
+            if dte <= 15 and delta >= 0.30:
+                raise ValueError(f"Policy Block: ROLL_PUT rejected (Delta {delta} >= 0.30 AND DTE {dte} <= 15). [BLOCKED_ROLL_ITM_PUT] Accept assignment instead.")
 
-    # 2. EMERGENCY DTE GATE (Hard Safety)
-    if (decision == "HOLD_PUT_POSITION" or decision == "HOLD_CALL_POSITION"):
-        dte = int(eye_data.get('dte_current', 99))
-        if dte < 1:
-            sim_log("🚨 DTE < 1: Emergency Close Attempt Triggered.")
-            decision_data['decision'] = 'CLOSE_FOR_PROFIT' 
-            decision_data['is_emergency_close'] = True
-            return decision_data, True
+    if decision in ["HOLD_PUT_POSITION", "HOLD_CALL_POSITION", "HOLD"]:
+        key = dec.get("position_key")
+        matched = None
+        for p in eye_data.get("active_positions", []):
+            if p.get("type") == "Option" and key and p.get("position_key") == key:
+                matched = p
+                break
+        if matched:
+            dte = int(matched.get('dte', 99))
+            if dte < 1:
+                sim_log(f"🚨 DTE < 1 for option {key}: Emergency Close Attempt Triggered.")
+                dec['decision'] = 'CLOSE_FOR_PROFIT' 
+                dec['is_emergency_close'] = True
+                return dec, True
 
-    # 3. PHASE CONSISTENCY GATE
-    if decision == "SELL_NEW_PUT" and phase != "CASH_ONLY":
-        raise ValueError(f"Phase Block: Cannot SELL_PUT while in {phase} phase.")
-    
-    if decision == "SELL_NEW_CALL" and phase != "ASSIGNED":
-        raise ValueError(f"Phase Block: Cannot SELL_CALL while in {phase} phase.")
+    if decision == "SELL_NEW_PUT":
+        strike = dec.get("strike_to_trade")
+        sma_200 = eye_data.get("market_regime", {}).get("200_sma", 0.0)
+        if strike and sma_200 and strike >= sma_200:
+            raise ValueError(f"Policy Block: Put strike {strike} is at or above the 200 SMA support floor ({sma_200}). Entry blocked.")
 
-    return decision_data, False
+    if decision == "SELL_NEW_PUT":
+        summary = eye_data.get("portfolio_summary", {})
+        risk_units = summary.get("current_risk_units", 0)
+        if risk_units >= 4:
+            raise ValueError(f"Policy Block: Max Risk Units (4) reached. Cannot write new Put.")
+            
+        tracker = reset_and_load_tracker()
+        written = tracker.get("contracts_written_today", 0)
+        day_class = eye_data.get("market_regime", {}).get("day_classification", "NORMAL_DAY")
+        
+        if written >= 2:
+            raise ValueError(f"Pacing Block: Daily cap (2) reached. Cannot write new Put.")
+        elif written == 1:
+            if day_class in ["QUIET_DAY"]:
+                raise ValueError(f"Pacing Block: Daily cap (1) reached for regime {day_class}. Cannot write new Put.")
+            elif day_class == "NORMAL_DAY":
+                first_strike = tracker.get("first_strike")
+                first_premium = tracker.get("first_premium")
+                candidate_strike = dec.get("strike_to_trade")
+                candidate_premium = dec.get("premium_to_collect")
+                if first_strike and first_premium and candidate_strike and candidate_premium:
+                    if not (candidate_strike < first_strike and candidate_premium >= first_premium):
+                        raise ValueError(f"Pacing Block: Better Option check failed (strike {candidate_strike} >= {first_strike} or premium {candidate_premium} < {first_premium}).")
+                    
+    return dec, False
 
-def apply_yield_gate(decision_data: dict):
-    decision = decision_data.get('decision', '')
-    if decision not in SELL_DECISIONS: return decision_data, False, None
-    premium = decision_data.get('premium_to_collect')
-    strike = decision_data.get('strike_to_trade')
-    if premium is None or strike is None or strike == 0: return decision_data, False, None
+def apply_single_yield_gate(dec):
+    decision = dec.get('decision', '')
+    if decision not in SELL_DECISIONS: return dec, False, None
+    premium = dec.get('premium_to_collect')
+    strike = dec.get('strike_to_trade')
+    if premium is None or strike is None or strike == 0: return dec, False, None
     
     yield_pct = (premium / strike) * 100.0
     if yield_pct < MIN_PREMIUM_YIELD_PCT:
         reason = f"Yield {yield_pct:.2f}% < {MIN_PREMIUM_YIELD_PCT}% floor."
-        decision_data = dict(decision_data)
-        decision_data['decision'] = 'WAIT_FOR_ENTRY'
-        return decision_data, True, reason
-    return decision_data, False, None
+        dec = dict(dec)
+        dec['decision'] = 'WAIT_FOR_ENTRY'
+        return dec, True, reason
+    return dec, False, None
 
-def build_critical_payload(decision_data, eye_data, error_msg, state):
-    payload = (
-        f"DECISION: {decision_data.get('decision')}\n"
-        f"STATE: {state.get('current_phase')}\n"
-        f"PRICE: {eye_data.get('price_seen', 'N/A')}\n"
-        f"DELTA: {eye_data.get('delta_current', 'N/A')}\n"
-        f"DTE: {eye_data.get('dte_current', 'N/A')}\n"
-        f"ERROR: {error_msg}"
-    )
-    return payload
-
-def build_memory_summary(decision, state, portfolio, eye_data, action_result, ai_override, override_reason):
-    action = decision.get('decision')
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
-    summary = f"🤖 AAPL Pulse: {action}\nTime: {timestamp}\nAction: {action_result}\n"
-    if ai_override: summary += f"⚠️ OVERRIDE: {override_reason}\n"
-    summary += f"Reason: {decision.get('reason', 'N/A')}"
-    return summary
-
-def execute_decision(decision_data, db, pulse_id, eye_data=None):
-    decision = decision_data.get('decision', 'UNKNOWN')
+# ─────────────────────────────────────────────
+# DECISION TRANSACTION HANDLER
+# ─────────────────────────────────────────────
+def execute_decision(dec, db, pulse_id, eye_data=None):
+    decision = dec.get('decision', 'UNKNOWN')
     portfolio = load_json(PORTFOLIO_PATH)
     state = load_json(STATE_PATH)
+    tracker = reset_and_load_tracker()
     
-    # Defensive initialization of positions
     if "positions" not in portfolio: portfolio["positions"] = []
     
-    if decision in ['HOLD_PUT_POSITION', 'HOLD_CALL_POSITION', 'HOLD_ASSIGNED_EQUITY', 'WAIT_FOR_ENTRY']:
+    if decision in ['HOLD_PUT_POSITION', 'HOLD_CALL_POSITION', 'HOLD_ASSIGNED_EQUITY', 'WAIT_FOR_ENTRY', 'HOLD']:
         return "No Action"
 
-    # --- HANDLER: SELL_NEW_PUT ---
     if decision == "SELL_NEW_PUT":
-        strike = decision_data.get('strike_to_trade')
-        premium = decision_data.get('premium_to_collect')
-        expiry = decision_data.get('dte_seen', 'N/A')
+        strike = float(dec.get('strike_to_trade'))
+        premium = float(dec.get('premium_to_collect'))
         chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
         
         portfolio["positions"].append({
@@ -218,25 +379,26 @@ def execute_decision(decision_data, db, pulse_id, eye_data=None):
             "option_type": "PUT",
             "expiry": chosen_expiry
         })
-        portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) + (premium * 100), 2)
-        state.update({
-            "current_phase": "CSP_ACTIVE", 
-            "current_option_strike": strike,
-            "current_option_expiry": chosen_expiry
-        })
+        portfolio["total_cash"] = round(portfolio.get("total_cash", 250000.0) + (premium * 100), 2)
+        
+        tracker["contracts_written_today"] += 1
+        if tracker["contracts_written_today"] == 1:
+            tracker["first_strike"] = strike
+            tracker["first_premium"] = premium
+        write_json(TRACKER_PATH, tracker)
+        
+        state = update_macro_state(portfolio, state)
         
         write_json(PORTFOLIO_PATH, portfolio)
         write_json(STATE_PATH, state)
-        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "SELL_PUT", "strike": strike, "price": premium, "pnl": 0.0})
+        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "SELL_PUT", "strike": strike, "expiry": chosen_expiry, "price": premium, "pnl": 0.0})
         _append_state_history(state)
-        _append_trades_csv("SELL_PUT", "AAPL", strike, expiry, premium, 0.0, pulse_id)
+        _append_trades_csv("SELL_PUT", "AAPL", strike, chosen_expiry, premium, 0.0, pulse_id)
         return f"SOLD PUT strike {strike}"
 
-    # --- HANDLER: SELL_NEW_CALL ---
     elif decision == "SELL_NEW_CALL":
-        strike = decision_data.get('strike_to_trade')
-        premium = decision_data.get('premium_to_collect')
-        expiry = decision_data.get('dte_seen', 'N/A')
+        strike = float(dec.get('strike_to_trade'))
+        premium = float(dec.get('premium_to_collect'))
         chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
         
         portfolio["positions"].append({
@@ -247,76 +409,82 @@ def execute_decision(decision_data, db, pulse_id, eye_data=None):
             "option_type": "CALL",
             "expiry": chosen_expiry
         })
-        portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) + (premium * 100), 2)
-        state.update({
-            "current_phase": "CC_ACTIVE", 
-            "current_option_strike": strike,
-            "current_option_expiry": chosen_expiry
-        })
+        portfolio["total_cash"] = round(portfolio.get("total_cash", 250000.0) + (premium * 100), 2)
+        
+        state = update_macro_state(portfolio, state)
         
         write_json(PORTFOLIO_PATH, portfolio)
         write_json(STATE_PATH, state)
-        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "SELL_CALL", "strike": strike, "price": premium, "pnl": 0.0})
+        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "SELL_CALL", "strike": strike, "expiry": chosen_expiry, "price": premium, "pnl": 0.0})
         _append_state_history(state)
-        _append_trades_csv("SELL_CALL", "AAPL", strike, expiry, premium, 0.0, pulse_id)
+        _append_trades_csv("SELL_CALL", "AAPL", strike, chosen_expiry, premium, 0.0, pulse_id)
         return f"SOLD CALL strike {strike}"
 
-    # --- HANDLER: CLOSE_FOR_PROFIT / LOSS ---
     elif decision in CLOSE_DECISIONS:
-        opt_pos = next((p for p in portfolio["positions"] if p.get("type") == "Option"), None)
+        key = dec.get("position_key")
+        strike = dec.get("close_strike")
+        expiry = dec.get("close_expiry")
+        
+        opt_pos = find_matching_option(portfolio["positions"], key=key, strike=strike, expiry=expiry)
         
         if not opt_pos:
-            if decision_data.get('is_emergency_close'):
-                raise ValueError("Emergency Close FAILED: No open option position found in portfolio.")
-            return "No Action (No position to close)"
+            if dec.get('is_emergency_close'):
+                raise ValueError("Emergency Close FAILED: Matching open option position not found in portfolio.")
+            return "No Action (Matching position to close not found)"
 
         pnl = 0.0
-        entry = opt_pos.get("avg_cost", 0)
-        close = decision_data.get("premium_to_collect", 0)
+        entry = opt_pos.get("avg_cost", 0.0)
+        close = dec.get("premium_to_collect")
+        if close is None:
+            close = 0.0
+            if eye_data and "option_chain" in eye_data:
+                for row in eye_data["option_chain"]:
+                    if abs(row.get("strike", 0.0) - opt_pos.get("strike", 0.0)) < 0.1:
+                        close = row.get("mid", 0.0)
+                        break
+        else:
+            close = float(close)
         pnl = round((entry - close) * 100, 2)
         portfolio["positions"] = [p for p in portfolio["positions"] if p != opt_pos]
-        portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) - (close * 100), 2)
-        portfolio["realized_pnl"] = round(portfolio.get("realized_pnl", 0) + pnl, 2)
+        portfolio["total_cash"] = round(portfolio.get("total_cash", 250000.0) - (close * 100), 2)
+        portfolio["realized_pnl"] = round(portfolio.get("realized_pnl", 0.0) + pnl, 2)
             
-        state.update({
-            "current_phase": "CASH_ONLY", 
-            "current_option_strike": None,
-            "current_option_expiry": None
-        })
+        state = update_macro_state(portfolio, state)
         
         write_json(PORTFOLIO_PATH, portfolio)
         write_json(STATE_PATH, state)
-        db.save_trade(pulse_id, {"symbol": "AAPL", "action": decision, "pnl": pnl})
+        db.save_trade(pulse_id, {"symbol": "AAPL", "action": decision, "strike": opt_pos.get("strike"), "expiry": opt_pos.get("expiry"), "price": close, "pnl": pnl})
         _append_state_history(state)
-        _append_trades_csv(decision, "AAPL", None, None, None, pnl, pulse_id)
-        return f"CLOSED for {pnl}"
+        _append_trades_csv(decision, "AAPL", opt_pos.get("strike"), opt_pos.get("expiry"), close, pnl, pulse_id)
+        return f"CLOSED position {opt_pos.get('position_key')} for PnL: {pnl}"
 
-    # --- HANDLER: ROLL_PUT (The Maneuver) ---
     elif decision == "ROLL_PUT":
-        # 1. Close current
-        opt_pos = next((p for p in portfolio["positions"] if p.get("type") == "Option"), None)
+        key = dec.get("position_key")
+        close_strike = dec.get("close_strike")
+        close_expiry = dec.get("close_expiry")
+        opt_pos = find_matching_option(portfolio["positions"], key=key, strike=close_strike, expiry=close_expiry, opt_type="PUT")
+        
         pnl = 0.0
         if opt_pos:
-            entry = opt_pos.get("avg_cost", 0)
-            close = decision_data.get("close_details", {}).get("premium_to_pay")
+            entry = opt_pos.get("avg_cost", 0.0)
+            close = dec.get("close_details", {}).get("premium_to_pay")
             if close is None:
-                # Fallback: search for active held strike mid price in option chain
                 close = 0.0
                 if eye_data and "option_chain" in eye_data:
                     for row in eye_data["option_chain"]:
-                        if row.get("strike") == opt_pos.get("strike"):
+                        if abs(row.get("strike", 0.0) - opt_pos.get("strike", 0.0)) < 0.1:
                             close = row.get("mid", 0.0)
                             break
             pnl = round((entry - close) * 100, 2)
             portfolio["positions"] = [p for p in portfolio["positions"] if p != opt_pos]
-            portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) - (close * 100), 2)
-            portfolio["realized_pnl"] = round(portfolio.get("realized_pnl", 0) + pnl, 2)
+            portfolio["total_cash"] = round(portfolio.get("total_cash", 250000.0) - (close * 100), 2)
+            portfolio["realized_pnl"] = round(portfolio.get("realized_pnl", 0.0) + pnl, 2)
+            db.save_trade(pulse_id, {"symbol": "AAPL", "action": "ROLL_PUT_CLOSE", "strike": opt_pos.get("strike"), "expiry": opt_pos.get("expiry"), "price": close, "pnl": pnl})
+            _append_trades_csv("ROLL_PUT_CLOSE", "AAPL", opt_pos.get("strike"), opt_pos.get("expiry"), close, pnl, pulse_id)
 
-        # 2. Open new (robust reading from nested or flat fields)
-        new_strike = decision_data.get('open_details', {}).get('strike_to_trade') or decision_data.get('strike_to_trade')
-        new_premium = decision_data.get('open_details', {}).get('premium_to_collect') or decision_data.get('premium_to_collect')
-        new_expiry = decision_data.get('open_details', {}).get('dte_seen') or decision_data.get('dte_seen', 'N/A')
-        chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
+        new_strike = dec.get('open_details', {}).get('strike_to_trade') or dec.get('strike_to_trade')
+        new_premium = dec.get('open_details', {}).get('premium_to_collect') or dec.get('premium_to_collect')
+        new_expiry = dec.get('open_details', {}).get('expiry_to_trade') or eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
         
         if new_strike is None or new_premium is None:
             raise ValueError(f"ROLL_PUT details missing: new_strike={new_strike}, new_premium={new_premium}")
@@ -327,49 +495,46 @@ def execute_decision(decision_data, db, pulse_id, eye_data=None):
             "strike": new_strike, 
             "avg_cost": new_premium, 
             "option_type": "PUT",
-            "expiry": chosen_expiry
+            "expiry": new_expiry
         })
         portfolio["total_cash"] = round(portfolio["total_cash"] + (new_premium * 100), 2)
-        state.update({
-            "current_phase": "CSP_ACTIVE", 
-            "current_option_strike": new_strike,
-            "current_option_expiry": chosen_expiry
-        })
+        
+        state = update_macro_state(portfolio, state)
 
         write_json(PORTFOLIO_PATH, portfolio)
         write_json(STATE_PATH, state)
-        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "ROLL_PUT_CLOSE", "pnl": pnl})
-        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "ROLL_PUT_OPEN", "strike": new_strike, "price": new_premium})
+        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "ROLL_PUT_OPEN", "strike": new_strike, "expiry": new_expiry, "price": new_premium, "pnl": 0.0})
         _append_state_history(state)
-        _append_trades_csv("ROLL_PUT", "AAPL", new_strike, new_expiry, new_premium, pnl, pulse_id)
-        return f"ROLLED to strike {new_strike} (PnL: {pnl})"
+        _append_trades_csv("ROLL_PUT_OPEN", "AAPL", new_strike, new_expiry, new_premium, pnl, pulse_id)
+        return f"ROLLED PUT to strike {new_strike} (PnL: {pnl})"
 
-    # --- HANDLER: ROLL_CALL ---
     elif decision == "ROLL_CALL":
-        # 1. Close current
-        opt_pos = next((p for p in portfolio["positions"] if p.get("type") == "Option"), None)
+        key = dec.get("position_key")
+        close_strike = dec.get("close_strike")
+        close_expiry = dec.get("close_expiry")
+        opt_pos = find_matching_option(portfolio["positions"], key=key, strike=close_strike, expiry=close_expiry, opt_type="CALL")
+        
         pnl = 0.0
         if opt_pos:
-            entry = opt_pos.get("avg_cost", 0)
-            close = decision_data.get("close_details", {}).get("premium_to_pay")
+            entry = opt_pos.get("avg_cost", 0.0)
+            close = dec.get("close_details", {}).get("premium_to_pay")
             if close is None:
-                # Fallback: search for active held strike mid price in option chain
                 close = 0.0
                 if eye_data and "option_chain" in eye_data:
                     for row in eye_data["option_chain"]:
-                        if row.get("strike") == opt_pos.get("strike"):
+                        if abs(row.get("strike", 0.0) - opt_pos.get("strike", 0.0)) < 0.1:
                             close = row.get("mid", 0.0)
                             break
             pnl = round((entry - close) * 100, 2)
             portfolio["positions"] = [p for p in portfolio["positions"] if p != opt_pos]
-            portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) - (close * 100), 2)
-            portfolio["realized_pnl"] = round(portfolio.get("realized_pnl", 0) + pnl, 2)
+            portfolio["total_cash"] = round(portfolio.get("total_cash", 250000.0) - (close * 100), 2)
+            portfolio["realized_pnl"] = round(portfolio.get("realized_pnl", 0.0) + pnl, 2)
+            db.save_trade(pulse_id, {"symbol": "AAPL", "action": "ROLL_CALL_CLOSE", "strike": opt_pos.get("strike"), "expiry": opt_pos.get("expiry"), "price": close, "pnl": pnl})
+            _append_trades_csv("ROLL_CALL_CLOSE", "AAPL", opt_pos.get("strike"), opt_pos.get("expiry"), close, pnl, pulse_id)
 
-        # 2. Open new (robust reading from nested or flat fields)
-        new_strike = decision_data.get('open_details', {}).get('strike_to_trade') or decision_data.get('strike_to_trade')
-        new_premium = decision_data.get('open_details', {}).get('premium_to_collect') or decision_data.get('premium_to_collect')
-        new_expiry = decision_data.get('open_details', {}).get('dte_seen') or decision_data.get('dte_seen', 'N/A')
-        chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
+        new_strike = dec.get('open_details', {}).get('strike_to_trade') or dec.get('strike_to_trade')
+        new_premium = dec.get('open_details', {}).get('premium_to_collect') or dec.get('premium_to_collect')
+        new_expiry = dec.get('open_details', {}).get('expiry_to_trade') or eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
         
         if new_strike is None or new_premium is None:
             raise ValueError(f"ROLL_CALL details missing: new_strike={new_strike}, new_premium={new_premium}")
@@ -380,46 +545,36 @@ def execute_decision(decision_data, db, pulse_id, eye_data=None):
             "strike": new_strike, 
             "avg_cost": new_premium, 
             "option_type": "CALL",
-            "expiry": chosen_expiry
+            "expiry": new_expiry
         })
         portfolio["total_cash"] = round(portfolio["total_cash"] + (new_premium * 100), 2)
-        state.update({
-            "current_phase": "CC_ACTIVE", 
-            "current_option_strike": new_strike,
-            "current_option_expiry": chosen_expiry
-        })
+        
+        state = update_macro_state(portfolio, state)
 
         write_json(PORTFOLIO_PATH, portfolio)
         write_json(STATE_PATH, state)
-        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "ROLL_CALL_CLOSE", "pnl": pnl})
-        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "ROLL_CALL_OPEN", "strike": new_strike, "price": new_premium})
+        db.save_trade(pulse_id, {"symbol": "AAPL", "action": "ROLL_CALL_OPEN", "strike": new_strike, "expiry": new_expiry, "price": new_premium, "pnl": 0.0})
         _append_state_history(state)
-        _append_trades_csv("ROLL_CALL", "AAPL", new_strike, new_expiry, new_premium, pnl, pulse_id)
-        return f"ROLLED to strike {new_strike} (PnL: {pnl})"
+        _append_trades_csv("ROLL_CALL_OPEN", "AAPL", new_strike, new_expiry, new_premium, pnl, pulse_id)
+        return f"ROLLED CALL to strike {new_strike} (PnL: {pnl})"
 
-    # --- HANDLER: ABORT_DUE_TO_RISK ---
     elif decision == "ABORT_DUE_TO_RISK":
-        # 1. Close any option positions
-        opt_pos = next((p for p in portfolio["positions"] if p.get("type") == "Option"), None)
-        if opt_pos:
-            close = decision_data.get("premium_to_collect", 0) # price to buy to close
-            if not close or close <= 0.0:
-                # Fallback: search for active held strike mid price in option chain
-                close = 0.0
-                if eye_data and "option_chain" in eye_data:
-                    for row in eye_data["option_chain"]:
-                        if row.get("strike") == opt_pos.get("strike"):
-                            close = row.get("mid", 0.0)
-                            break
-            portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) - (close * 100), 2)
+        opts = [p for p in portfolio["positions"] if p.get("type") == "Option"]
+        for opt_pos in opts:
+            close = 0.0
+            if eye_data and "option_chain" in eye_data:
+                for row in eye_data["option_chain"]:
+                    if abs(row.get("strike", 0.0) - opt_pos.get("strike", 0.0)) < 0.1:
+                        close = row.get("mid", 0.0)
+                        break
+            portfolio["total_cash"] = round(portfolio.get("total_cash", 250000.0) - (close * 100), 2)
             portfolio["positions"] = [p for p in portfolio["positions"] if p != opt_pos]
             
-        # 2. Close any stock positions
-        stock_pos = next((p for p in portfolio["positions"] if p.get("type") == "Stock"), None)
-        if stock_pos:
+        stocks = [p for p in portfolio["positions"] if p.get("type") == "Stock"]
+        for stock_pos in stocks:
             qty = stock_pos.get("quantity", 0)
             spot = eye_data.get("price_seen", 0.0) if eye_data else 0.0
-            portfolio["total_cash"] = round(portfolio.get("total_cash", 250000) + (qty * spot), 2)
+            portfolio["total_cash"] = round(portfolio.get("total_cash", 250000.0) + (qty * spot), 2)
             portfolio["positions"] = [p for p in portfolio["positions"] if p != stock_pos]
             
         state.update({
@@ -437,6 +592,28 @@ def execute_decision(decision_data, db, pulse_id, eye_data=None):
         
     raise ValueError(f"Unknown decision: {decision}")
 
+def build_critical_payload(decision_data, eye_data, error_msg, state):
+    payload = (
+        f"DECISIONS COUNT: {len(decision_data.get('decisions', []))}\n"
+        f"STATE: {state.get('current_phase')}\n"
+        f"PRICE: {eye_data.get('price_seen', 'N/A')}\n"
+        f"ERROR: {error_msg}"
+    )
+    return payload
+
+def build_memory_summary(decisions, state, portfolio, eye_data, action_results, ai_override, override_reason):
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+    summary = f"🤖 AAPL Pulse Execution\nTime: {timestamp}\n"
+    if ai_override: 
+        summary += f"⚠️ OVERRIDE: {override_reason}\n"
+    summary += "\nDECISIONS RUN:\n"
+    for i, dec in enumerate(decisions):
+        act = dec.get('decision')
+        res = action_results[i] if i < len(action_results) else "Not executed"
+        reason = dec.get('reason', 'N/A')
+        summary += f"{i+1}. Action: {act} -> {res}\n   Reason: {reason}\n"
+    return summary
+
 async def main_executor():
     sim_log("═══ Hermes Executor Starting ═══")
     raw_brain_output = sys.stdin.read()
@@ -450,34 +627,78 @@ async def main_executor():
     portfolio = load_json(PORTFOLIO_PATH)
     db = HermesDatabase()
     
-    # 1. State Awareness (Assignment Detection)
-    state = detect_assignment(portfolio, state)
-    write_json(STATE_PATH, state) # Persist detection status
+    # 1. State Awareness (Assignment Detection) & Simulated Expiry Check
+    if os.getenv("SIM_MODE") == "1":
+        # Pre-assign trade pulse_id 0 to check expirations
+        if check_simulation_expirations(portfolio, eye_data, db, 0):
+            write_json(PORTFOLIO_PATH, portfolio)
+        portfolio = load_json(PORTFOLIO_PATH)
+        state = load_json(STATE_PATH)
+        state = update_macro_state(portfolio, state)
+        write_json(STATE_PATH, state)
+
+    # Reset day tracking
+    reset_and_load_tracker()
     
-    # Pre-save pulse to DB
-    pulse_id = db.save_pulse(eye_data, decision_data)
+    # Pre-save pulse to DB (using blank/synthesized decisions first)
+    pulse_id = db.save_pulse(eye_data, {"decision": "PENDING", "reason": "Execution in progress"})
+    
+    dec_list = decision_data.get("decisions", [])
+    
+    # Sort: execute closes first to release margin, then opens
+    close_legs = []
+    open_legs = []
+    for d in dec_list:
+        if d.get("decision") in CLOSE_DECISIONS or d.get("decision") in ["ROLL_PUT", "ROLL_CALL", "ABORT_DUE_TO_RISK"]:
+            close_legs.append(d)
+        else:
+            open_legs.append(d)
+    sorted_decisions = close_legs + open_legs
+    
+    action_results = []
+    ai_override = False
+    override_reason = None
+    processed_decisions = []
     
     try:
-        # 2. Validation Interlock (The Smart Guard)
-        decision_data, v_override = validate_decision(decision_data, eye_data, state)
+        for dec in sorted_decisions:
+            # 2. Validation Interlock (The Smart Guard)
+            dec, v_override = validate_single_decision(dec, eye_data, portfolio)
+            
+            # 3. Yield Gate
+            dec, y_override, y_reason = apply_single_yield_gate(dec)
+            
+            if v_override or y_override:
+                ai_override = True
+                override_reason = "DTE Safety" if v_override else y_reason
+            
+            # Update state in loop for next check validation
+            portfolio = load_json(PORTFOLIO_PATH)
+            
+            action_result = execute_decision(dec, db, pulse_id, eye_data)
+            sim_log(f"Action Result: {action_result}")
+            
+            action_results.append(action_result)
+            processed_decisions.append(dec)
+            
+        # Synthesize database columns
+        decision_summary = ", ".join(d.get("decision") for d in processed_decisions)
+        reasoning_summary = " | ".join(d.get("reason", "N/A") for d in processed_decisions)
         
-        # 3. Yield Gate
-        decision_data, y_override, y_reason = apply_yield_gate(decision_data)
+        # Save finalized summaries to DB
+        db_decision_data = dict(decision_data)
+        db_decision_data['decision'] = decision_summary
+        db_decision_data['reason'] = reasoning_summary
+        db.save_pulse(eye_data, db_decision_data, ai_override=ai_override, override_reason=override_reason)
         
-        ai_override = v_override or y_override
-        override_reason = "DTE Safety" if v_override else y_reason
-        
-        action_result = execute_decision(decision_data, db, pulse_id, eye_data)
-        sim_log(f"Action Result: {action_result}")
-        
-        summary = build_memory_summary(decision_data, state, portfolio, eye_data, action_result, ai_override, override_reason)
+        summary = build_memory_summary(processed_decisions, state, portfolio, eye_data, action_results, ai_override, override_reason)
         
         # Audit Trail First
         try:
             with open(MEMORY_PATH, 'a') as f: f.write(f"--- PULSE #{pulse_id} ---\n{summary}\n\n")
         except: pass
         
-        # Telegram Last (Hardened)
+        # Telegram Last
         send_telegram(summary)
         
     except Exception as e:

@@ -42,17 +42,19 @@ MARKET_OPEN_MINS=$(( 14 * 60 + 0 ))
 # Market Close Gate: 20:00 UTC (1:30 AM IST)
 MARKET_CLOSE_MINS=$(( 20 * 60 + 0 ))
 
-# 1. Weekend Check
-if [ "$DAY_OF_WEEK" -gt 5 ]; then
-    echo "[HERMES] Market closed on weekends (UTC). Skipping pulse."
-    exit 0
-fi
+if [ "$FORCE_PULSE" != "1" ]; then
+    # 1. Weekend Check
+    if [ "$DAY_OF_WEEK" -gt 5 ]; then
+        echo "[HERMES] Market closed on weekends (UTC). Skipping pulse."
+        exit 0
+    fi
 
-# 2. Hours Check
-if [ "$CURRENT_TOTAL_MINS" -lt "$MARKET_OPEN_MINS" ] || [ "$CURRENT_TOTAL_MINS" -ge "$MARKET_CLOSE_MINS" ]; then
-    CURRENT_UTC=$(date -u +"%H:%M UTC")
-    echo "[HERMES] Market closed at ${CURRENT_UTC}. Strategy hours: 14:00-20:00 UTC (7:30 PM - 1:30 AM IST). Skipping."
-    exit 0
+    # 2. Hours Check
+    if [ "$CURRENT_TOTAL_MINS" -lt "$MARKET_OPEN_MINS" ] || [ "$CURRENT_TOTAL_MINS" -ge "$MARKET_CLOSE_MINS" ]; then
+        CURRENT_UTC=$(date -u +"%H:%M UTC")
+        echo "[HERMES] Market closed at ${CURRENT_UTC}. Strategy hours: 14:00-20:00 UTC (7:30 PM - 1:30 AM IST). Skipping."
+        exit 0
+    fi
 fi
 
 echo "[HERMES] Market open at $(date -u +'%H:%M UTC'). Running pulse..."

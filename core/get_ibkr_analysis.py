@@ -15,6 +15,7 @@ from typing import List, Dict, Any
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / 'data'
 PORTFOLIO_PATH = DATA_DIR / 'portfolio.json'
+TRACKER_PATH = DATA_DIR / 'intraday_tracker.json'
 
 # Global Warning Tracker
 WARNINGS = []
@@ -78,7 +79,23 @@ def load_portfolio():
         with open(PORTFOLIO_PATH, 'r') as f: return json.load(f)
     except: 
         add_warning("Portfolio file missing.")
-        return {"cash": 250000.0, "positions": []}
+        return {"total_cash": 250000.0, "realized_pnl": 0.0, "positions": []}
+
+def get_intraday_tracker() -> Dict[str, Any]:
+    try:
+        if TRACKER_PATH.exists():
+            with open(TRACKER_PATH, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        add_warning(f"Error loading intraday tracker: {e}")
+    
+    today_str = datetime.now().strftime('%Y-%m-%d')
+    return {
+        "date": today_str,
+        "contracts_written_today": 0,
+        "first_strike": None,
+        "first_premium": None
+    }
 
 def get_vix() -> float:
     try: 
@@ -112,6 +129,34 @@ def get_recent_news(symbol: str = "AAPL") -> List[str]:
         return headlines if headlines else ["No recent news headlines."]
     except:
         return ["News fetch failed."]
+
+def get_sma_200(symbol: str = "AAPL", spot_fallback: float = 0.0) -> float:
+    try:
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period="1y")
+        if len(hist) >= 200:
+            sma_200 = hist['Close'].rolling(window=200).mean().iloc[-1]
+            return round(float(sma_200), 2)
+        elif len(hist) > 0:
+            sma_200 = hist['Close'].mean()
+            return round(float(sma_200), 2)
+    except Exception as e:
+        add_warning(f"Error calculating 200 SMA: {e}")
+    return round(spot_fallback * 0.90, 2)
+
+def get_daily_change(ticker: yf.Ticker, last_price: float) -> float:
+    try:
+        prev_close = ticker.info.get('previousClose')
+        if not prev_close:
+            hist = ticker.history(period='2d')
+            if len(hist) >= 2:
+                prev_close = float(hist['Close'].iloc[-2])
+        if prev_close and prev_close > 0:
+            change = ((last_price - prev_close) / prev_close) * 100
+            return round(change, 2)
+    except Exception as e:
+        add_warning(f"Error calculating daily price change: {e}")
+    return 0.0
 
 async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[str, Any]:
     result = {"option_chain": [], "chosen_expiry": None, "chosen_dte": None}
@@ -148,7 +193,6 @@ async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[st
             # IMPROVED IV DETECTION
             iv_raw = float(row['impliedVolatility'])
             if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001 or (bid == 0.0 and ask == 0.0):
-                # Use Math Engine to solve for real IV
                 iv = solve_iv(mid, spot, strike, T, r, 'put')
             else:
                 iv = iv_raw
@@ -185,163 +229,204 @@ async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[st
 
     return result
 
-def recover_expiry_from_db(held_strike: float) -> str | None:
-    try:
-        import sqlite3
-        db_path = Path(__file__).parent.parent / 'data' / 'hermes_brain.db'
-        if not db_path.exists(): return None
-        conn = sqlite3.connect(db_path)
-        cursor = conn.execute(
-            "SELECT raw_input_json, raw_output_json, ai_decision FROM pulse_history ORDER BY id DESC"
-        )
-        for row in cursor.fetchall():
-            input_data = json.loads(row[0]) if row[0] else {}
-            output_data = json.loads(row[1]) if row[1] else {}
-            decision = row[2]
+def enrich_option_position(p: Dict[str, Any], spot: float, ticker: yf.Ticker) -> Dict[str, Any]:
+    strike = float(p.get("strike"))
+    expiry = p.get("expiry")
+    opt_type_str = p.get("option_type", "PUT").lower()
+    
+    expiry_formatted = expiry
+    if expiry and '-' not in expiry and len(expiry) == 8:
+        expiry_formatted = f"{expiry[:4]}-{expiry[4:6]}-{expiry[6:]}"
+        
+    dte = 99
+    delta = -0.5 if opt_type_str == 'put' else 0.5
+    current_premium = float(p.get("avg_cost", 1.0))
+    
+    if expiry_formatted:
+        try:
+            today = datetime.now().date()
+            exp_date = datetime.strptime(expiry_formatted, '%Y-%m-%d').date()
+            dte = (exp_date - today).days
             
-            if decision == "SELL_NEW_PUT" and output_data.get("strike_to_trade") == held_strike:
-                exp = input_data.get("chosen_expiry")
-                if exp:
-                    conn.close()
-                    return exp
-            elif decision == "ROLL_PUT":
-                open_strike = output_data.get("open_details", {}).get("strike_to_trade") or output_data.get("strike_to_trade")
-                if open_strike == held_strike:
-                    exp = input_data.get("chosen_expiry")
-                    if exp:
-                        conn.close()
-                        return exp
-        conn.close()
-    except Exception as e:
-        print(f"[RECOVER] Error recovering expiry: {e}", file=sys.stderr)
-    return None
+            chain_obj = ticker.option_chain(expiry_formatted)
+            chain_table = chain_obj.calls if opt_type_str == 'call' else chain_obj.puts
+            match_row = chain_table[chain_table['strike'] == strike]
+            
+            iv = 0.18
+            if not match_row.empty:
+                row = match_row.iloc[0]
+                bid, ask = float(row['bid']), float(row['ask'])
+                mid = round((bid + ask) / 2, 2)
+                if mid <= 0.0: mid = float(row['lastPrice'])
+                if mid > 0.0: current_premium = mid
+                
+                r = get_risk_free_rate()
+                T = dte / 365.25
+                iv_raw = float(row['impliedVolatility'])
+                if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001 or (bid == 0.0 and ask == 0.0):
+                    iv = solve_iv(current_premium, spot, strike, T, r, opt_type_str)
+                else:
+                    iv = iv_raw
+            else:
+                r = get_risk_free_rate()
+                T = dte / 365.25
+                iv = get_vix_sigma()
+                current_premium = black_scholes_price(spot, strike, T, r, iv, opt_type_str)
+                
+            delta_raw = calculate_delta(spot, strike, dte / 365.25, get_risk_free_rate(), iv, opt_type_str)
+            delta = round(delta_raw, 4)
+        except Exception as e:
+            add_warning(f"Error enriching option {opt_type_str.upper()}_{strike}_{expiry}: {e}")
+            
+    avg_cost = float(p.get("avg_cost", 1.0))
+    profit_pct = 0.0
+    if avg_cost > 0:
+        profit_pct = ((avg_cost - current_premium) / avg_cost) * 100
+        
+    position_key = f"{opt_type_str.upper()}_{int(strike)}_{expiry.replace('-', '') if expiry else 'N/A'}"
+    
+    return {
+        "position_key": position_key,
+        "type": "Option",
+        "option_type": opt_type_str.upper(),
+        "strike": strike,
+        "expiry": expiry.replace('-', '') if expiry else 'N/A',
+        "avg_cost": avg_cost,
+        "current_premium": round(current_premium, 2),
+        "profit_pct": round(profit_pct, 1),
+        "dte": dte,
+        "delta": delta
+    }
 
 async def fetch_analysis_data() -> Dict[str, Any]:
-    data = {"account_status": "CASH_ONLY", "price_seen": 0.0, "vix_seen": 17.0, "iv_current": "N/A", "option_chain": [], "warnings": []}
     ticker = yf.Ticker('AAPL')
-    data["price_seen"] = round(float(ticker.fast_info['lastPrice']), 2)
-    data["vix_seen"] = get_vix()
-    data["earnings_days"] = get_earnings_days("AAPL")
-    data["recent_news"] = get_recent_news("AAPL")
+    price_seen = round(float(ticker.fast_info['lastPrice']), 2)
+    vix = get_vix()
+    earnings_days = get_earnings_days("AAPL")
+    recent_news = get_recent_news("AAPL")
+    
+    sma_200 = get_sma_200("AAPL", price_seen)
+    if os.getenv("SIM_MODE") == "1":
+        sma_200 = float(os.getenv("FORCE_SMA", sma_200))
+    daily_change_pct = get_daily_change(ticker, price_seen)
     
     portfolio = load_portfolio()
+    intraday_tracker = get_intraday_tracker()
+    
+    active_positions = []
     has_shares = False
     has_put = False
     has_call = False
-    held_strike = None
-    held_expiry = None
-    held_option_type = None
+    first_held_strike = None
+    first_held_expiry = None
+    first_held_option_type = None
+    first_held_delta = 0.0
+    first_held_dte = 99
     
+    shares_count = 0
     for p in portfolio.get("positions", []):
-        if p.get("type") == "Stock" and p.get("symbol") == "AAPL" and p.get("quantity", 0) >= 100:
-            has_shares = True
+        if p.get("type") == "Stock" and p.get("symbol") == "AAPL":
+            qty = p.get("quantity", 0)
+            if qty >= 100:
+                has_shares = True
+                shares_count += qty
+            active_positions.append({
+                "position_key": f"STOCK_{p.get('symbol')}",
+                "type": "Stock",
+                "symbol": p.get("symbol"),
+                "quantity": qty,
+                "avg_cost": p.get("avg_cost")
+            })
         elif p.get("type") == "Option":
-            held_strike = p.get("strike")
-            held_expiry = p.get("expiry")
-            held_option_type = p.get("option_type", "PUT")
-            if held_option_type == "CALL":
-                has_call = True
-            else:
+            enriched = enrich_option_position(p, price_seen, ticker)
+            active_positions.append(enriched)
+            if enriched["option_type"] == "PUT":
                 has_put = True
+            elif enriched["option_type"] == "CALL":
+                has_call = True
+                
+            if not first_held_strike:
+                first_held_strike = enriched["strike"]
+                first_held_expiry = enriched["expiry"]
+                first_held_option_type = enriched["option_type"]
+                first_held_delta = enriched["delta"]
+                first_held_dte = enriched["dte"]
 
+    risk_units = int(shares_count // 100) + sum(1 for p in active_positions if p.get("type") == "Option")
+    
+    net_liq = float(portfolio.get("total_cash", 250000.0))
+    stock_value = shares_count * price_seen
+    net_liq += stock_value
+    
+    buying_power_limit = net_liq * 0.50
+    remaining_buying_power = max(0.0, buying_power_limit - sum(100 * p.get("strike", price_seen) for p in active_positions if p.get("type") == "Option" and p.get("option_type") == "PUT") - stock_value)
+    
     if has_shares and has_call:
-        data["account_status"] = "CC_ACTIVE"
+        account_status = "CC_ACTIVE"
     elif has_shares:
-        data["account_status"] = "SHARES_ASSIGNED"
+        account_status = "SHARES_ASSIGNED"
     elif has_put:
-        data["account_status"] = "CSP_ACTIVE"
+        account_status = "CSP_ACTIVE"
     else:
-        data["account_status"] = "CASH_ONLY"
-
-    if held_strike:
-        data["strike_held"] = held_strike
-    if held_expiry:
-        data["expiry_held"] = held_expiry
-            
-    chain_result = await get_yf_option_chain(data["price_seen"], held_strike)
-    data.update(chain_result)
-    
-    # Final IV enrichment from ATM
-    if data["option_chain"]:
-        atm = sorted(data["option_chain"], key=lambda x: abs(x['strike'] - data["price_seen"]))[0]
-        data["iv_current"] = atm['iv']
-    
-    # Calculate current DTE and Delta for the held option
-    delta_current = 0.0
-    dte_current = 99
-    
-    if data["account_status"] in ["CSP_ACTIVE", "CC_ACTIVE"] and held_strike:
-        is_call = (held_option_type == "CALL")
-        opt_type_str = 'call' if is_call else 'put'
-
-        # 1. Try to recover the expiry from database trade logs
-        if not held_expiry or held_expiry == "N/A":
-            recovered = recover_expiry_from_db(held_strike)
-            if recovered:
-                held_expiry = recovered
-                add_warning(f"Auto-healed held option expiry from DB history: strike {held_strike} -> expiry {held_expiry}.")
-                
-        # 2. Fallback to option chain search if database recovery failed
-        if not held_expiry or held_expiry == "N/A":
-            today = datetime.now().date()
-            for exp in ticker.options:
-                exp_date = datetime.strptime(exp, '%Y-%m-%d').date()
-                dte = (exp_date - today).days
-                if dte > 0:
-                    try:
-                        chain_obj = ticker.option_chain(exp)
-                        chain_table = chain_obj.calls if is_call else chain_obj.puts
-                        if held_strike in chain_table['strike'].values:
-                            held_expiry = exp.replace('-', '')
-                            break
-                    except:
-                        continue
+        account_status = "CASH_ONLY"
         
-        if held_expiry and held_expiry != "N/A":
-            # Format expiry string to YYYY-MM-DD
-            if '-' not in held_expiry and len(held_expiry) == 8:
-                expiry_formatted = f"{held_expiry[:4]}-{held_expiry[4:6]}-{held_expiry[6:]}"
-            else:
-                expiry_formatted = held_expiry
-            
-            try:
-                today = datetime.now().date()
-                exp_date = datetime.strptime(expiry_formatted, '%Y-%m-%d').date()
-                dte_current = (exp_date - today).days
-                
-                # Fetch option chain for held expiry
-                chain_obj = ticker.option_chain(expiry_formatted)
-                held_chain = chain_obj.calls if is_call else chain_obj.puts
-                match_row = held_chain[held_chain['strike'] == held_strike]
-                if not match_row.empty:
-                    row = match_row.iloc[0]
-                    bid, ask = float(row['bid']), float(row['ask'])
-                    mid = round((bid + ask) / 2, 2)
-                    if mid <= 0.0: mid = float(row['lastPrice'])
-                    
-                    r = get_risk_free_rate()
-                    T = dte_current / 365.25
-                    iv_raw = float(row['impliedVolatility'])
-                    if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001 or (bid == 0.0 and ask == 0.0):
-                        iv = solve_iv(mid, data["price_seen"], held_strike, T, r, opt_type_str)
-                    else:
-                        iv = iv_raw
-                        
-                    delta_raw = calculate_delta(data["price_seen"], held_strike, T, r, iv, opt_type_str)
-                    delta_current = round(delta_raw, 4)
-                else:
-                    # Fallback BS delta if not in chain (e.g. extremely far OTM/ITM)
-                    r = get_risk_free_rate()
-                    T = dte_current / 365.25
-                    sigma = get_vix_sigma()
-                    delta_raw = calculate_delta(data["price_seen"], held_strike, T, r, sigma, opt_type_str)
-                    delta_current = round(delta_raw, 4)
-            except Exception as e:
-                add_warning(f"Error calculating held option metrics: {e}")
-                
-    data["delta_current"] = delta_current
-    data["dte_current"] = dte_current
-    data["warnings"] = WARNINGS
+    chain_result = await get_yf_option_chain(price_seen, first_held_strike)
+    
+    iv_current = 18.0
+    if chain_result["option_chain"]:
+        atm = sorted(chain_result["option_chain"], key=lambda x: abs(x['strike'] - price_seen))[0]
+        iv_current = atm['iv']
+        
+    if iv_current > 30.0 or daily_change_pct <= -2.0:
+        day_classification = "GOOD_DAY"
+    elif 15.0 <= iv_current <= 30.0 and daily_change_pct > -2.0:
+        day_classification = "NORMAL_DAY"
+    else:
+        day_classification = "QUIET_DAY"
+
+    data = {
+        "account_status": account_status,
+        "price_seen": price_seen,
+        "vix_seen": vix,
+        "iv_current": iv_current,
+        "option_chain": chain_result["option_chain"],
+        "chosen_expiry": chain_result["chosen_expiry"],
+        "chosen_dte": chain_result["chosen_dte"],
+        "warnings": WARNINGS,
+        "earnings_days": earnings_days,
+        "recent_news": recent_news,
+        
+        "portfolio_summary": {
+            "net_liquidation_value": round(net_liq, 2),
+            "buying_power_limit": round(buying_power_limit, 2),
+            "remaining_buying_power": round(remaining_buying_power, 2),
+            "dynamic_max_contracts": 4,
+            "current_risk_units": risk_units,
+            "account_status": account_status
+        },
+        "active_positions": active_positions,
+        "intraday_state": intraday_tracker,
+        "market_regime": {
+            "price_seen": price_seen,
+            "daily_change_pct": daily_change_pct,
+            "vix": vix,
+            "200_sma": sma_200,
+            "iv_current": iv_current,
+            "day_classification": day_classification
+        }
+    }
+    
+    if first_held_strike:
+        data["strike_held"] = first_held_strike
+        data["expiry_held"] = first_held_expiry
+        data["delta_current"] = first_held_delta
+        data["dte_current"] = first_held_dte
+    else:
+        data["strike_held"] = None
+        data["expiry_held"] = None
+        data["delta_current"] = 0.0
+        data["dte_current"] = 99
+        
     return data
 
 if __name__ == "__main__":

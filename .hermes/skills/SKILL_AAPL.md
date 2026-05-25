@@ -1,28 +1,26 @@
 <skill_file_metadata>
   symbol: AAPL
   strategy: Wheel
-  version: 4.2
-  last_hardened: 2026-05-14
+  version: 5.0
+  last_hardened: 2026-05-25
 </skill_file_metadata>
 
 <instruction_set_aapl>
 
   <instruction id="IV_VOLATILITY_ANALYSIS">
-    REASON: Live IV is the 'Fear Gauge'. Use it to price risk.
+    REASON: Volatility dictates entry sizing. Sell more contracts when fear is high.
     RULES:
-      - iv_current > 30%: Elevated fear. Good premium harvest zone. Sell puts with confidence at standard deltas.
-      - iv_current 20-30%: Normal market. Proceed with standard wheel logic.
-      - iv_current < 20%: Low fear. Cheap premium. Wait for better entry unless MA200 support is clear.
-      - iv_current == 'UNAVAILABLE': Treat as Normal (20-30% zone).
-      - CRITICAL: iv_current > 45% AND earnings_days < 14: DANGER. (Blocked by Python Gate).
+    - GOOD_DAY (iv_current > 30% OR daily_change_pct <= -2.0%): Volatility spike or stock drop. You are permitted to write up to **2 contracts** today.
+    - NORMAL_DAY (iv_current 15-30% AND daily_change_pct > -2.0%): Normal market. Proceed with standard pacing (max **1 contract** today).
+    - QUIET_DAY (iv_current < 15%): Low fear. Cheap premium. Write max **1 contract** today and only at highly secure strikes.
   </instruction>
 
   <instruction id="EARNINGS_GAUNTLET">
     REASON: Never hold an option through a binary earnings event.
     RULES:
-      - NEVER select an expiry that is AFTER the next earnings_days.
-      - If earnings_days < 7: DANGER. (Blocked by Python Blackout Gate).
-      - If no safe expiry exists in the option_chain: Output HOLD.
+    - NEVER select an expiry that is AFTER the next earnings_days.
+    - If earnings_days < 7: DANGER. (Blocked by Python Blackout Gate).
+    - If no safe expiry exists in the option_chain: Output HOLD.
   </instruction>
 
 </instruction_set_aapl>
@@ -33,101 +31,81 @@
 # ═══════════════════════════════════════════════════════════════
 
 <hard_limits_aapl>
-  1. MAX_DELTA: 0.35 for any new position (Institutional safety limit).
-  2. MIN_DTE: 21 Days (Time stop). Close any position if DTE < 21 to avoid Gamma.
-  3. DIVIDEND_GATE: Never sell a Call within 7 days of ex-dividend date.
-  4. EARNINGS_GATE: Expiry DTE must be < earnings_days (Never straddle earnings).
-  5. STRIKE_FLOOR: Never select a strike below min_strike = max(floor_A, floor_B).
-  6. COST_BASIS: Never sell a Call below Adjusted Cost Basis (Basis = Strike - Premium).
+  1. MAX_RISK_UNITS: Capped at 4. Risk Units = (AAPL Shares / 100) + Active Put Contracts + Active Call Contracts.
+  2. BUYING_POWER_ALLOCATION: Max allocated buying power is 50% of Net Liquidation Value (NLV).
+  3. STRIKE_VS_SMA200: All written Put strikes must be strictly BELOW the 200-day Simple Moving Average (200_sma).
+  4. TIME_STOP (MIN_DTE): Close any Put or Call if DTE < 15 and it is still Out-of-The-Money (OTM) to avoid tail/gamma risk.
+  5. EMERGENCY_CLOSE: If DTE < 1 for any open contract, execute an EMERGENCY CLOSE immediately.
+  6. COST_BASIS_RULE: Never sell a Call below Adjusted Cost Basis (Adjusted Basis = Assignment Strike - Total Net Premium Collected).
 </hard_limits_aapl>
 
 # ═══════════════════════════════════════════════════════════════
-# SECTION B — PREFERRED TARGETS (The Strategy Engine)
-# Brain should optimise decision within these strategic bands.
+# SECTION B — THE MULTI-CONTRACT DECISION TREE
+# Brain must loop over and evaluate each active position.
 # ═══════════════════════════════════════════════════════════════
 
-<brain_reference_aapl>
-  1. PREFERRED DTE: Closest available to 35 days (start of theta decay).
-  2. PREFERRED DELTA: 0.25 to 0.28 (Normal) | 0.18 to 0.22 (High IV).
-  3. PROFIT TARGET: Close early at 50% max premium profit.
-  4. ROLL TRIGGER: If Delta exceeds 0.35, evaluate ROLL for credit or Assignment.
+<decision_tree_puts>
+  FOR EACH active PUT position (check "active_positions" list):
+  1. DTE < 1? ─────────────────────────────────► Execute CLOSE_FOR_PROFIT or CLOSE_FOR_LOSS (Emergency Close).
+  2. Profit >= 80%? ───────────────────────────► Execute CLOSE_FOR_PROFIT.
+  3. DTE <= 15 and Still OTM (Delta < 0.30)? ──► Execute ROLL_PUT (widen/extend for net credit).
+  4. DTE <= 15 and ITM/ATM (Delta >= 0.30)? ───► Output HOLD_PUT_POSITION. Reasoning must explicitly state: "Put is ITM and DTE <= 15 — accept assignment, do not roll."
+  5. Delta > 0.45 and DTE > 15? ───────────────► HOLD and monitor closely. Do not roll yet.
+  6. None of the above? ──────────────────────► Execute HOLD_PUT_POSITION.
+</decision_tree_puts>
 
-  # ─────────────────────────────────────────────────────────────────────────
-  # ELITE HYBRID NEWS FRAMEWORK
-  # ─────────────────────────────────────────────────────────────────────────
-  5. HISTORICAL GROUNDING: 
-     Remember: AAPL has survived 40+ years of probes, fines, and crashes. 
-     You are a calm professional. Do not overreact to speculative headlines.
-     
-  6. IV-FIRST FILTER:
-     Check iv_current BEFORE reading headlines.
-     - If iv_current is high (>30%), market fear is already priced in. 
-     - High IV + Bad News = Opportunity to sell expensive fear at wider strikes.
-     
-  7. THE 3-BUCKET DECISION:
-     Analyze the 6 raw headlines and categorize into one of three buckets:
-     
-     - BUCKET A: BLACK SWAN (Existential threat to AAPL itself)
-       Criteria: Confirmed Bankruptcy, SEC Trading Halt, or Fraud Conviction.
-       Action: Output ABORT_DUE_TO_RISK.
-       
-     - BUCKET B: NEGATIVE NUDGE (Risky but survivable)
-       Criteria: DOJ probes, regulatory fines, misses, or product recalls.
-       Action: RE-PRICE RISK. Widen strike selection (lower delta).
-       CRITICAL CONSTRAINT: The new strike MUST still meet the 1.0% premium yield
-       requirement (min_premium). If no such strike exists → WAIT_FOR_ENTRY.
-
-     - BUCKET C: NOISE (Standard market activity)
-       Criteria: Product launches, analyst upgrades, routine lawsuits.
-       Action: IGNORE. Execute standard wheel strategy.
-</brain_reference_aapl>
+<decision_tree_calls>
+  FOR EACH active CALL position (check "active_positions" list):
+  1. DTE < 1? ─────────────────────────────────► Execute CLOSE_FOR_PROFIT or CLOSE_FOR_LOSS (Emergency Close).
+  2. Profit >= 80%? ───────────────────────────► Execute CLOSE_FOR_PROFIT.
+  3. DTE <= 15 and ITM/ATM? ───────────────────► Execute ROLL_CALL (move strike up/out for net credit) to defend shares.
+  4. None of the above? ──────────────────────► Execute HOLD_CALL_POSITION.
+</decision_tree_calls>
 
 # ═══════════════════════════════════════════════════════════════
-# SECTION C — MANDATORY YIELD GATE (The Iron Math Law)
-# This is not a guideline. This is a mathematical checkpoint.
-# Python will block you if you fail it. Do not even try to bypass.
+# SECTION C — PACING & INTRADAY WRITE RULES
 # ═══════════════════════════════════════════════════════════════
 
-<mandatory_yield_check>
-  BEFORE outputting SELL_NEW_PUT, you MUST run this calculation:
+<pacing_rules>
+  When scanning for NEW Put positions to sell (position_key = "NEW_PUT_SCAN"):
+  1. Check risk capacity: Only proceed if current_risk_units < 4.
+  2. Check intraday_state:
+     - If contracts_written_today >= 2: STOP. No new put trades allowed today.
+     - If contracts_written_today == 1 AND day_classification is NORMAL_DAY/QUIET_DAY: STOP.
+     - If contracts_written_today == 1 AND day_classification is GOOD_DAY:
+       You may write a 2nd contract ONLY if:
+       - Candidate Put Strike < first_strike (Safer)
+       - Candidate Put Premium >= first_premium (Equal/Better premium)
+       Otherwise, do not write a 2nd contract.
+</pacing_rules>
 
-  STEP 1 — Calculate premium yield:
-    premium_yield_pct = (premium_to_collect / strike_to_trade) × 100
+# ═══════════════════════════════════════════════════════════════
+# SECTION D — INPUT & OUTPUT SCHEMA
+# ═══════════════════════════════════════════════════════════════
 
-  STEP 2 — Compare to floor:
-    If premium_yield_pct >= 1.0% → SELL is ALLOWED. Proceed.
-    If premium_yield_pct <  1.0% → SELL is FORBIDDEN. Output WAIT_FOR_ENTRY.
+<input_schema_payload>
+  You will receive a unified portfolio payload structure:
+  - "portfolio_summary": Tracks NLV, allowed limits, and current risk units.
+  - "active_positions": A list of active options and stock blocks.
+  - "intraday_state": Tracker of trades executed today.
+  - "market_regime": Live stock parameters, VIX, 200 SMA, and day classification.
+</input_schema_payload>
 
-  WORKED EXAMPLES (study these — they match yesterday's failures):
+<output_schema_override>
+  You MUST output a strictly valid JSON object containing an array of decisions:
 
-    ❌ WRONG (what you did yesterday — every single pulse):
-       Strike $285, premium $2.40
-       yield = (2.40 / 285) × 100 = 0.84%
-       0.84% < 1.0% → MUST output WAIT_FOR_ENTRY, NOT SELL_NEW_PUT.
-
-    ❌ WRONG:
-       Strike $275, premium $1.47
-       yield = (1.47 / 275) × 100 = 0.53%
-       0.53% < 1.0% → WAIT_FOR_ENTRY required.
-
-    ✅ CORRECT:
-       Strike $285, premium $3.10
-       yield = (3.10 / 285) × 100 = 1.09%
-       1.09% >= 1.0% → SELL_NEW_PUT is permitted.
-
-    ✅ CORRECT:
-       Strike $275, premium $2.90
-       yield = (2.90 / 275) × 100 = 1.05%
-       1.05% >= 1.0% → SELL_NEW_PUT is permitted.
-
-  INCLUDE in your reason field:
-    "premium_yield = (X / Y) × 100 = Z%"
-    This is required so the Python gate can audit your math.
-
-  REMEMBER: Python will independently verify this calculation.
-  If you output SELL_NEW_PUT with yield < 1.0%, Python will
-  override your decision to WAIT_FOR_ENTRY and send a Telegram
-  alert flagging your failure. Avoid triggering this gate.
-</mandatory_yield_check>
-
-<!-- END OF SKILL_AAPL.md | Version 4.1 | TIMELLESS INSTRUCTIONS -->
+  {
+    "decisions": [
+      {
+        "position_key": "string (matches 'position_key' of active position, or 'NEW_PUT_SCAN')",
+        "decision": "string (SELL_NEW_PUT | SELL_NEW_CALL | HOLD_PUT_POSITION | HOLD_CALL_POSITION | HOLD_ASSIGNED_EQUITY | CLOSE_FOR_PROFIT | CLOSE_FOR_LOSS | ROLL_PUT | ROLL_CALL | ABORT_DUE_TO_RISK)",
+        "close_strike": "float or null",
+        "close_expiry": "string or null (format YYYYMMDD)",
+        "strike_to_trade": "float or null",
+        "dte_seen": "integer or null",
+        "premium_to_collect": "float or null",
+        "reason": "string (precise reason containing specific numbers)"
+      }
+    ]
+  }
+</output_schema_override>

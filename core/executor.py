@@ -311,16 +311,16 @@ def validate_single_decision(dec, eye_data, portfolio):
         sma_200 = eye_data.get("market_regime", {}).get("200_sma", 0.0)
         sma_50 = eye_data.get("market_regime", {}).get("50_sma", 0.0)
         
-        if current_price and sma_200 and current_price < sma_200:
-            raise ValueError(f"Trend gate: AAPL price ({current_price}) below 200 SMA ({sma_200}) — no new puts in downtrend")
-        if strike and sma_50 and strike >= sma_50:
-            raise ValueError(f"Policy Block: Strike {strike} is at or above the 50 SMA support floor ({sma_50}). Entry blocked.")
+        # Hard SMA ceilings removed. Brain handles safe strike selection via dynamic Deltas.
 
     if decision == "SELL_NEW_PUT":
         summary = eye_data.get("portfolio_summary", {})
         risk_units = summary.get("current_risk_units", 0)
-        if risk_units >= 4:
-            raise ValueError(f"Policy Block: Max Risk Units (4) reached. Cannot write new Put.")
+        day_class = eye_data.get("market_regime", {}).get("day_classification", "NORMAL_DAY")
+        
+        max_allowed_units = 1 if day_class == "BEARISH_DAY" else 4
+        if risk_units >= max_allowed_units:
+            raise ValueError(f"Policy Block: Max Risk Units ({max_allowed_units}) reached for regime {day_class}. Cannot write new Put.")
             
         tracker = reset_and_load_tracker()
         written = tracker.get("contracts_written_today", 0)
@@ -329,7 +329,7 @@ def validate_single_decision(dec, eye_data, portfolio):
         if written >= 2:
             raise ValueError(f"Pacing Block: Daily cap (2) reached. Cannot write new Put.")
         elif written == 1:
-            if day_class in ["QUIET_DAY"]:
+            if day_class in ["QUIET_DAY", "BEARISH_DAY"]:
                 raise ValueError(f"Pacing Block: Daily cap (1) reached for regime {day_class}. Cannot write new Put.")
             elif day_class == "NORMAL_DAY":
                 first_strike = tracker.get("first_strike")

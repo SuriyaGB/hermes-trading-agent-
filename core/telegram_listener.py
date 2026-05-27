@@ -75,4 +75,15 @@ def handle_all_messages(message):
         print(f"❌ Error during execution: {e}")
 
 if __name__ == "__main__":
-    bot.infinity_polling(timeout=10, long_polling_timeout=5)
+    import time
+    from requests.exceptions import ReadTimeout, ConnectionError
+    print("🚀 Starting robust polling loop...")
+    while True:
+        try:
+            bot.infinity_polling(timeout=10, long_polling_timeout=5)
+        except (ReadTimeout, ConnectionError) as e:
+            print(f"⚠️ Telegram Network Error: {e}. Retrying in 5 seconds...")
+            time.sleep(5)
+        except Exception as e:
+            print(f"❌ Telegram Unexpected Error: {e}. Retrying in 5 seconds...")
+            time.sleep(5)

@@ -394,7 +394,9 @@ async def fetch_analysis_data() -> Dict[str, Any]:
         atm = sorted(chain_result["option_chain"], key=lambda x: abs(x['strike'] - price_seen))[0]
         iv_current = atm['iv']
         
-    if iv_current > 30.0 or daily_change_pct <= -2.0:
+    if price_seen < sma_200:
+        day_classification = "BEARISH_DAY"
+    elif iv_current > 30.0 or daily_change_pct <= -2.0:
         day_classification = "GOOD_DAY"
     elif 15.0 <= iv_current <= 30.0 and daily_change_pct > -2.0:
         day_classification = "NORMAL_DAY"

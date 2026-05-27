@@ -33,11 +33,14 @@
 <hard_limits_aapl>
   1. MAX_RISK_UNITS: Capped at 4. Risk Units = (AAPL Shares / 100) + Active Put Contracts + Active Call Contracts.
   2. BUYING_POWER_ALLOCATION: Max allocated buying power is 50% of Net Liquidation Value (NLV).
-  3. TREND_GATE_200SMA: If AAPL spot price < 200 SMA, entries are strictly blocked. Output WAIT_FOR_ENTRY.
-  4. STRIKE_VS_SMA50: All written Put strikes must be strictly BELOW the 50-day Simple Moving Average (50_sma).
-  5. STRIKE_DELTA_PACING: Select strike based on Delta: GOOD_DAY = -0.25 to -0.30, NORMAL_DAY = -0.20 to -0.25, QUIET_DAY = -0.15 to -0.20.
-  6. MINIMUM_PREMIUM_FLOOR: Minimum premium collected must be >= $0.50 per contract. If no strike satisfies both Delta and $0.50 min, output WAIT_FOR_ENTRY.
-  7. TIME_STOP (MIN_DTE): Close any Put or Call if DTE < 15 and it is still Out-of-The-Money (OTM) to avoid tail/gamma risk.
+  3. TREND_GATE_SCALING: If AAPL spot price < 200 SMA, the market is a BEARISH_DAY.
+  4. STRIKE_DELTA_PACING: Select strike based on Delta:
+     - GOOD_DAY = -0.25 to -0.30
+     - NORMAL_DAY = -0.20 to -0.25
+     - QUIET_DAY = -0.15 to -0.20
+     - BEARISH_DAY = -0.10 to -0.15 (Max Risk Units = 1)
+  5. MINIMUM_PREMIUM_FLOOR: Minimum premium collected must be >= $0.50 per contract. If no strike satisfies both Delta and $0.50 min, output WAIT_FOR_ENTRY.
+  6. TIME_STOP (MIN_DTE): Close any Put or Call if DTE < 15 and it is still Out-of-The-Money (OTM) to avoid tail/gamma risk.
   8. EMERGENCY_CLOSE: If DTE < 1 for any open contract, execute an EMERGENCY CLOSE immediately.
   9. COST_BASIS_RULE: Never sell a Call below Adjusted Cost Basis (Adjusted Basis = Assignment Strike - Total Net Premium Collected).
 </hard_limits_aapl>
@@ -72,13 +75,13 @@
 <pacing_rules>
   When scanning for NEW Put positions to sell (position_key = "NEW_PUT_SCAN"):
   1. Check risk capacity: Only proceed if current_risk_units < 4.
-  2. Check trend: Only proceed if AAPL spot price >= 200_sma. If spot < 200_sma, stop and output WAIT_FOR_ENTRY.
+  2. Check trend pacing: If day_classification == BEARISH_DAY, Max Risk Units is capped at 1.
   3. Select strike by Delta bounds:
      - On GOOD_DAY: Target Delta range -0.25 to -0.30.
      - On NORMAL_DAY: Target Delta range -0.20 to -0.25.
      - On QUIET_DAY: Target Delta range -0.15 to -0.20.
+     - On BEARISH_DAY: Target Delta range -0.10 to -0.15.
      If multiple strikes fit, prefer the one closest to the center of the range.
-  4. Enforce 50 SMA Cap: Strike must be strictly below 50_sma.
   5. Enforce Premium Floor: Collected premium must be >= $0.50.
   6. Check intraday_state:
      - If contracts_written_today >= 2: STOP. No new put trades allowed today.

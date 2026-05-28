@@ -179,54 +179,80 @@ async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[st
     expiries = ticker.options
     today = datetime.now().date()
     
-    target_expiry = None
+    # ── MULTI-EXPIRY COLLECTION (30 to 50 DTE window) ──────────────────────
+    # Collect ALL valid expiry dates in the 30-50 DTE window.
+    # This gives the AI the full picture to choose both Strike AND Expiry.
+    valid_expiries = []
     for exp in expiries:
         exp_date = datetime.strptime(exp, '%Y-%m-%d').date()
         dte = (exp_date - today).days
         if 30 <= dte <= 50:
-            target_expiry, target_dte = exp, dte
-            break
-    
-    if not target_expiry: return result
-    
-    result["chosen_expiry"] = target_expiry.replace('-', '')
-    result["chosen_dte"] = target_dte
-    
+            valid_expiries.append((exp, dte))
+
+    if not valid_expiries:
+        return result
+
+    # Use shortest valid expiry as the reference for chosen_expiry/chosen_dte
+    # (kept for backwards-compat; executor now uses AI's expiry_to_trade instead)
+    result["chosen_expiry"] = valid_expiries[0][0].replace('-', '')
+    result["chosen_dte"]    = valid_expiries[0][1]
+    result["valid_expiries"] = [
+        {"expiry": e.replace('-', ''), "dte": d} for e, d in valid_expiries
+    ]
+
     try:
-        chain = ticker.option_chain(target_expiry).puts
         vix = get_vix()
-        r = get_risk_free_rate()
-        T = target_dte / 365.25
-        
+        r   = get_risk_free_rate()
+
         all_rows = []
-        for _, row in chain.iterrows():
-            strike = float(row['strike'])
-            bid, ask = float(row['bid']), float(row['ask'])
-            mid = round((bid + ask) / 2, 2)
-            if mid <= 0.0: mid = float(row['lastPrice'])
-            
-            # IMPROVED IV DETECTION
-            iv_raw = float(row['impliedVolatility'])
-            if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001 or (bid == 0.0 and ask == 0.0):
-                iv = solve_iv(mid, spot, strike, T, r, 'put')
-            else:
-                iv = iv_raw
+        for target_expiry, target_dte in valid_expiries:
+            try:
+                chain = ticker.option_chain(target_expiry).puts
+            except Exception:
+                continue  # skip any expiry that yfinance cannot fetch
 
-            delta = calculate_delta(spot, strike, T, r, iv, 'put')
-            
-            all_rows.append({
-                "strike": strike, "bid": bid, "ask": ask, "mid": mid,
-                "delta": round(delta, 4), "iv": round(iv * 100, 1)
-            })
-        
-        sorted_by_dist = sorted(all_rows, key=lambda x: abs(x['strike'] - spot))
-        atm_strikes = [x['strike'] for x in sorted_by_dist[:20]]
+            T = target_dte / 365.25
 
-        filtered = []
-        for row in all_rows:
-            if row['strike'] in atm_strikes or (held_strike and abs(row['strike'] - held_strike) < 0.1):
-                filtered.append(row)
-        result["option_chain"] = sorted(filtered, key=lambda x: x['strike'], reverse=True)
+            expiry_rows = []
+            for _, row in chain.iterrows():
+                strike = float(row['strike'])
+                bid, ask = float(row['bid']), float(row['ask'])
+                mid = round((bid + ask) / 2, 2)
+                if mid <= 0.0: mid = float(row['lastPrice'])
+
+                # IMPROVED IV DETECTION
+                iv_raw = float(row['impliedVolatility'])
+                if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001 or (bid == 0.0 and ask == 0.0):
+                    iv = solve_iv(mid, spot, strike, T, r, 'put')
+                else:
+                    iv = iv_raw
+
+                delta = calculate_delta(spot, strike, T, r, iv, 'put')
+
+                expiry_rows.append({
+                    "expiry": target_expiry.replace('-', ''),  # YYYYMMDD — AI must echo this back
+                    "dte":    target_dte,
+                    "strike": strike,
+                    "bid":    bid,
+                    "ask":    ask,
+                    "mid":    mid,
+                    "delta":  round(delta, 4),
+                    "iv":     round(iv * 100, 1)
+                })
+
+            # Keep only the 20 strikes closest to spot for this expiry
+            expiry_rows_sorted = sorted(expiry_rows, key=lambda x: abs(x['strike'] - spot))
+            atm_strikes = {x['strike'] for x in expiry_rows_sorted[:20]}
+
+            for row in expiry_rows:
+                if row['strike'] in atm_strikes or (held_strike and abs(row['strike'] - held_strike) < 0.1):
+                    all_rows.append(row)
+
+        # Final combined list: sorted by expiry then strike descending
+        result["option_chain"] = sorted(
+            all_rows,
+            key=lambda x: (x['dte'], -x['strike'])
+        )
 
         zero_bid_count = sum(1 for row in all_rows if row.get('bid', 0) == 0.0)
         if zero_bid_count == len(all_rows) and len(all_rows) > 0:

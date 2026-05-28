@@ -374,7 +374,17 @@ def execute_decision(dec, db, pulse_id, eye_data=None):
     if decision == "SELL_NEW_PUT":
         strike = float(dec.get('strike_to_trade'))
         premium = float(dec.get('premium_to_collect'))
-        chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
+
+        # ── OPTION 2: Read expiry directly from the AI's explicit choice ──
+        # AI must output expiry_to_trade (YYYYMMDD) copied from the option chain row.
+        # Normalize: strip any dashes the AI may accidentally include.
+        ai_expiry = dec.get('expiry_to_trade')
+        if ai_expiry:
+            chosen_expiry = str(ai_expiry).replace('-', '').strip()
+        else:
+            # Safety fallback: use Python's pre-selected shortest expiry
+            sim_log("⚠️ AI did not output expiry_to_trade — falling back to chosen_expiry")
+            chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
         
         portfolio["positions"].append({
             "type": "Option", 
@@ -404,7 +414,14 @@ def execute_decision(dec, db, pulse_id, eye_data=None):
     elif decision == "SELL_NEW_CALL":
         strike = float(dec.get('strike_to_trade'))
         premium = float(dec.get('premium_to_collect'))
-        chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
+
+        # ── OPTION 2: Read expiry directly from the AI's explicit choice ──
+        ai_expiry = dec.get('expiry_to_trade')
+        if ai_expiry:
+            chosen_expiry = str(ai_expiry).replace('-', '').strip()
+        else:
+            sim_log("⚠️ AI did not output expiry_to_trade — falling back to chosen_expiry")
+            chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
         
         portfolio["positions"].append({
             "type": "Option", 

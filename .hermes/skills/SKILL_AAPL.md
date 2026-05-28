@@ -103,6 +103,17 @@
   - "active_positions": A list of active options and stock blocks.
   - "intraday_state": Tracker of trades executed today.
   - "market_regime": Live stock parameters, VIX, 200 SMA, and day classification.
+  - "option_chain": A combined list of puts across ALL valid expiries (30-50 DTE).
+    Each row contains: expiry (YYYYMMDD), dte, strike, bid, ask, mid, delta, iv.
+    You MUST compare across expiry rows and choose the single best strike+expiry combination.
+
+  DTE SELECTION RULE:
+  - You have full visibility of all available expiries in the 30-50 DTE window.
+  - Default preference: select the expiry CLOSEST to 45 DTE from the valid_expiries list.
+  - Exception: If VIX >= 25 (high fear), prefer a longer DTE (45-50) for maximum premium and safety buffer.
+  - Exception: If day_classification == QUIET_DAY and VIX < 15, a shorter DTE (30-36) is acceptable to cycle faster.
+  - EARNINGS RULE: NEVER select an expiry that falls AFTER the next earnings date.
+    If the closest-to-45 expiry is after earnings, step back to the last safe expiry before earnings.
 </input_schema_payload>
 
 <output_schema_override>
@@ -116,9 +127,10 @@
         "close_strike": "float or null",
         "close_expiry": "string or null (format YYYYMMDD)",
         "strike_to_trade": "float or null",
+        "expiry_to_trade": "string — REQUIRED when decision is SELL_NEW_PUT or SELL_NEW_CALL. Must be the EXACT 'expiry' value (YYYYMMDD format, no dashes) copied from the option_chain row you selected. Example: '20260711'",
         "dte_seen": "integer or null",
         "premium_to_collect": "float or null",
-        "reason": "string (precise reason containing specific numbers)"
+        "reason": "string (precise reason containing specific numbers, must state the chosen DTE and expiry)"
       }
     ]
   }

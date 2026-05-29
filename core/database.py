@@ -125,6 +125,31 @@ class HermesDatabase:
             conn.commit()
             return pulse_id
 
+    def update_pulse(self, pulse_id, brain_decision, ai_override=False, override_reason=None):
+        """
+        Updates an existing PENDING pulse row with the final decision.
+        Called after execution completes to finalize the pre-saved PENDING row,
+        preventing duplicate rows in pulse_history.
+        """
+        with self._get_connection() as conn:
+            conn.execute('''
+                UPDATE pulse_history
+                SET ai_decision    = ?,
+                    ai_reasoning   = ?,
+                    raw_output_json = ?,
+                    ai_override    = ?,
+                    override_reason = ?
+                WHERE id = ?
+            ''', (
+                brain_decision.get('decision'),
+                brain_decision.get('reason'),
+                json.dumps(brain_decision),
+                1 if ai_override else 0,
+                override_reason,
+                pulse_id
+            ))
+            conn.commit()
+
     def save_trade(self, pulse_id, trade_details):
         """
         Saves a trade action to the ledger.

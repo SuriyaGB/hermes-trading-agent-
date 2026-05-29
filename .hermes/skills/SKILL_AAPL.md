@@ -39,8 +39,14 @@
      - NORMAL_DAY = -0.20 to -0.25
      - QUIET_DAY = -0.15 to -0.20
      - BEARISH_DAY = -0.10 to -0.15 (Max Risk Units = 1)
-  5. MINIMUM_PREMIUM_FLOOR: Minimum premium collected must be >= $0.50 per contract. If no strike satisfies both Delta and $0.50 min, output WAIT_FOR_ENTRY.
-  6. TIME_STOP (MIN_DTE): Close any Put or Call if DTE < 15 and it is still Out-of-The-Money (OTM) to avoid tail/gamma risk.
+  5. MINIMUM_PREMIUM_FLOOR: Minimum premium collected must be >= $0.50 per contract.
+     If no strike satisfies both Delta and $0.50 min, output HOLD_PUT_POSITION with reason stating
+     "No qualifying strike found. Premium floor not met. Holding and waiting for better conditions."
+  6. TIME_STOP (MIN_DTE): If DTE < 15 and position is still OTM:
+      - If profit_pct >= 50%: Execute CLOSE_FOR_PROFIT (lock in gains, escape gamma risk).
+      - If profit_pct < 50%: Execute ROLL_PUT or ROLL_CALL to next monthly expiry for net credit.
+      - If position is ITM: Hold and accept assignment. Do NOT roll an ITM put.
+      IMPORTANT: Refer to decision_tree_puts and decision_tree_calls below for exact rule order.
   8. EMERGENCY_CLOSE: If DTE < 1 for any open contract, execute an EMERGENCY CLOSE immediately.
   9. COST_BASIS_RULE: Never sell a Call below Adjusted Cost Basis (Adjusted Basis = Assignment Strike - Total Net Premium Collected).
 </hard_limits_aapl>
@@ -51,21 +57,83 @@
 # ═══════════════════════════════════════════════════════════════
 
 <decision_tree_puts>
-  FOR EACH active PUT position (check "active_positions" list):
-  1. DTE < 1? ─────────────────────────────────► Execute CLOSE_FOR_PROFIT or CLOSE_FOR_LOSS (Emergency Close).
-  2. Profit >= 80%? ───────────────────────────► Execute CLOSE_FOR_PROFIT.
-  3. DTE <= 15 and Still OTM (Delta < 0.30)? ──► Execute ROLL_PUT (widen/extend for net credit).
-  4. DTE <= 15 and ITM/ATM (Delta >= 0.30)? ───► Output HOLD_PUT_POSITION. Reasoning must explicitly state: "Put is ITM and DTE <= 15 — accept assignment, do not roll."
-  5. Delta > 0.45 and DTE > 15? ───────────────► HOLD and monitor closely. Do not roll yet.
-  6. None of the above? ──────────────────────► Execute HOLD_PUT_POSITION.
+  FOR EACH active PUT position (check "active_positions" list). Evaluate rules in this exact order — stop at the first match:
+
+  RULE 1 — EMERGENCY CLOSE (DTE < 1):
+    If dte < 1:
+    → Execute CLOSE_FOR_PROFIT (if profit_pct > 0) or CLOSE_FOR_LOSS (if profit_pct <= 0).
+    REASON: Option expires today. Broker auto-assignment risk is critical. Exit immediately.
+
+  RULE 2 — WORTHLESS OPTION EXIT (current_premium <= $0.10):
+    If current_premium <= 0.10:
+    → Execute CLOSE_FOR_PROFIT.
+    REASON: Option is nearly worthless (current value = current_premium from live data).
+             Holding it locks up the full remaining_buying_power shown in portfolio_summary
+             just to capture a few more cents. Free the capital and write a fresh contract.
+
+  RULE 3 — STANDARD PROFIT TARGET (profit_pct >= 75%):
+    If profit_pct >= 75.0:
+    → Execute CLOSE_FOR_PROFIT.
+    REASON: Captured 75% of maximum premium. The remaining 25% takes disproportionately long
+             to decay and is not worth the continuing risk exposure.
+
+  RULE 4 — GAMMA SAFETY EXIT (DTE <= 15 and profit_pct >= 50%):
+    If dte <= 15 AND profit_pct >= 50.0:
+    → Execute CLOSE_FOR_PROFIT.
+    REASON: Under 15 days left and already profitable. Gamma risk rises sharply near expiry.
+             A sudden stock move can erase gains. Lock in profits now and redeploy capital.
+
+  RULE 5 — ROLL PUT (DTE <= 15 and OTM and profit_pct < 50%):
+    If dte <= 15 AND delta > -0.30 (Still OTM) AND profit_pct < 50.0:
+    → Execute ROLL_PUT (buy to close current, sell next monthly expiry for net credit).
+    REASON: Approaching expiry with insufficient profit. Extend to next cycle for more premium.
+             Only roll if net credit is achievable. Never roll for a debit.
+
+  RULE 6 — ACCEPT ASSIGNMENT (DTE <= 15 and ITM):
+    If dte <= 15 AND delta <= -0.30 (ITM/ATM):
+    → Execute HOLD_PUT_POSITION.
+    Reason must explicitly state: "Put is ITM with DTE <= 15 — accepting assignment. Preparing for Covered Call phase."
+    REASON: Stock moved below strike. Rolling ITM puts is too expensive. Accept 100 AAPL shares
+             at the strike price (below market cost basis) and proceed to Phase 3 (sell Covered Call).
+
+  RULE 7 — HOLD (Default, all other conditions):
+    → Execute HOLD_PUT_POSITION.
+    REASON: None of the above conditions met. Time decay is working in our favour. Hold.
 </decision_tree_puts>
 
 <decision_tree_calls>
-  FOR EACH active CALL position (check "active_positions" list):
-  1. DTE < 1? ─────────────────────────────────► Execute CLOSE_FOR_PROFIT or CLOSE_FOR_LOSS (Emergency Close).
-  2. Profit >= 80%? ───────────────────────────► Execute CLOSE_FOR_PROFIT.
-  3. DTE <= 15 and ITM/ATM? ───────────────────► Execute ROLL_CALL (move strike up/out for net credit) to defend shares.
-  4. None of the above? ──────────────────────► Execute HOLD_CALL_POSITION.
+  FOR EACH active CALL position (check "active_positions" list). Evaluate rules in this exact order — stop at the first match:
+
+  RULE 1 — EMERGENCY CLOSE (DTE < 1):
+    If dte < 1:
+    → Execute CLOSE_FOR_PROFIT (if profit_pct > 0) or CLOSE_FOR_LOSS (if profit_pct <= 0).
+    REASON: Call expires today. Exit immediately to avoid surprise assignment of shares.
+
+  RULE 2 — WORTHLESS OPTION EXIT (current_premium <= $0.10):
+    If current_premium <= 0.10:
+    → Execute CLOSE_FOR_PROFIT.
+    REASON: Call is nearly worthless. Free the shares from the covered call obligation.
+             This allows selling a new Call at a fresh, higher premium.
+
+  RULE 3 — STANDARD PROFIT TARGET (profit_pct >= 75%):
+    If profit_pct >= 75.0:
+    → Execute CLOSE_FOR_PROFIT.
+    REASON: Captured 75% of maximum Call premium. Close and re-sell a new Covered Call.
+
+  RULE 4 — GAMMA SAFETY EXIT (DTE <= 15 and profit_pct >= 50%):
+    If dte <= 15 AND profit_pct >= 50.0:
+    → Execute CLOSE_FOR_PROFIT.
+    REASON: Under 15 days left and already profitable at 50%+. Close to avoid gamma risk.
+
+  RULE 5 — ROLL CALL (DTE <= 15 and ITM/ATM and profit_pct < 50%):
+    If dte <= 15 AND stock price approaching or above Call strike (delta >= 0.30) AND profit_pct < 50.0:
+    → Execute ROLL_CALL (buy to close current Call, sell new Call at higher strike, next monthly expiry, for net credit).
+    REASON: Stock rallying toward strike with little time left. Roll up and out to defend shares
+             and collect more premium. Only roll if net credit. Never roll for a debit.
+
+  RULE 6 — HOLD (Default, all other conditions):
+    → Execute HOLD_CALL_POSITION.
+    REASON: None of the above conditions met. Time decay working in our favour. Hold.
 </decision_tree_calls>
 
 # ═══════════════════════════════════════════════════════════════

@@ -641,8 +641,14 @@ async def main_executor():
     raw_brain_output = sys.stdin.read()
     decision_data = extract_decision(raw_brain_output)
     if not decision_data:
+        error_msg = (
+            f"🚨 HERMES: LLM returned unparseable output.\n"
+            f"Raw output (first 300 chars):\n{raw_brain_output[:300]}\n"
+            f"Pulse aborted. Check OpenAI response format."
+        )
         sim_log("Invalid AI Output format. Pulse aborted.")
-        return
+        send_telegram(error_msg, is_critical=True)
+        sys.exit(1)
 
     eye_data = load_json(EYE_CACHE_PATH)
     state = load_json(STATE_PATH)
@@ -666,7 +672,23 @@ async def main_executor():
     pulse_id = db.save_pulse(eye_data, {"decision": "PENDING", "reason": "Execution in progress"})
     
     dec_list = decision_data.get("decisions", [])
-    
+
+    # Guard: LLM returned empty decisions array — this is a silent no-op.
+    # Alert and abort so we can investigate.
+    if not dec_list:
+        warning_msg = (
+            f"⚠️ HERMES: LLM returned empty decisions array.\n"
+            f"Raw output: {raw_brain_output[:300]}\n"
+            f"No actions taken this pulse. Investigate LLM reasoning."
+        )
+        sim_log("LLM returned empty decisions array. No actions taken.")
+        # Clean up the PENDING DB row so it does not stay orphaned forever
+        db.update_pulse(pulse_id,
+                        {"decision": "EMPTY_DECISIONS", "reason": "LLM returned empty decisions array. No actions taken."},
+                        ai_override=True, override_reason="Empty decisions array from LLM")
+        send_telegram(warning_msg, is_critical=False)
+        return
+
     # Sort: execute closes first to release margin, then opens
     close_legs = []
     open_legs = []
@@ -707,11 +729,12 @@ async def main_executor():
         decision_summary = ", ".join(d.get("decision") for d in processed_decisions)
         reasoning_summary = " | ".join(d.get("reason", "N/A") for d in processed_decisions)
         
-        # Save finalized summaries to DB
+        # Update the pre-saved PENDING row with final decisions (no new row created)
         db_decision_data = dict(decision_data)
         db_decision_data['decision'] = decision_summary
         db_decision_data['reason'] = reasoning_summary
-        db.save_pulse(eye_data, db_decision_data, ai_override=ai_override, override_reason=override_reason)
+        db.update_pulse(pulse_id, db_decision_data, ai_override=ai_override, override_reason=override_reason)
+
         
         summary = build_memory_summary(processed_decisions, state, portfolio, eye_data, action_results, ai_override, override_reason)
         

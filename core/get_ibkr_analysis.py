@@ -429,6 +429,42 @@ async def fetch_analysis_data() -> Dict[str, Any]:
     else:
         day_classification = "QUIET_DAY"
 
+    # ── SCAN CAPACITY: Python computes all entry gates with hard math ─────────
+    # This replaces the old patchwork fake-position injection.
+    # Python decides CAN we open a new put. LLM decides WHICH strike to pick.
+    # active_positions stays clean — only real broker positions.
+    max_allowed_units    = 1 if day_classification == "BEARISH_DAY" else 4
+    daily_cap            = 1 if day_classification in ["QUIET_DAY", "BEARISH_DAY"] else 2
+    contracts_written_today = intraday_tracker.get("contracts_written_today", 0)
+
+    earnings_safe    = (earnings_days > 7) if earnings_days else True
+    buying_power_ok  = remaining_buying_power >= (price_seen * 100 * 0.20)
+    vix_ok           = 13.0 <= vix <= 29.9
+    risk_ok          = risk_units < max_allowed_units
+    pacing_ok        = contracts_written_today < daily_cap
+
+    can_open = earnings_safe and buying_power_ok and vix_ok and risk_ok and pacing_ok
+
+    if not can_open:
+        if not earnings_safe:   scan_block_reason = f"Earnings in {min(earnings_days) if earnings_days else 'N/A'} days (<= 7). Gate: earnings_safe."
+        elif not buying_power_ok: scan_block_reason = f"Buying power ${remaining_buying_power:.0f} below min required. Gate: buying_power_ok."
+        elif not vix_ok:        scan_block_reason = f"VIX={vix} outside 13-29.9 range. Gate: vix_ok."
+        elif not risk_ok:       scan_block_reason = f"risk_units={risk_units} >= max {max_allowed_units} for {day_classification}. Gate: risk_ok."
+        else:                   scan_block_reason = f"contracts_written_today={contracts_written_today} >= daily_cap={daily_cap}. Gate: pacing_ok."
+    else:
+        scan_block_reason = "All gates passed."
+
+    scan_capacity = {
+        "can_open_new_put"   : can_open,
+        "slots_available"    : max(0, max_allowed_units - risk_units),
+        "daily_cap_remaining": max(0, daily_cap - contracts_written_today),
+        "earnings_safe"      : earnings_safe,
+        "buying_power_ok"    : buying_power_ok,
+        "vix_ok"             : vix_ok,
+        "reason"             : scan_block_reason
+    }
+    # ── END SCAN CAPACITY ─────────────────────────────────────────────────────
+
     data = {
         "account_status": account_status,
         "price_seen": price_seen,
@@ -440,7 +476,8 @@ async def fetch_analysis_data() -> Dict[str, Any]:
         "warnings": WARNINGS,
         "earnings_days": earnings_days,
         "recent_news": recent_news,
-        
+        "scan_capacity": scan_capacity,
+
         "portfolio_summary": {
             "net_liquidation_value": round(net_liq, 2),
             "buying_power_limit": round(buying_power_limit, 2),
@@ -461,6 +498,7 @@ async def fetch_analysis_data() -> Dict[str, Any]:
             "day_classification": day_classification
         }
     }
+
     
     if first_held_strike:
         data["strike_held"] = first_held_strike

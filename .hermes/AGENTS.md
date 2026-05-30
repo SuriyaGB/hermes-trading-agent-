@@ -182,6 +182,47 @@ with the same ID, use the Skill File's version. These engine phases are the gene
       DEFAULTS ONLY. They are replaced entirely by the loaded Skill File's decision tree.
       DO NOT apply these generic rules in parallel with the Skill File's rules.
     </note>
+    <multi_contract_scan>
+      MANDATORY SCAN PROTOCOL: After evaluating every position in active_positions,
+      read the "scan_capacity" field in the payload.
+
+      IF scan_capacity.can_open_new_put == false:
+        → Do NOT output any NEW_PUT_SCAN decision.
+        → Python has already blocked capacity. Reason is in scan_capacity.reason.
+        → Do not second-guess this. Do not output SELL_NEW_PUT.
+
+      IF scan_capacity.can_open_new_put == true:
+        → Python has confirmed ALL of these are clear:
+            earnings_safe    : earnings > 7 days away
+            buying_power_ok  : sufficient margin available
+            vix_ok           : VIX between 13 and 29.9
+            risk_ok          : risk_units below daily cap
+            pacing_ok        : contracts_written_today below daily limit
+        → You MUST now evaluate option_chain to find the best qualifying strike.
+        → Follow SKILL_AAPL.md pacing_rules for delta range and premium floor.
+
+        CASE A — A qualifying strike EXISTS in option_chain:
+          → Output SELL_NEW_PUT with position_key = "NEW_PUT_SCAN"
+          → You MUST populate: strike_to_trade, expiry_to_trade,
+            premium_to_collect, dte_seen
+          → Reason MUST state: delta seen, expiry chosen, premium seen,
+            day_classification used for delta range.
+
+        CASE B — NO qualifying strike found (delta out of range OR premium below floor):
+          → Output HOLD_PUT_POSITION with position_key = "NEW_PUT_SCAN"
+          → Reason MUST state: what delta range was required for today's
+            day_classification, what was the best delta available, which
+            gate failed.
+
+      CRITICAL RULES:
+      1. can_open_new_put = true means Python approves capacity.
+         It does NOT mean you must automatically sell a put.
+         You MUST still find a qualifying strike. If none found → HOLD.
+      2. NEVER output WAIT_FOR_ENTRY — this is not a valid decision token.
+         The correct token when no strike qualifies is HOLD_PUT_POSITION.
+      3. NEVER output SELL_NEW_PUT when can_open_new_put = false.
+         Python's decision is final. Do not override it.
+    </multi_contract_scan>
     <decision_logic_order>
       Generic defaults (ONLY apply if NO Skill File is loaded):
       1. <condition>P&L >= 75% of max premium</condition>     <action>CLOSE_FOR_PROFIT immediately.</action>
@@ -198,6 +239,7 @@ with the same ID, use the Skill File's version. These engine phases are the gene
       Result MUST be net credit. If net debit → do NOT roll. Accept assignment instead.
     </roll_put_definition>
   </phase>
+
 
 
   <phase id="3" name="SELL_NEW_CALL">

@@ -353,7 +353,7 @@ def apply_single_yield_gate(dec):
     if yield_pct < MIN_PREMIUM_YIELD_PCT:
         reason = f"Yield {yield_pct:.2f}% < {MIN_PREMIUM_YIELD_PCT}% floor."
         dec = dict(dec)
-        dec['decision'] = 'WAIT_FOR_ENTRY'
+        dec['decision'] = 'HOLD_PUT_POSITION'  # Valid token — do nothing, wait for better conditions
         return dec, True, reason
     return dec, False, None
 
@@ -368,10 +368,15 @@ def execute_decision(dec, db, pulse_id, eye_data=None):
     
     if "positions" not in portfolio: portfolio["positions"] = []
     
-    if decision in ['HOLD_PUT_POSITION', 'HOLD_CALL_POSITION', 'HOLD_ASSIGNED_EQUITY', 'WAIT_FOR_ENTRY', 'HOLD']:
+    if decision in ['HOLD_PUT_POSITION', 'HOLD_CALL_POSITION', 'HOLD_ASSIGNED_EQUITY', 'HOLD']:
         return "No Action"
 
     if decision == "SELL_NEW_PUT":
+        # Null guard: LLM MUST provide these fields. If missing → clean error, not a crash.
+        if not dec.get('strike_to_trade'):
+            raise ValueError("SELL_NEW_PUT: LLM did not provide strike_to_trade. Rejecting decision.")
+        if not dec.get('premium_to_collect'):
+            raise ValueError("SELL_NEW_PUT: LLM did not provide premium_to_collect. Rejecting decision.")
         strike = float(dec.get('strike_to_trade'))
         premium = float(dec.get('premium_to_collect'))
 

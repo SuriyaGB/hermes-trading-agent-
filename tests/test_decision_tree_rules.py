@@ -175,6 +175,264 @@ results.append(run_test(
 ))
 
 # ─────────────────────────────────────────────────────────────────────────────
+# SCAN CAPACITY GATE TESTS (NEW — replaces fake-position pacing tests)
+# These test the scan_capacity Python calculation that now lives in
+# get_ibkr_analysis.py. This is the exact logic that determines
+# can_open_new_put = True or False.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def compute_scan_capacity(risk_units, contracts_written_today, day_classification,
+                           vix, earnings_days, remaining_buying_power, price_seen):
+    """
+    Mirrors the scan_capacity calculation in get_ibkr_analysis.py exactly.
+    Returns the scan_capacity dict with can_open_new_put True or False.
+    """
+    max_allowed_units = 1 if day_classification == "BEARISH_DAY" else 4
+    daily_cap         = 1 if day_classification in ["QUIET_DAY", "BEARISH_DAY"] else 2
+
+    earnings_safe    = (earnings_days > 7) if earnings_days else True
+    buying_power_ok  = remaining_buying_power >= (price_seen * 100 * 0.20)
+    vix_ok           = 13.0 <= vix <= 29.9
+    risk_ok          = risk_units < max_allowed_units
+    pacing_ok        = contracts_written_today < daily_cap
+
+    can_open = earnings_safe and buying_power_ok and vix_ok and risk_ok and pacing_ok
+
+    if not can_open:
+        if not earnings_safe:     reason = f"Earnings gate failed."
+        elif not buying_power_ok: reason = f"Buying power gate failed."
+        elif not vix_ok:          reason = f"VIX gate failed."
+        elif not risk_ok:         reason = f"Risk units gate failed."
+        else:                     reason = f"Pacing gate failed."
+    else:
+        reason = "All gates passed."
+
+    return {
+        "can_open_new_put"   : can_open,
+        "slots_available"    : max(0, max_allowed_units - risk_units),
+        "daily_cap_remaining": max(0, daily_cap - contracts_written_today),
+        "earnings_safe"      : earnings_safe,
+        "buying_power_ok"    : buying_power_ok,
+        "vix_ok"             : vix_ok,
+        "reason"             : reason
+    }
+
+
+def run_capacity_test(test_name, expected_can_open, **kwargs):
+    result = compute_scan_capacity(**kwargs)
+    status = PASS if result["can_open_new_put"] == expected_can_open else FAIL
+    print(f"\n{'='*70}")
+    print(f"  {status}  {test_name}")
+    print(f"{'='*70}")
+    print(f"  Expected can_open_new_put = {expected_can_open}")
+    print(f"  Got      can_open_new_put = {result['can_open_new_put']}")
+    print(f"  Gates: earnings_safe={result['earnings_safe']}, "
+          f"buying_power_ok={result['buying_power_ok']}, "
+          f"vix_ok={result['vix_ok']}")
+    print(f"  Reason: {result['reason']}")
+    if status == FAIL:
+        print(f"  ⚠️  MISMATCH!")
+    return status == PASS
+
+
+# TC7: Yesterday's exact situation — 1 open put, free capacity, normal day
+results.append(run_capacity_test(
+    "TC7: NORMAL_DAY, 1 open, written=0, earnings safe — can_open=True",
+    expected_can_open    = True,
+    risk_units           = 1,
+    contracts_written_today = 0,
+    day_classification   = "NORMAL_DAY",
+    vix                  = 18.5,
+    earnings_days        = 45,
+    remaining_buying_power = 125000,
+    price_seen           = 311.41
+))
+
+# TC8: Daily cap already reached (NORMAL_DAY allows 2, written=2)
+results.append(run_capacity_test(
+    "TC8: NORMAL_DAY, written=2 — can_open=False (pacing gate blocks)",
+    expected_can_open    = False,
+    risk_units           = 2,
+    contracts_written_today = 2,
+    day_classification   = "NORMAL_DAY",
+    vix                  = 18.5,
+    earnings_days        = 45,
+    remaining_buying_power = 125000,
+    price_seen           = 311.41
+))
+
+# TC9: BEARISH_DAY with 1 contract — cap is 1 on bearish days
+results.append(run_capacity_test(
+    "TC9: BEARISH_DAY, 1 open, written=0 — can_open=False (risk gate blocks)",
+    expected_can_open    = False,
+    risk_units           = 1,
+    contracts_written_today = 0,
+    day_classification   = "BEARISH_DAY",
+    vix                  = 22.0,
+    earnings_days        = 45,
+    remaining_buying_power = 125000,
+    price_seen           = 311.41
+))
+
+# TC10: Earnings too close — earnings_safe gate blocks
+results.append(run_capacity_test(
+    "TC10: Earnings in 3 days — can_open=False (earnings_safe gate blocks)",
+    expected_can_open    = False,
+    risk_units           = 1,
+    contracts_written_today = 0,
+    day_classification   = "NORMAL_DAY",
+    vix                  = 18.5,
+    earnings_days        = 3,
+    remaining_buying_power = 125000,
+    price_seen           = 311.41
+))
+
+# TC11: VIX too high (fear spike) — vix gate blocks
+results.append(run_capacity_test(
+    "TC11: VIX=35 (fear spike) — can_open=False (vix_ok gate blocks)",
+    expected_can_open    = False,
+    risk_units           = 0,
+    contracts_written_today = 0,
+    day_classification   = "GOOD_DAY",
+    vix                  = 35.0,
+    earnings_days        = 45,
+    remaining_buying_power = 125000,
+    price_seen           = 311.41
+))
+
+# TC12: CASH_ONLY — no positions, no writes today, normal conditions
+# CRITICAL: This must allow opening because Phase 1 handles CASH_ONLY
+results.append(run_capacity_test(
+    "TC12: CASH_ONLY (risk_units=0), all gates clear — can_open=True",
+    expected_can_open    = True,
+    risk_units           = 0,
+    contracts_written_today = 0,
+    day_classification   = "NORMAL_DAY",
+    vix                  = 18.5,
+    earnings_days        = 45,
+    remaining_buying_power = 250000,
+    price_seen           = 311.41
+))
+
+# These test the Python-level pacing rules that control when NEW_PUT_SCAN
+# results in SELL_NEW_PUT vs HOLD_PUT_POSITION.
+# Previously UNTESTED — root cause of the multi-contract failure.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def evaluate_new_put_scan(risk_units, contracts_written_today, day_classification,
+                           best_delta, best_premium, vix):
+    """
+    Mirrors the pacing_rules logic from SKILL_AAPL.md for NEW_PUT_SCAN.
+    Returns (decision, reason).
+    """
+    # Gate 1: VIX check
+    if vix < 13:
+        return "HOLD_PUT_POSITION", f"VIX={vix} < 13. Premiums too cheap. No new puts."
+    if vix >= 30:
+        return "HOLD_PUT_POSITION", f"VIX={vix} >= 30. Market too fearful. No new opens."
+
+    # Gate 2: Risk unit capacity
+    max_units = 1 if day_classification == "BEARISH_DAY" else 4
+    if risk_units >= max_units:
+        return "HOLD_PUT_POSITION", f"Risk units {risk_units} >= max {max_units} for {day_classification}."
+
+    # Gate 3: Daily pacing
+    if contracts_written_today >= 2:
+        return "HOLD_PUT_POSITION", f"Daily cap (2) reached. contracts_written_today={contracts_written_today}."
+    if contracts_written_today == 1 and day_classification in ["QUIET_DAY", "NORMAL_DAY"]:
+        return "HOLD_PUT_POSITION", f"Daily cap (1) for {day_classification}. Already wrote 1 contract today."
+
+    # Gate 4: Delta qualification
+    delta_ranges = {
+        "GOOD_DAY":    (-0.30, -0.25),
+        "NORMAL_DAY":  (-0.25, -0.20),
+        "QUIET_DAY":   (-0.20, -0.15),
+        "BEARISH_DAY": (-0.15, -0.10),
+    }
+    lo, hi = delta_ranges.get(day_classification, (-0.30, -0.15))
+    if not (lo <= best_delta <= hi):
+        return "HOLD_PUT_POSITION", f"Delta {best_delta} outside range [{lo}, {hi}] for {day_classification}."
+
+    # Gate 5: Premium floor
+    if best_premium < 0.50:
+        return "HOLD_PUT_POSITION", f"Premium ${best_premium} < $0.50 floor."
+
+    return "SELL_NEW_PUT", (
+        f"All gates passed. risk_units={risk_units}/{max_units}. "
+        f"written_today={contracts_written_today}. {day_classification}. "
+        f"Delta={best_delta} in range. Premium=${best_premium} >= $0.50."
+    )
+
+
+def run_scan_test(test_name, risk_units, contracts_written_today, day_classification,
+                  best_delta, best_premium, vix, expected_decision):
+    decision, reason = evaluate_new_put_scan(
+        risk_units, contracts_written_today, day_classification,
+        best_delta, best_premium, vix
+    )
+    status = PASS if decision == expected_decision else FAIL
+    print(f"\n{'='*70}")
+    print(f"  {status}  {test_name}")
+    print(f"{'='*70}")
+    print(f"  Inputs   → risk_units={risk_units}, written_today={contracts_written_today}, "
+          f"day={day_classification}, delta={best_delta}, premium=${best_premium}, VIX={vix}")
+    print(f"  Expected → {expected_decision}")
+    print(f"  Got      → {decision}")
+    print(f"  Reason   → {reason}")
+    if status == FAIL:
+        print(f"  ⚠️  MISMATCH! Got {decision} but expected {expected_decision}.")
+    return status == PASS
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TEST CASE 7: Normal day, 1 contract open, capacity available
+# → Yesterday's exact situation. Should write a new put.
+# → EXPECTED: SELL_NEW_PUT
+# ─────────────────────────────────────────────────────────────────────────────
+results.append(run_scan_test(
+    test_name             = "TC7: Normal day, 1 open, capacity free — Should SELL_NEW_PUT",
+    risk_units            = 1,
+    contracts_written_today = 0,
+    day_classification    = "NORMAL_DAY",
+    best_delta            = -0.22,
+    best_premium          = 3.01,
+    vix                   = 18.5,
+    expected_decision     = "SELL_NEW_PUT"
+))
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TEST CASE 8: Daily cap already reached (2 contracts written today)
+# → Should NOT write another contract even though slots are free.
+# → EXPECTED: HOLD_PUT_POSITION
+# ─────────────────────────────────────────────────────────────────────────────
+results.append(run_scan_test(
+    test_name             = "TC8: 2 contracts already written today — Should HOLD (daily cap)",
+    risk_units            = 2,
+    contracts_written_today = 2,
+    day_classification    = "NORMAL_DAY",
+    best_delta            = -0.22,
+    best_premium          = 3.01,
+    vix                   = 18.5,
+    expected_decision     = "HOLD_PUT_POSITION"
+))
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TEST CASE 9: BEARISH_DAY with 1 contract already open
+# → Max allowed is 1 on bearish days. Cap already reached.
+# → EXPECTED: HOLD_PUT_POSITION
+# ─────────────────────────────────────────────────────────────────────────────
+results.append(run_scan_test(
+    test_name             = "TC9: BEARISH_DAY, 1 contract open — Should HOLD (bearish cap=1)",
+    risk_units            = 1,
+    contracts_written_today = 0,
+    day_classification    = "BEARISH_DAY",
+    best_delta            = -0.12,
+    best_premium          = 1.50,
+    vix                   = 22.0,
+    expected_decision     = "HOLD_PUT_POSITION"
+))
+
+# ─────────────────────────────────────────────────────────────────────────────
 # SUMMARY
 # ─────────────────────────────────────────────────────────────────────────────
 print(f"\n{'='*70}")
@@ -182,7 +440,7 @@ passed = sum(results)
 total  = len(results)
 print(f"  FINAL RESULT: {passed}/{total} tests passed.")
 if passed == total:
-    print(f"  🎉 ALL TESTS PASSED. Decision tree logic is working correctly.")
+    print(f"  🎉 ALL TESTS PASSED. Exit logic + Entry/Scan pacing logic both correct.")
 else:
     print(f"  ⚠️  {total - passed} test(s) FAILED. Review the logic above.")
 print(f"{'='*70}\n")

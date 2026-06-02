@@ -24,6 +24,16 @@ def add_warning(msg: str):
     print(f"[WARNING] {msg}", file=sys.stderr)
     WARNINGS.append(msg)
 
+def calculate_midpoint(bid: float, ask: float, last_price: float) -> float:
+    spread = ask - bid
+    if bid > 0 and ask > 0:
+        if spread > 1.50 or (spread / bid) > 0.50:
+            return last_price
+        mid = round((bid + ask) / 2, 2)
+        if mid > 0:
+            return mid
+    return last_price
+
 # ─────────────────────────────────────────────
 # ADVANCED MATH ENGINE (Institutional)
 # ─────────────────────────────────────────────
@@ -82,14 +92,17 @@ def load_portfolio():
         return {"total_cash": 250000.0, "realized_pnl": 0.0, "positions": []}
 
 def get_intraday_tracker() -> Dict[str, Any]:
+    from core.utils import get_market_date
+    today_str = get_market_date()
     try:
         if TRACKER_PATH.exists():
             with open(TRACKER_PATH, 'r') as f:
-                return json.load(f)
+                tracker = json.load(f)
+                if tracker and tracker.get("date") == today_str:
+                    return tracker
     except Exception as e:
         add_warning(f"Error loading intraday tracker: {e}")
     
-    today_str = datetime.now().strftime('%Y-%m-%d')
     return {
         "date": today_str,
         "contracts_written_today": 0,
@@ -217,8 +230,7 @@ async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[st
             for _, row in chain.iterrows():
                 strike = float(row['strike'])
                 bid, ask = float(row['bid']), float(row['ask'])
-                mid = round((bid + ask) / 2, 2)
-                if mid <= 0.0: mid = float(row['lastPrice'])
+                mid = calculate_midpoint(bid, ask, float(row['lastPrice']))
 
                 # IMPROVED IV DETECTION
                 iv_raw = float(row['impliedVolatility'])
@@ -297,8 +309,7 @@ def enrich_option_position(p: Dict[str, Any], spot: float, ticker: yf.Ticker) ->
             if not match_row.empty:
                 row = match_row.iloc[0]
                 bid, ask = float(row['bid']), float(row['ask'])
-                mid = round((bid + ask) / 2, 2)
-                if mid <= 0.0: mid = float(row['lastPrice'])
+                mid = calculate_midpoint(bid, ask, float(row['lastPrice']))
                 if mid > 0.0: current_premium = mid
                 
                 r = get_risk_free_rate()
@@ -434,7 +445,7 @@ async def fetch_analysis_data() -> Dict[str, Any]:
     # Python decides CAN we open a new put. LLM decides WHICH strike to pick.
     # active_positions stays clean — only real broker positions.
     max_allowed_units    = 1 if day_classification == "BEARISH_DAY" else 4
-    daily_cap            = 1 if day_classification in ["QUIET_DAY", "BEARISH_DAY"] else 2
+    daily_cap            = 2 if day_classification == "GOOD_DAY" else 1
     contracts_written_today = intraday_tracker.get("contracts_written_today", 0)
 
     earnings_safe    = (earnings_days > 7) if earnings_days else True

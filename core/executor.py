@@ -94,16 +94,10 @@ def _append_trades_csv(action, symbol, strike, expiry, price, pnl, pulse_id):
             writer.writerow([datetime.now().strftime('%Y-%m-%d %H:%M:%S'), pulse_id, symbol, action, strike, expiry, price, pnl])
     except: pass
 
-def load_json(path: Path) -> dict:
-    try:
-        with open(path, 'r') as f: return json.load(f)
-    except: return {}
-
-def write_json(path: Path, data: dict):
-    with open(path, 'w') as f: json.dump(data, f, indent=2)
+from core.utils import load_json, write_json, get_market_date, ValidationError, PolicyBlockError, PacingBlockError
 
 def reset_and_load_tracker() -> dict:
-    today_str = datetime.now().strftime('%Y-%m-%d')
+    today_str = get_market_date()
     tracker = load_json(TRACKER_PATH)
     if not tracker or tracker.get("date") != today_str:
         tracker = {
@@ -288,7 +282,7 @@ def validate_single_decision(dec, eye_data, portfolio):
             delta = abs(float(matched.get('delta', 0.0)))
             dte = int(matched.get('dte', 99))
             if dte <= 15 and delta >= 0.30:
-                raise ValueError(f"Policy Block: ROLL_PUT rejected (Delta {delta} >= 0.30 AND DTE {dte} <= 15). [BLOCKED_ROLL_ITM_PUT] Accept assignment instead.")
+                raise PolicyBlockError(f"Policy Block: ROLL_PUT rejected (Delta {delta} >= 0.30 AND DTE {dte} <= 15). [BLOCKED_ROLL_ITM_PUT] Accept assignment instead.")
 
     if decision in ["HOLD_PUT_POSITION", "HOLD_CALL_POSITION", "HOLD"]:
         key = dec.get("position_key")
@@ -320,25 +314,30 @@ def validate_single_decision(dec, eye_data, portfolio):
         
         max_allowed_units = 1 if day_class == "BEARISH_DAY" else 4
         if risk_units >= max_allowed_units:
-            raise ValueError(f"Policy Block: Max Risk Units ({max_allowed_units}) reached for regime {day_class}. Cannot write new Put.")
+            raise PolicyBlockError(f"Policy Block: Max Risk Units ({max_allowed_units}) reached for regime {day_class}. Cannot write new Put.")
             
         tracker = reset_and_load_tracker()
         written = tracker.get("contracts_written_today", 0)
         day_class = eye_data.get("market_regime", {}).get("day_classification", "NORMAL_DAY")
         
-        if written >= 2:
-            raise ValueError(f"Pacing Block: Daily cap (2) reached. Cannot write new Put.")
-        elif written == 1:
-            if day_class in ["QUIET_DAY", "BEARISH_DAY"]:
-                raise ValueError(f"Pacing Block: Daily cap (1) reached for regime {day_class}. Cannot write new Put.")
-            elif day_class == "NORMAL_DAY":
-                first_strike = tracker.get("first_strike")
-                first_premium = tracker.get("first_premium")
-                candidate_strike = dec.get("strike_to_trade")
-                candidate_premium = dec.get("premium_to_collect")
-                if first_strike and first_premium and candidate_strike and candidate_premium:
-                    if not (candidate_strike < first_strike and candidate_premium >= first_premium):
-                        raise ValueError(f"Pacing Block: Better Option check failed (strike {candidate_strike} >= {first_strike} or premium {candidate_premium} < {first_premium}).")
+        try:
+            if written >= 2:
+                raise PacingBlockError(f"Pacing Block: Daily cap (2) reached. Cannot write new Put.")
+            elif written == 1:
+                if day_class in ["QUIET_DAY", "BEARISH_DAY", "NORMAL_DAY"]:
+                    raise PacingBlockError(f"Pacing Block: Daily cap (1) reached for regime {day_class}. Cannot write new Put.")
+                elif day_class == "GOOD_DAY":
+                    first_strike = tracker.get("first_strike")
+                    first_premium = tracker.get("first_premium")
+                    candidate_strike = dec.get("strike_to_trade")
+                    candidate_premium = dec.get("premium_to_collect")
+                    if first_strike and first_premium and candidate_strike and candidate_premium:
+                        if not (candidate_strike < first_strike and candidate_premium >= first_premium):
+                            raise PacingBlockError(f"Pacing Block: Better Option check failed (strike {candidate_strike} >= {first_strike} or premium {candidate_premium} < {first_premium}).")
+        except PacingBlockError as e:
+            dec['decision'] = 'HOLD_PUT_POSITION'
+            dec['reason'] = str(e)
+            return dec, True
                     
     return dec, False
 

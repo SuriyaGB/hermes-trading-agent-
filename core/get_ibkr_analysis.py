@@ -17,6 +17,11 @@ DATA_DIR = PROJECT_ROOT / 'data'
 PORTFOLIO_PATH = DATA_DIR / 'portfolio.json'
 TRACKER_PATH = DATA_DIR / 'intraday_tracker.json'
 
+# --- Pricing Cache (Stateful After-Hours Defense) ---
+# Stores last valid mid and IV per contract key during market hours.
+# Format: { "PUT_295_20260717": {"mid": 3.47, "iv": 0.182, "timestamp": "2026-06-02T19:55:00"} }
+_pricing_cache: dict = {}
+
 # Global Warning Tracker
 WARNINGS = []
 
@@ -24,15 +29,47 @@ def add_warning(msg: str):
     print(f"[WARNING] {msg}", file=sys.stderr)
     WARNINGS.append(msg)
 
-def calculate_midpoint(bid: float, ask: float, last_price: float) -> float:
+def calculate_midpoint(bid: float, ask: float, last_price: float,
+                       contract_key: str = None,
+                       spot: float = None, strike: float = None,
+                       dte: int = None, option_type: str = "PUT") -> float:
+    """
+    Returns the best available mid price for an option contract.
+    Priority: (1) Clean mid from tight spread, (2) Cached last-valid mid,
+    (3) Black-Scholes theoretical price. Never uses lastPrice.
+    """
     spread = ask - bid
-    if bid > 0 and ask > 0:
-        if spread > 1.50 or (spread / bid) > 0.50:
-            return last_price
-        mid = round((bid + ask) / 2, 2)
-        if mid > 0:
-            return mid
-    return last_price
+    mid = (bid + ask) / 2.0
+
+    # Spread is clean — use it and update cache
+    if bid > 0 and (spread <= 1.50 and (spread / bid) <= 0.50):
+        if contract_key:
+            _pricing_cache[contract_key] = {
+                "mid": mid,
+                "timestamp": datetime.now().isoformat()
+            }
+        return mid
+
+    # Spread is broken (after-hours or illiquid) — try cache first
+    if contract_key and contract_key in _pricing_cache:
+        cached = _pricing_cache[contract_key]
+        return cached["mid"]
+
+    # Cache is empty (first run or restart) — use Black-Scholes theoretical
+    # Never use lastPrice — it is a stale exchange transaction, not a fair price
+    if spot is not None and strike is not None and dte is not None:
+        iv_estimate = get_vix_sigma() * 1.3  # AAPL IV historically ~30% above VIX
+        theoretical = black_scholes_price(
+            S=spot, K=strike, T=dte / 365.0,
+            r=0.045, sigma=iv_estimate,
+            option_type=option_type.lower()
+        )
+        if theoretical and theoretical > 0:
+            return round(theoretical, 2)
+
+    # Absolute last resort: use mid even if spread is wide
+    # This is safer than lastPrice which can be hours stale
+    return round(mid, 2)
 
 # ─────────────────────────────────────────────
 # ADVANCED MATH ENGINE (Institutional)
@@ -80,6 +117,24 @@ def calculate_delta(S, K, T, r, iv, option_type='put'):
         return norm.cdf(d1)
     else:
         return norm.cdf(d1) - 1
+
+def get_delta_zone(delta: float, dte: int) -> str:
+    """
+    Returns delta zone label using a DTE-adjusted threshold.
+    Threshold tightens as expiry approaches (higher Gamma risk).
+    
+    Base threshold: -0.25 at DTE >= 45
+    Adjusts linearly to -0.20 at DTE <= 15
+    """
+    # Linear interpolation: threshold tightens as DTE shrinks
+    dte_clamped = max(15, min(45, dte))
+    threshold = -0.25 + ((-0.20 - (-0.25)) * (45 - dte_clamped) / (45 - 15))
+    # threshold = -0.25 at DTE=45, -0.20 at DTE=15
+
+    if abs(delta) <= abs(threshold):
+        return f"safe zone (threshold {threshold:.3f} at DTE {dte})"
+    else:
+        return f"caution zone (threshold {threshold:.3f} at DTE {dte})"
 
 # ─────────────────────────────────────────────
 # DATA FETCHING
@@ -230,14 +285,35 @@ async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[st
             for _, row in chain.iterrows():
                 strike = float(row['strike'])
                 bid, ask = float(row['bid']), float(row['ask'])
-                mid = calculate_midpoint(bid, ask, float(row['lastPrice']))
+                pos_key = f"PUT_{int(strike)}_{target_expiry.replace('-', '')}"
+                mid = calculate_midpoint(bid, ask, float(row['lastPrice']),
+                                         contract_key=pos_key, spot=spot,
+                                         strike=strike, dte=target_dte, option_type='put')
 
                 # IMPROVED IV DETECTION
                 iv_raw = float(row['impliedVolatility'])
-                if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001 or (bid == 0.0 and ask == 0.0):
-                    iv = solve_iv(mid, spot, strike, T, r, 'put')
+                if pos_key in _pricing_cache and "iv" in _pricing_cache[pos_key]:
+                    cached_iv = _pricing_cache[pos_key].get("iv")
+                    if cached_iv and cached_iv > 0:
+                        iv = cached_iv
+                    else:
+                        if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001 or (bid == 0.0 and ask == 0.0):
+                            iv = solve_iv(mid, spot, strike, T, r, 'put')
+                        else:
+                            iv = iv_raw
                 else:
-                    iv = iv_raw
+                    if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001 or (bid == 0.0 and ask == 0.0):
+                        iv = solve_iv(mid, spot, strike, T, r, 'put')
+                    else:
+                        iv = iv_raw
+                        
+                spread = ask - bid
+                if bid > 0 and spread <= 1.50:
+                    _pricing_cache[pos_key] = {
+                        "mid": mid,
+                        "iv": iv,
+                        "timestamp": datetime.now().isoformat()
+                    }
 
                 delta = calculate_delta(spot, strike, T, r, iv, 'put')
 
@@ -249,6 +325,7 @@ async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[st
                     "ask":    ask,
                     "mid":    mid,
                     "delta":  round(delta, 4),
+                    "delta_zone": get_delta_zone(delta, target_dte),
                     "iv":     round(iv * 100, 1)
                 })
 
@@ -294,6 +371,7 @@ def enrich_option_position(p: Dict[str, Any], spot: float, ticker: yf.Ticker) ->
     dte = 99
     delta = -0.5 if opt_type_str == 'put' else 0.5
     current_premium = float(p.get("avg_cost", 1.0))
+    position_key = f"{opt_type_str.upper()}_{int(strike)}_{expiry.replace('-', '') if expiry else 'N/A'}"
     
     if expiry_formatted:
         try:
@@ -309,16 +387,36 @@ def enrich_option_position(p: Dict[str, Any], spot: float, ticker: yf.Ticker) ->
             if not match_row.empty:
                 row = match_row.iloc[0]
                 bid, ask = float(row['bid']), float(row['ask'])
-                mid = calculate_midpoint(bid, ask, float(row['lastPrice']))
+                mid = calculate_midpoint(bid, ask, float(row['lastPrice']),
+                                         contract_key=position_key, spot=spot,
+                                         strike=strike, dte=dte, option_type=opt_type_str)
                 if mid > 0.0: current_premium = mid
                 
                 r = get_risk_free_rate()
                 T = dte / 365.25
                 iv_raw = float(row['impliedVolatility'])
-                if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001 or (bid == 0.0 and ask == 0.0):
-                    iv = solve_iv(current_premium, spot, strike, T, r, opt_type_str)
+                if position_key in _pricing_cache and "iv" in _pricing_cache[position_key]:
+                    cached_iv = _pricing_cache[position_key].get("iv")
+                    if cached_iv and cached_iv > 0:
+                        iv = cached_iv
+                    else:
+                        if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001 or (bid == 0.0 and ask == 0.0):
+                            iv = solve_iv(current_premium, spot, strike, T, r, opt_type_str)
+                        else:
+                            iv = iv_raw
                 else:
-                    iv = iv_raw
+                    if iv_raw < 0.01 or abs(iv_raw - 0.500005) < 0.0001 or (bid == 0.0 and ask == 0.0):
+                        iv = solve_iv(current_premium, spot, strike, T, r, opt_type_str)
+                    else:
+                        iv = iv_raw
+
+                spread = ask - bid
+                if bid > 0 and spread <= 1.50:
+                    _pricing_cache[position_key] = {
+                        "mid": mid,
+                        "iv": iv,
+                        "timestamp": datetime.now().isoformat()
+                    }
             else:
                 r = get_risk_free_rate()
                 T = dte / 365.25
@@ -335,8 +433,6 @@ def enrich_option_position(p: Dict[str, Any], spot: float, ticker: yf.Ticker) ->
     if avg_cost > 0:
         profit_pct = ((avg_cost - current_premium) / avg_cost) * 100
         
-    position_key = f"{opt_type_str.upper()}_{int(strike)}_{expiry.replace('-', '') if expiry else 'N/A'}"
-    
     return {
         "position_key": position_key,
         "type": "Option",
@@ -347,7 +443,8 @@ def enrich_option_position(p: Dict[str, Any], spot: float, ticker: yf.Ticker) ->
         "current_premium": round(current_premium, 2),
         "profit_pct": round(profit_pct, 1),
         "dte": dte,
-        "delta": delta
+        "delta": delta,
+        "delta_zone": get_delta_zone(delta, dte)
     }
 
 async def fetch_analysis_data() -> Dict[str, Any]:

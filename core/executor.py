@@ -299,6 +299,40 @@ def validate_single_decision(dec, eye_data, portfolio):
                 dec['is_emergency_close'] = True
                 return dec, True
 
+            profit_pct = matched.get("profit_pct", 0.0)
+
+            # Rule 3: Standard Profit Target (75%)
+            if profit_pct >= 75.0:
+                dec["decision"] = "CLOSE_FOR_PROFIT"
+                dec["python_override"] = True
+                dec["override_reason"] = (
+                    f"Python Rule 3: profit_pct {profit_pct:.1f}% >= 75.0% target. "
+                    f"Overriding LLM decision to CLOSE_FOR_PROFIT."
+                )
+                return dec, True
+
+            # Rule 4: Gamma Safety Exit (DTE <= 15 and profit >= 50%)
+            if dte <= 15 and profit_pct >= 50.0:
+                dec["decision"] = "CLOSE_FOR_PROFIT"
+                dec["python_override"] = True
+                dec["override_reason"] = (
+                    f"Python Rule 4 (Gamma Safety): DTE={dte} <= 15 and "
+                    f"profit_pct {profit_pct:.1f}% >= 50.0%. Overriding to CLOSE_FOR_PROFIT."
+                )
+                return dec, True
+
+            # Python computes the correct close target text — never rely on LLM for this
+            if dte <= 15:
+                close_target_str = f"below 50% close target (DTE={dte}, Gamma Safety Rule 4)"
+            else:
+                close_target_str = f"below 75% close target (Rule 3)"
+            
+            import re
+            original_reason = dec.get("reason", "")
+            cleaned = re.sub(r'\(?below \d+% close target.*?\)?', '', original_reason, flags=re.IGNORECASE).strip()
+            cleaned = cleaned.replace("()", "").strip()
+            dec["reason"] = f"{cleaned} ({close_target_str})"
+
     if decision == "SELL_NEW_PUT":
         strike = dec.get("strike_to_trade")
         current_price = eye_data.get("price_seen", 0.0)
@@ -633,11 +667,30 @@ def build_memory_summary(decisions, state, portfolio, eye_data, action_results, 
     if ai_override: 
         summary += f"⚠️ OVERRIDE: {override_reason}\n"
     summary += "\nDECISIONS RUN:\n"
-    for i, dec in enumerate(decisions):
+    
+    # Track clean decisions and their results safely
+    clean_count = 0
+    for original_idx, dec in enumerate(decisions):
+        if dec.get('decision') == 'NEW_PUT_SCAN':
+            continue
+            
         act = dec.get('decision')
-        res = action_results[i] if i < len(action_results) else "Not executed"
+        res = action_results[original_idx] if original_idx < len(action_results) else "Not executed"
         reason = dec.get('reason', 'N/A')
-        summary += f"{i+1}. Action: {act} -> {res}\n   Reason: {reason}\n"
+        clean_count += 1
+        summary += f"{clean_count}. Action: {act} -> {res}\n   Reason: {reason}\n"
+        
+    # ALWAYS append the risk gate evaluation — Python enforces this unconditionally
+    risk_units = eye_data.get("portfolio_summary", {}).get("current_risk_units", 0) if eye_data else 0
+    max_units = eye_data.get("portfolio_summary", {}).get("dynamic_max_contracts", 4) if eye_data else 4
+    gate_reason = eye_data.get("scan_capacity", {}).get("reason", "") if eye_data else ""
+
+    gate_line = (
+        f"{clean_count + 1}. Action: NEW_PUT_SCAN -> No Action\n"
+        f"   Reason: Risk units {risk_units} of {max_units}. {gate_reason}"
+    )
+    summary += f"\n{gate_line}\n"
+    
     return summary
 
 async def main_executor():

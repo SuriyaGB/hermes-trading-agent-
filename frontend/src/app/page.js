@@ -40,9 +40,7 @@ export default function CommandCentre() {
         const apiUrl = getApiUrl();        
         
         // 1. Fetch Portfolio
-        const portRes = await fetch(`${apiUrl}/api/portfolio?t=${Date.now()}`, {
-          headers: { 'ngrok-skip-browser-warning': 'true' }
-        });
+        const portRes = await fetch(`/api/proxy?url=${encodeURIComponent(`${apiUrl}/api/portfolio?t=${Date.now()}`)}`);
         if (portRes.ok) {
           const portData = await portRes.json();
           if (portData && typeof portData.total_cash === 'number') {
@@ -51,18 +49,14 @@ export default function CommandCentre() {
         }
 
         // 2. Fetch Status
-        const statRes = await fetch(`${apiUrl}/api/status?t=${Date.now()}`, {
-          headers: { 'ngrok-skip-browser-warning': 'true' }
-        });
+        const statRes = await fetch(`/api/proxy?url=${encodeURIComponent(`${apiUrl}/api/status?t=${Date.now()}`)}`);
         if (statRes.ok) {
           const statData = await statRes.json();
           setStatus(statData);
         }
 
         // 3. Fetch Last 20 Pulses for the chart
-        const pulseRes = await fetch(`${apiUrl}/api/pulses?limit=20&t=${Date.now()}`, {
-          headers: { 'ngrok-skip-browser-warning': 'true' }
-        });
+        const pulseRes = await fetch(`/api/proxy?url=${encodeURIComponent(`${apiUrl}/api/pulses?limit=20&t=${Date.now()}`)}`);
         if (pulseRes.ok) {
           const pulseData = await pulseRes.json();
           if (Array.isArray(pulseData) && pulseData.length > 0) {
@@ -148,7 +142,14 @@ export default function CommandCentre() {
             <span>ACCOUNT EQUITY (NET LIQ)</span>
           </div>
           <h2 className="text-3xl font-light tracking-tight">
-            ${((portfolio?.total_cash || 250000) - (activePosition?.avg_cost ? activePosition.avg_cost * 100 : 0)).toLocaleString('en-US', {minimumFractionDigits: 2})}
+            ${((portfolio?.total_cash || 250000) - (portfolio?.positions || []).reduce((acc, pos) => {
+              if (pos.type === 'Option') {
+                const price = pos.current_price !== undefined ? pos.current_price : (pos.avg_cost || 0);
+                const qty = Math.abs(pos.quantity || 1);
+                return acc + (price * qty * 100);
+              }
+              return acc;
+            }, 0)).toLocaleString('en-US', {minimumFractionDigits: 2})}
           </h2>
         </div>
         

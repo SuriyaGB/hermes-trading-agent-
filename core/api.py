@@ -59,6 +59,14 @@ def get_portfolio():
                             chain_item = chain_by_strike[strike]
                             mid_price = chain_item.get("mid")
                             
+                            # Safely inject LIVE greeks directly from memory into the response
+                            if "delta" in chain_item:
+                                pos["delta"] = chain_item["delta"]
+                            if "dte" in chain_item:
+                                pos["dte"] = chain_item["dte"]
+                            if "expiry" in chain_item:
+                                pos["expiry"] = chain_item["expiry"]
+                            
                             if mid_price is not None:
                                 pos["current_price"] = mid_price
                                 # For short options (which we sell): profit is avg_cost - mid_price

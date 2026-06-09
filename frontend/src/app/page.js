@@ -12,7 +12,9 @@ import {
   Calendar, 
   DollarSign, 
   AlertTriangle,
-  Info
+  Info,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -32,6 +34,7 @@ export default function CommandCentre() {
   const [pulses, setPulses] = useState([]);
   const [lastPulse, setLastPulse] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   // Fetch data from our Python FastAPI backend
   useEffect(() => {
@@ -77,9 +80,13 @@ export default function CommandCentre() {
     return () => clearInterval(interval);
   }, []);
 
-  const activePosition = portfolio.positions?.[0] || null;
-  const currentDelta = lastPulse ? lastPulse.delta_current : '--';
-  const currentDte = lastPulse ? lastPulse.dte_current : '--';
+  const totalPositions = portfolio.positions?.length || 0;
+  const activePosition = portfolio.positions?.[activeIndex] || portfolio.positions?.[0] || null;
+  // Calculate dynamic metrics for the specific active position
+  const posDelta = activePosition?.delta || (activeIndex === 0 && lastPulse ? lastPulse.delta_current : '--');
+  const posDte = activePosition?.dte || (activeIndex === 0 && lastPulse ? lastPulse.dte_current : '--');
+  const currentYield = activePosition?.avg_cost ? (activePosition.avg_cost * 100).toFixed(2) : '0.00';
+  const currentYieldPct = (activePosition?.avg_cost && activePosition?.strike) ? ((activePosition.avg_cost / activePosition.strike) * 100).toFixed(2) : '0.00';
 
   // Wheel Phase Node Coordinates for the SVG Visualizer
   const phaseNodes = [
@@ -88,6 +95,14 @@ export default function CommandCentre() {
     { id: 'SHARES_ASSIGNED', label: '3. ASSIGNED', x: 200, y: 250, color: '#FFEA00', desc: 'Stock shares assigned' },
     { id: 'CC_ACTIVE', label: '4. CALL SOLD', x: 50, y: 150, color: '#A855F7', desc: 'Covered Call active' }
   ];
+
+  // Derive phase dynamically from activePosition to bypass backend global state
+  let derivedPhase = status?.current_phase || 'LOADING';
+  if (activePosition) {
+    if (activePosition.option_type === 'PUT') derivedPhase = 'CSP_ACTIVE';
+    else if (activePosition.option_type === 'CALL') derivedPhase = 'CC_ACTIVE';
+    else if (activePosition.type === 'Stock') derivedPhase = 'SHARES_ASSIGNED';
+  }
 
   // Helper to format date strings for chart X-axis
   const formatChartDate = (timestamp) => {
@@ -186,7 +201,7 @@ export default function CommandCentre() {
           </div>
           <div className="flex items-center space-x-2 mt-1">
             <span className="w-2 h-2 rounded-full bg-cyber-green animate-pulse"></span>
-            <span className="text-lg font-mono tracking-wider text-white">{status?.current_phase || 'LOADING'}</span>
+            <span className="text-lg font-mono tracking-wider text-white">{derivedPhase}</span>
           </div>
         </div>
       </div>
@@ -195,7 +210,7 @@ export default function CommandCentre() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Column: Visual State Machine (SVG Diagram) */}
-        <div className="glass-panel p-6 col-span-1 lg:col-span-5 flex flex-col items-center justify-center text-center min-h-[380px]">
+        <div key={`flowmap-${activeIndex}`} className="glass-panel p-6 col-span-1 lg:col-span-5 flex flex-col items-center justify-center text-center min-h-[380px] animate-in fade-in zoom-in-95 duration-500">
           <h3 className="text-sm font-mono text-white/60 tracking-wider mb-6 flex items-center self-start">
             <Activity size={14} className="mr-2 text-cyber-green" /> WHEEL STATE FLOWMAP
           </h3>
@@ -209,22 +224,22 @@ export default function CommandCentre() {
               <path d="M 50,150 Q 100,50 200,50" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2" />
 
               {/* Glowing active arrow */}
-              {status?.current_phase === 'CASH_ONLY' && (
+              {derivedPhase === 'CASH_ONLY' && (
                 <path d="M 50,150 Q 100,50 200,50" fill="none" stroke="#3B82F6" strokeWidth="3" className="animate-pulse" />
               )}
-              {status?.current_phase === 'CSP_ACTIVE' && (
+              {derivedPhase === 'CSP_ACTIVE' && (
                 <path d="M 200,50 Q 300,50 350,150" fill="none" stroke="#00E676" strokeWidth="3" className="animate-pulse" />
               )}
-              {status?.current_phase === 'SHARES_ASSIGNED' && (
+              {derivedPhase === 'SHARES_ASSIGNED' && (
                 <path d="M 350,150 Q 350,250 200,250" fill="none" stroke="#FFEA00" strokeWidth="3" className="animate-pulse" />
               )}
-              {status?.current_phase === 'CC_ACTIVE' && (
+              {derivedPhase === 'CC_ACTIVE' && (
                 <path d="M 200,250 Q 100,250 50,150" fill="none" stroke="#A855F7" strokeWidth="3" className="animate-pulse" />
               )}
 
               {/* Render Nodes */}
               {phaseNodes.map((node) => {
-                const isActive = status?.current_phase === node.id;
+                const isActive = derivedPhase === node.id;
                 return (
                   <g key={node.id}>
                     {/* Pulsing Backlight for Active Node */}
@@ -273,7 +288,7 @@ export default function CommandCentre() {
           {/* Active Phase details panel */}
           <div className="mt-4 px-4 py-2 bg-white/5 border border-white/5 rounded-lg w-full">
             {phaseNodes.map((n) => {
-              if (status?.current_phase === n.id) {
+              if (derivedPhase === n.id) {
                 return (
                   <div key={n.id} className="animate-in fade-in duration-300">
                     <p className="text-xs font-mono text-white/50 tracking-wider">ACTIVE STATE DESCRIPTION</p>
@@ -289,10 +304,34 @@ export default function CommandCentre() {
         {/* Right Column: Live Position Card */}
         <div className="glass-panel p-6 col-span-1 lg:col-span-7 flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-mono text-white/60 tracking-wider mb-6 flex items-center justify-between">
-              <span className="flex items-center"><Target size={14} className="mr-2 text-cyber-green" /> ACTIVE WHEEL POSITION</span>
-              <span className="text-xs opacity-50 font-normal">100 SHARES BIND</span>
-            </h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-sm font-mono text-white/60 tracking-wider flex items-center">
+                <Target size={14} className="mr-2 text-cyber-green" /> ACTIVE WHEEL POSITION
+              </h3>
+              
+              {totalPositions > 1 && (
+                <div className="flex items-center space-x-3 bg-black/40 px-3 py-1.5 rounded-full border border-white/10">
+                  <button 
+                    onClick={() => setActiveIndex(prev => prev > 0 ? prev - 1 : totalPositions - 1)}
+                    className="text-white/40 hover:text-white transition-colors"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span className="text-xs font-mono text-white/60">
+                    POS {activeIndex + 1} <span className="opacity-50">/ {totalPositions}</span>
+                  </span>
+                  <button 
+                    onClick={() => setActiveIndex(prev => prev < totalPositions - 1 ? prev + 1 : 0)}
+                    className="text-white/40 hover:text-white transition-colors"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              )}
+              {totalPositions <= 1 && (
+                <span className="text-xs opacity-50 font-normal">100 SHARES BIND</span>
+              )}
+            </div>
 
             {activePosition ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-500">
@@ -346,21 +385,21 @@ export default function CommandCentre() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-black/30 border border-white/5 p-4 rounded-lg flex flex-col justify-center">
                     <p className="text-[10px] font-mono text-white/40 mb-1">CONTRACT DELTA</p>
-                    <p className="text-xl font-mono text-purple-400">{currentDelta}</p>
+                    <p className="text-xl font-mono text-purple-400">{posDelta}</p>
                     <span className="text-[9px] font-mono text-white/30 mt-1">Bound: ±0.20</span>
                   </div>
 
                   <div className="bg-black/30 border border-white/5 p-4 rounded-lg flex flex-col justify-center">
                     <p className="text-[10px] font-mono text-white/40 mb-1">DAYS TO EXPIRY</p>
-                    <p className="text-xl font-mono text-yellow-500">{currentDte !== '--' ? `${currentDte} Days` : '--'}</p>
+                    <p className="text-xl font-mono text-yellow-500">{posDte !== '--' ? `${posDte} Days` : '--'}</p>
                     <span className="text-[9px] font-mono text-white/30 mt-1">Roll limit: 21</span>
                   </div>
 
                   <div className="bg-black/30 border border-white/5 p-4 rounded-lg flex flex-col justify-center col-span-2">
                     <p className="text-[10px] font-mono text-white/40 mb-1">YIELD AT RISK CAP</p>
                     <div className="flex justify-between items-baseline mt-1">
-                      <p className="text-lg font-mono text-cyber-green">+$328.00</p>
-                      <span className="text-[10px] font-mono text-cyber-green/60">+1.31% return</span>
+                      <p className="text-lg font-mono text-cyber-green">+${currentYield}</p>
+                      <span className="text-[10px] font-mono text-cyber-green/60">+{currentYieldPct}% return</span>
                     </div>
                   </div>
                 </div>

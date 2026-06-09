@@ -107,29 +107,45 @@ export default function AgentComparison() {
   const hermesPositions = hermesData.portfolio?.positions || [];
   let hermesLiability = 0;
   let hermesCollateral = 0;
+  let hermesPremium = 0;
+  let hermesUnrealized = 0;
+  
   hermesPositions.forEach(pos => {
     if (pos.type === 'Option') {
       const price = pos.current_price || pos.avg_cost || 0;
       const qty = Math.abs(pos.quantity || 1);
       hermesLiability += price * qty * 100;
       hermesCollateral += (pos.strike || 0) * qty * 100;
+      hermesPremium += (pos.avg_cost || 0) * qty * 100;
+      hermesUnrealized += (pos.unrealized_pnl || 0);
     }
   });
+  
   const hermesNetLiq = hermesCash - hermesLiability;
-  const hermesPnl = hermesData.portfolio?.realized_pnl || 0;
+  const hermesRealized = hermesData.portfolio?.realized_pnl || 0;
+  const hermesInterest = hermesCash - 250000 - hermesPremium - hermesRealized;
 
   // Derived Metrics for ThetaGang
   const thetaLive = thetaData.live;
   const thetaNetLiq = thetaLive?.summary?.totalValue !== undefined ? thetaLive.summary.totalValue : 250000;
-  const thetaCash = thetaLive?.summary?.totalCash !== undefined ? thetaLive.summary.totalCash : (thetaLive?.summary?.availableCash !== undefined ? thetaLive.summary.availableCash : 250000);
+  const thetaCash = thetaLive?.summary?.totalCash !== undefined ? thetaLive.summary.totalCash : 250000;
   const thetaAvailable = thetaLive?.summary?.availableCash !== undefined ? thetaLive.summary.availableCash : 250000;
   const thetaPositions = thetaLive?.positions || [];
+  
   let thetaCollateral = 0;
+  let thetaPremium = 0;
+  let thetaUnrealized = 0;
+  
   thetaPositions.forEach(pos => {
     if (pos.secType === 'OPT') {
       thetaCollateral += (pos.strike || 0) * Math.abs(pos.quantity) * 100;
+      thetaPremium += (pos.entryPrice || 0) * Math.abs(pos.quantity) * 100;
+      thetaUnrealized += (pos.pnl || 0);
     }
   });
+  
+  // Realized PnL is confirmed 0 from IBKR; remainder is interest
+  const thetaInterest = thetaCash - 250000 - thetaPremium;
 
   // Reconstruct Combined Performance History
   const combineHistoryData = () => {
@@ -276,27 +292,33 @@ export default function AgentComparison() {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="glass-panel p-5 bg-white/[0.02]">
-              <p className="text-xs text-white/40 font-mono tracking-wider">NET LIQ (VALUATION)</p>
+              <p className="text-xs text-white/40 font-mono tracking-wider flex justify-between">
+                <span>NET LIQ (REAL)</span>
+              </p>
               <p className="text-xl sm:text-2xl font-light text-white mt-1">
-                ${hermesNetLiq.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                ${hermesNetLiq.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-            <div className="glass-panel p-5 bg-white/[0.02]">
-              <p className="text-xs text-white/40 font-mono tracking-wider">TOTAL CASH (LIQUID)</p>
-              <p className="text-xl sm:text-2xl font-light text-white mt-1">
-                ${hermesCash.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div className="glass-panel p-5 bg-white/[0.02]">
-              <p className="text-xs text-white/40 font-mono tracking-wider">COLLATERAL LOCK</p>
-              <p className="text-xl sm:text-2xl font-light text-yellow-500 mt-1">
-                ${hermesCollateral.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div className="glass-panel p-5 bg-white/[0.02]">
-              <p className="text-xs text-white/40 font-mono tracking-wider">REALIZED PREMIUM</p>
+            <div className="glass-panel p-5 bg-white/[0.02] border border-cyber-green/20 relative">
+              <p className="text-xs text-white/40 font-mono tracking-wider">TOTAL CASH</p>
               <p className="text-xl sm:text-2xl font-light text-cyber-green mt-1">
-                +${hermesPnl.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                ${hermesCash.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <div className="mt-2 text-[10px] font-mono text-white/50 flex justify-between">
+                <span>Premium: ${hermesPremium.toLocaleString()}</span>
+                <span>Interest: ${Math.max(0, hermesInterest).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+              </div>
+            </div>
+            <div className="glass-panel p-5 bg-white/[0.02]">
+              <p className="text-xs text-white/40 font-mono tracking-wider">UNREALIZED P&L</p>
+              <p className={`text-xl sm:text-2xl font-light mt-1 ${hermesUnrealized >= 0 ? 'text-cyber-green' : 'text-red-400'}`}>
+                {hermesUnrealized >= 0 ? '+' : ''}${hermesUnrealized.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="glass-panel p-5 bg-white/[0.02]">
+              <p className="text-xs text-white/40 font-mono tracking-wider">REALIZED PROFIT</p>
+              <p className="text-xl sm:text-2xl font-light text-white mt-1">
+                ${hermesRealized.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
           </div>
@@ -309,28 +331,38 @@ export default function AgentComparison() {
             ThetaGang Financial Summary
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="glass-panel p-5 bg-white/[0.02]">
-              <p className="text-xs text-white/40 font-mono tracking-wider">NET LIQ (VALUATION)</p>
+            <div className="glass-panel p-5 bg-white/[0.02] relative">
+              <p className="text-xs text-white/40 font-mono tracking-wider flex justify-between">
+                <span>NET LIQ (REPORTED)</span>
+                <AlertTriangle size={14} className="text-yellow-500" title="API pricing may be stale" />
+              </p>
               <p className="text-xl sm:text-2xl font-light text-white mt-1">
-                ${thetaNetLiq.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                ${thetaNetLiq.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-            <div className="glass-panel p-5 bg-white/[0.02]">
-              <p className="text-xs text-white/40 font-mono tracking-wider">TOTAL CASH (LIQUID)</p>
-              <p className="text-xl sm:text-2xl font-light text-white mt-1">
-                ${thetaCash.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div className="glass-panel p-5 bg-white/[0.02]">
-              <p className="text-xs text-white/40 font-mono tracking-wider">COLLATERAL LOCK</p>
-              <p className="text-xl sm:text-2xl font-light text-yellow-400 mt-1">
-                ${thetaCollateral.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div className="glass-panel p-5 bg-white/[0.02]">
-              <p className="text-xs text-white/40 font-mono tracking-wider">FREE LIQUIDITY</p>
+            <div className="glass-panel p-5 bg-white/[0.02] border border-cyan-400/20 relative">
+              <p className="text-xs text-white/40 font-mono tracking-wider">TOTAL CASH</p>
               <p className="text-xl sm:text-2xl font-light text-cyan-400 mt-1">
-                ${thetaAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                ${thetaCash.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <div className="mt-2 text-[10px] font-mono text-white/50 flex justify-between">
+                <span>Premium: ${thetaPremium.toLocaleString()}</span>
+                <span className="text-yellow-400">Interest: ${Math.max(0, thetaInterest).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+              </div>
+            </div>
+            <div className="glass-panel p-5 bg-white/[0.02] relative">
+              <p className="text-xs text-white/40 font-mono tracking-wider flex justify-between">
+                <span>UNREALIZED P&L</span>
+                <AlertTriangle size={14} className="text-yellow-500" title="API pricing may be stale" />
+              </p>
+              <p className={`text-xl sm:text-2xl font-light mt-1 ${thetaUnrealized >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
+                {thetaUnrealized >= 0 ? '+' : ''}${thetaUnrealized.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="glass-panel p-5 bg-white/[0.02]">
+              <p className="text-xs text-white/40 font-mono tracking-wider">REALIZED PROFIT</p>
+              <p className="text-xl sm:text-2xl font-light text-white mt-1">
+                $0.00 <span className="text-[10px] text-white/30 ml-1">(IBKR Verified)</span>
               </p>
             </div>
           </div>

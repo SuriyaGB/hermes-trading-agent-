@@ -673,26 +673,35 @@ def build_memory_summary(decisions, state, portfolio, eye_data, action_results, 
     
     # Track clean decisions and their results safely
     clean_count = 0
+    new_put_attempted = False
+    
     for original_idx, dec in enumerate(decisions):
-        if dec.get('decision') == 'NEW_PUT_SCAN':
+        is_new_scan = dec.get('position_key') == 'NEW_PUT_SCAN'
+        act = dec.get('decision')
+        
+        # If LLM just output HOLD for the new scan, we skip it and let Python's gate check print instead
+        if is_new_scan and act not in ['SELL_NEW_PUT', 'SELL_NEW_CALL']:
             continue
             
-        act = dec.get('decision')
+        if is_new_scan:
+            new_put_attempted = True
+            
         res = action_results[original_idx] if original_idx < len(action_results) else "Not executed"
         reason = dec.get('reason', 'N/A')
         clean_count += 1
         summary += f"{clean_count}. Action: {act} -> {res}\n   Reason: {reason}\n"
         
-    # ALWAYS append the risk gate evaluation — Python enforces this unconditionally
-    risk_units = eye_data.get("portfolio_summary", {}).get("current_risk_units", 0) if eye_data else 0
-    max_units = eye_data.get("portfolio_summary", {}).get("dynamic_max_contracts", 4) if eye_data else 4
-    gate_reason = eye_data.get("scan_capacity", {}).get("reason", "") if eye_data else ""
+    # If the LLM didn't attempt to open a new position, append Python's risk gate evaluation
+    if not new_put_attempted:
+        risk_units = eye_data.get("portfolio_summary", {}).get("current_risk_units", 0) if eye_data else 0
+        max_units = eye_data.get("portfolio_summary", {}).get("dynamic_max_contracts", 4) if eye_data else 4
+        gate_reason = eye_data.get("scan_capacity", {}).get("reason", "") if eye_data else ""
 
-    gate_line = (
-        f"{clean_count + 1}. Action: NEW_PUT_SCAN -> No Action\n"
-        f"   Reason: Risk units {risk_units} of {max_units}. {gate_reason}"
-    )
-    summary += f"\n{gate_line}\n"
+        gate_line = (
+            f"• Portfolio Scan: NEW_PUT_SCAN -> No Action\n"
+            f"   Reason: Risk units {risk_units} of {max_units}. {gate_reason}"
+        )
+        summary += f"\n{gate_line}\n"
     
     return summary
 

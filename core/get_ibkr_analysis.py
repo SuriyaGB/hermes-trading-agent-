@@ -251,11 +251,34 @@ async def get_yf_option_chain(spot: float, held_strike: float = None) -> Dict[st
     # Collect ALL valid expiry dates in the 30-50 DTE window.
     # This gives the AI the full picture to choose both Strike AND Expiry.
     valid_expiries = []
+    
+    # 1. Add active portfolio expiries to guarantee we track live positions!
+    portfolio_path = Path(__file__).parent.parent / "data" / "portfolio.json"
+    if portfolio_path.exists():
+        try:
+            with open(portfolio_path, "r") as f:
+                port_data = json.load(f)
+            for pos in port_data.get("positions", []):
+                if pos.get("type") == "Option" and pos.get("expiry") and pos.get("expiry") != "N/A":
+                    # Convert YYYYMMDD to YYYY-MM-DD
+                    raw_exp = pos["expiry"]
+                    fmt_exp = f"{raw_exp[:4]}-{raw_exp[4:6]}-{raw_exp[6:]}"
+                    if fmt_exp in expiries:
+                        exp_date = datetime.strptime(fmt_exp, '%Y-%m-%d').date()
+                        dte = (exp_date - today).days
+                        # Only add if not already in list
+                        if not any(e[0] == fmt_exp for e in valid_expiries):
+                            valid_expiries.append((fmt_exp, dte))
+        except Exception as e:
+            add_warning(f"Failed to load active expiries: {e}")
+
+    # 2. Add standard 30-50 DTE window for new trade hunting
     for exp in expiries:
         exp_date = datetime.strptime(exp, '%Y-%m-%d').date()
         dte = (exp_date - today).days
         if 30 <= dte <= 50:
-            valid_expiries.append((exp, dte))
+            if not any(e[0] == exp for e in valid_expiries):
+                valid_expiries.append((exp, dte))
 
     if not valid_expiries:
         return result

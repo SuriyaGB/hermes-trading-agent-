@@ -374,10 +374,6 @@ export default function CommandCentre() {
                           : '--'}
                       </span>
                     </div>
-                    <div className="flex justify-between text-xs py-2">
-                      <span className="text-white/40">Contract Expiry</span>
-                      <span className="text-white">{formatExpiryDate(activePosition.expiry)}</span>
-                    </div>
                     <div className="flex justify-between items-center py-2 border-t border-white/5">
                       <span className="text-white/40 text-xs">Trade Entered (EST)</span>
                       <span className="text-white font-mono text-xs">
@@ -393,14 +389,27 @@ export default function CommandCentre() {
                           : '--'}
                       </span>
                     </div>
+                    <div className="flex justify-between text-xs py-2 border-t border-white/5">
+                      <span className="text-white/40">Contract Expiry</span>
+                      <span className="text-white">{formatExpiryDate(activePosition.expiry)}</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Metrics Breakdown Grid */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-black/30 border border-white/5 p-4 rounded-lg flex flex-col justify-center">
-                    <p className="text-[10px] font-mono text-white/40 mb-1">CONTRACT DELTA</p>
-                    <p className="text-xl font-mono text-purple-400">{posDelta}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-[10px] font-mono text-white/40">CONTRACT DELTA</p>
+                      {activePosition?.is_fallback_data && (
+                        <span className="text-[8px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded border border-red-500/30">
+                          ⚠️ STALE DATA
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-xl font-mono ${parseFloat(posDelta) < 0 ? 'text-fuchsia-400' : 'text-emerald-400'}`}>
+                      {posDelta}
+                    </p>
                     <span className="text-[9px] font-mono text-white/30 mt-1">Bound: ±0.20</span>
                   </div>
 

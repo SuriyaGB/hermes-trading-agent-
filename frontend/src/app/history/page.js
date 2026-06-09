@@ -80,23 +80,41 @@ export default function PulseHistory() {
                   <td colSpan="5" className="p-8 text-center text-white/30 border-dashed">LOADING MEMORY LOGS...</td>
                 </tr>
               ) : (
-                pulses.map((pulse, i) => (
-                  <tr key={i} className="hover:bg-white/5 transition-colors group">
-                    <td className="p-4 text-white/60 whitespace-nowrap">
-                      {new Date(pulse.timestamp).toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute:'2-digit' })}
-                    </td>
-                    <td className="p-4 text-white">${pulse.aapl_price}</td>
-                    <td className="p-4 text-yellow-500/80">{pulse.vix_level}</td>
-                    <td className="p-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded text-xs border ${getDecisionColor(pulse.ai_decision)}`}>
-                        {pulse.ai_decision}
-                      </span>
-                    </td>
-                    <td className="p-4 text-cyber-green/70 text-xs leading-relaxed max-w-xl group-hover:text-cyber-green transition-colors">
-                      {pulse.ai_reasoning}
-                    </td>
-                  </tr>
-                ))
+                pulses.map((pulse, i) => {
+                  // Deduplicate identical decisions (e.g., HOLD, HOLD, HOLD)
+                  const decisions = Array.from(new Set((pulse.ai_decision || '').split(', ')));
+                  // Split reasoning by the pipe delimiter
+                  const reasons = (pulse.ai_reasoning || '').split(' | ');
+                  
+                  return (
+                    <tr key={i} className="hover:bg-white/5 transition-colors group">
+                      <td className="p-4 text-white/60 whitespace-nowrap align-top">
+                        {pulse.timestamp ? new Date(pulse.timestamp.replace(' ', 'T')).toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute:'2-digit' }) : '--'}
+                      </td>
+                      <td className="p-4 text-white align-top">${pulse.aapl_price}</td>
+                      <td className="p-4 text-yellow-500/80 align-top">{pulse.vix_level}</td>
+                      <td className="p-4 align-top">
+                        <div className="flex flex-col gap-1 items-start">
+                          {decisions.map((decision, idx) => (
+                            <span key={idx} className={`px-2 py-1 rounded text-[10px] border ${getDecisionColor(decision)}`}>
+                              {decision}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="p-4 text-cyber-green/70 text-xs leading-relaxed max-w-xl group-hover:text-cyber-green transition-colors align-top">
+                        <div className="space-y-2">
+                          {reasons.map((reason, idx) => (
+                            <p key={idx} className="flex items-start">
+                              <span className="text-white/20 mr-2 font-bold mt-px">›</span>
+                              <span>{reason}</span>
+                            </p>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

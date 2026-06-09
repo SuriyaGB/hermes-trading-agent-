@@ -46,26 +46,81 @@ def get_portfolio():
                 raw_data = json.loads(row[0])
                 option_chain = raw_data.get("option_chain", [])
                 
-                # Build option chain lookup by strike
-                chain_by_strike = {item["strike"]: item for item in option_chain if "strike" in item}
+
+                # Build option chain lookup by (strike, expiry)
+                chain_by_key = {}
+                for item in option_chain:
+                    if "strike" in item and "expiry" in item:
+                        key = (float(item["strike"]), item["expiry"])
+                        chain_by_key[key] = item
+                        # Also save a strike-only fallback for N/A expiries
+                        chain_by_key[float(item["strike"])] = item
                 
                 for pos in portfolio.get("positions", []):
                     if pos.get("type") == "Option":
                         strike = float(pos.get("strike", 0))
+                        pos_expiry = pos.get("expiry", "N/A")
                         avg_cost = float(pos.get("avg_cost", 0))
                         
-                        # Find matching strike in the option chain of the latest pulse
-                        if strike in chain_by_strike:
-                            chain_item = chain_by_strike[strike]
+                        # Calculate DTE perfectly using mathematics, not fallbacks
+                        if pos_expiry != "N/A":
+                            try:
+                                exp_dt = datetime.strptime(pos_expiry, "%Y%m%d").date()
+                                pos["dte"] = (exp_dt - datetime.now().date()).days
+                            except Exception:
+                                pass
+                                
+                        # Recover missing entry_time from historical logs
+                        if "entry_time" not in pos:
+                            log_path = DATA_DIR / "trades_log.csv"
+                            if log_path.exists():
+                                try:
+                                    with open(log_path, "r") as f:
+                                        rows = list(csv.DictReader(f))
+                                        for r in reversed(rows):
+                                            log_strike = float(r.get("strike", 0))
+                                            log_expiry = r.get("expiry", "N/A")
+                                            if r.get("symbol") == pos.get("symbol", "") and log_strike == strike and log_expiry == pos_expiry:
+                                                pos["entry_time"] = r.get("timestamp", "").replace(" ", "T")
+                                                break
+                                except Exception:
+                                    pass
+                                    
+                            # Secondary fallback: if trades_log failed, check trade_state_history.jsonl
+                            if "entry_time" not in pos:
+                                hist_path = DATA_DIR / "trade_state_history.jsonl"
+                                if hist_path.exists():
+                                    try:
+                                        with open(hist_path, "r") as f:
+                                            # We want the FIRST time this strike appeared in history
+                                            for line in f:
+                                                try:
+                                                    state_obj = json.loads(line.strip())
+                                                    if state_obj.get("current_option_strike") == strike and state_obj.get("current_option_expiry") == pos_expiry:
+                                                        if state_obj.get("last_pulse_timestamp"):
+                                                            pos["entry_time"] = state_obj["last_pulse_timestamp"]
+                                                            break
+                                                except:
+                                                    continue
+                                    except Exception:
+                                        pass
+                        
+                        # Find matching strike and expiry in the option chain
+                        chain_item = None
+                        if pos_expiry != "N/A" and (strike, pos_expiry) in chain_by_key:
+                            chain_item = chain_by_key[(strike, pos_expiry)]
+                            pos["is_fallback_data"] = False
+                        elif strike in chain_by_key:
+                            # ⚠️ FALLBACK TRIGGERED ⚠️
+                            chain_item = chain_by_key[strike]
+                            pos["is_fallback_data"] = True
+                            
+                        if chain_item:
                             mid_price = chain_item.get("mid")
                             
-                            # Safely inject LIVE greeks directly from memory into the response
+                            # Inject Delta (We DO NOT overwrite Expiry or DTE with fallback lies)
                             if "delta" in chain_item:
                                 pos["delta"] = chain_item["delta"]
-                            if "dte" in chain_item:
-                                pos["dte"] = chain_item["dte"]
-                            if "expiry" in chain_item:
-                                pos["expiry"] = chain_item["expiry"]
                             
                             if mid_price is not None:
                                 pos["current_price"] = mid_price

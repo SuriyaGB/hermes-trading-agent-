@@ -374,9 +374,24 @@ export default function CommandCentre() {
                           : '--'}
                       </span>
                     </div>
-                    <div className="flex justify-between text-xs">
+                    <div className="flex justify-between text-xs py-2">
                       <span className="text-white/40">Contract Expiry</span>
                       <span className="text-white">{formatExpiryDate(activePosition.expiry)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-t border-white/5">
+                      <span className="text-white/40 text-xs">Trade Entered (EST)</span>
+                      <span className="text-white font-mono text-xs">
+                        {activePosition?.entry_time && activePosition.entry_time !== 'N/A'
+                          ? new Date(activePosition.entry_time).toLocaleString("en-US", {
+                              timeZone: "America/New_York",
+                              month: "short",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true
+                            })
+                          : '--'}
+                      </span>
                     </div>
                   </div>
                 </div>

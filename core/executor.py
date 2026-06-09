@@ -430,7 +430,8 @@ def execute_decision(dec, db, pulse_id, eye_data=None):
             "strike": strike, 
             "avg_cost": premium, 
             "option_type": "PUT",
-            "expiry": chosen_expiry
+            "expiry": chosen_expiry,
+            "entry_time": datetime.now().isoformat()
         })
         portfolio["total_cash"] = round(portfolio.get("total_cash", 250000.0) + (premium * 100), 2)
         
@@ -467,7 +468,8 @@ def execute_decision(dec, db, pulse_id, eye_data=None):
             "strike": strike, 
             "avg_cost": premium, 
             "option_type": "CALL",
-            "expiry": chosen_expiry
+            "expiry": chosen_expiry,
+            "entry_time": datetime.now().isoformat()
         })
         portfolio["total_cash"] = round(portfolio.get("total_cash", 250000.0) + (premium * 100), 2)
         
@@ -555,7 +557,8 @@ def execute_decision(dec, db, pulse_id, eye_data=None):
             "strike": new_strike, 
             "avg_cost": new_premium, 
             "option_type": "PUT",
-            "expiry": new_expiry
+            "expiry": new_expiry,
+            "entry_time": datetime.now().isoformat()
         })
         portfolio["total_cash"] = round(portfolio["total_cash"] + (new_premium * 100), 2)
         

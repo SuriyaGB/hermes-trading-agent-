@@ -95,8 +95,8 @@ export default function IncomeTracker() {
           return {
             time: formattedDate,
             fullTime: date,
-            "Hermes Balance": hVal,
-            "ThetaGang Balance": tVal
+            "Hermes Total Cash": hVal,
+            "ThetaGang Net Liq": tVal
           };
         });
 
@@ -192,8 +192,8 @@ export default function IncomeTracker() {
                   <YAxis stroke="rgba(255,255,255,0.3)" tick={{fill: '#00E676', fontSize: 12, fontFamily: 'monospace'}} domain={['dataMin - 1000', 'dataMax + 1000']} tickFormatter={(value) => `$${value.toLocaleString()}`} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
-                  <Area type="monotone" dataKey="Hermes Balance" stroke="#00E676" fillOpacity={1} fill="url(#colorHermes)" strokeWidth={3} />
-                  <Area type="monotone" dataKey="ThetaGang Balance" stroke="#00D6FF" fillOpacity={1} fill="url(#colorTheta)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="Hermes Total Cash" stroke="#00E676" fillOpacity={1} fill="url(#colorHermes)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="ThetaGang Net Liq" stroke="#00D6FF" fillOpacity={1} fill="url(#colorTheta)" strokeWidth={3} />
                 </AreaChart>
               ) : chartType === 'Line' ? (
                 <LineChart data={data} margin={{ top: 20, right: 30, left: 40, bottom: 0 }}>
@@ -202,8 +202,8 @@ export default function IncomeTracker() {
                   <YAxis stroke="rgba(255,255,255,0.3)" tick={{fill: '#00E676', fontSize: 12, fontFamily: 'monospace'}} domain={['dataMin - 1000', 'dataMax + 1000']} tickFormatter={(value) => `$${value.toLocaleString()}`} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
-                  <Line type="monotone" dataKey="Hermes Balance" stroke="#00E676" strokeWidth={4} dot={false} />
-                  <Line type="monotone" dataKey="ThetaGang Balance" stroke="#00D6FF" strokeWidth={4} dot={false} />
+                  <Line type="monotone" dataKey="Hermes Total Cash" stroke="#00E676" strokeWidth={4} dot={false} />
+                  <Line type="monotone" dataKey="ThetaGang Net Liq" stroke="#00D6FF" strokeWidth={4} dot={false} />
                 </LineChart>
               ) : (
                 <BarChart data={data} margin={{ top: 20, right: 30, left: 40, bottom: 0 }}>
@@ -212,8 +212,8 @@ export default function IncomeTracker() {
                   <YAxis stroke="rgba(255,255,255,0.3)" tick={{fill: '#00E676', fontSize: 12, fontFamily: 'monospace'}} domain={['dataMin - 1000', 'dataMax + 1000']} tickFormatter={(value) => `$${value.toLocaleString()}`} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
-                  <Bar dataKey="Hermes Balance" fill="#00E676" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="ThetaGang Balance" fill="#00D6FF" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Hermes Total Cash" fill="#00E676" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="ThetaGang Net Liq" fill="#00D6FF" radius={[4, 4, 0, 0]} />
                 </BarChart>
               )}
             </ResponsiveContainer>

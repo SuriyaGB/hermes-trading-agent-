@@ -546,7 +546,7 @@ def execute_decision(dec, db, pulse_id, eye_data=None):
 
         new_strike = dec.get('open_details', {}).get('strike_to_trade') or dec.get('strike_to_trade')
         new_premium = dec.get('open_details', {}).get('premium_to_collect') or dec.get('premium_to_collect')
-        new_expiry = dec.get('open_details', {}).get('expiry_to_trade') or eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
+        new_expiry = dec.get('open_details', {}).get('expiry_to_trade') or dec.get('expiry_to_trade') or (eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A')
         
         if new_strike is None or new_premium is None:
             raise ValueError(f"ROLL_PUT details missing: new_strike={new_strike}, new_premium={new_premium}")
@@ -597,7 +597,7 @@ def execute_decision(dec, db, pulse_id, eye_data=None):
 
         new_strike = dec.get('open_details', {}).get('strike_to_trade') or dec.get('strike_to_trade')
         new_premium = dec.get('open_details', {}).get('premium_to_collect') or dec.get('premium_to_collect')
-        new_expiry = dec.get('open_details', {}).get('expiry_to_trade') or eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
+        new_expiry = dec.get('open_details', {}).get('expiry_to_trade') or dec.get('expiry_to_trade') or (eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A')
         
         if new_strike is None or new_premium is None:
             raise ValueError(f"ROLL_CALL details missing: new_strike={new_strike}, new_premium={new_premium}")

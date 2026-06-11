@@ -13,7 +13,7 @@ export function getApiUrl() {
 
   // 3. Fallback automatically based on hostname
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return "https://create-bluish-excavate.ngrok-free.dev";
+    return "http://localhost:8000";
   }
 
   return "https://create-bluish-excavate.ngrok-free.dev";

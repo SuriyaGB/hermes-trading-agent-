@@ -241,23 +241,18 @@ def get_health():
 
 @app.get("/api/income_history")
 def get_income_history():
-    """Dynamically reconstructs account balance history using trades log and portfolio daily sequence."""
+    """Dynamically reconstructs account balance and net liquidation history using trades log and DB snapshots."""
     portfolio_path = DATA_DIR / "portfolio.json"
     trades_path = DATA_DIR / "trades_log.csv"
+    db_path = DATA_DIR / "hermes_brain.db"
     
     if not portfolio_path.exists():
         return []
         
-    with open(portfolio_path, "r") as f:
-        port_data = json.load(f)
-        
-    current_cash = port_data.get("total_cash", 250000.0)
-    
-    # We initialize the starting balance at the beginning of history (May 14, 2026)
     start_date = datetime(2026, 5, 14).date()
     end_date = datetime.now().date()
     
-    # Reconstruct trade events by date
+    # 1. Reconstruct Cash from trades_log.csv
     trades_by_date = {}
     if trades_path.exists():
         try:
@@ -270,8 +265,6 @@ def get_income_history():
                         price = float(row.get('price', 0.0))
                     except ValueError:
                         price = 0.0
-                        
-                    # Parse date portion only (e.g. YYYY-MM-DD)
                     if timestamp_str:
                         date_key = datetime.strptime(timestamp_str.split(' ')[0], "%Y-%m-%d").date()
                         if date_key not in trades_by_date:
@@ -280,13 +273,56 @@ def get_income_history():
         except Exception as e:
             print(f"Error parsing trades log: {e}")
             
+    # 2. Reconstruct Net Liquidation from hermes_brain.db
+    db_nlv_by_date = {}
+    if db_path.exists():
+        try:
+            conn = sqlite3.connect(str(db_path))
+            cur = conn.execute("SELECT timestamp, raw_input_json FROM pulse_history ORDER BY id ASC")
+            for row in cur.fetchall():
+                ts_str = row[0]
+                date_key = datetime.strptime(ts_str.split(' ')[0], "%Y-%m-%d").date()
+                j = json.loads(row[1])
+                
+                # The DB 'net_liquidation_value' historically just tracked Total Cash
+                raw_cash = j.get('portfolio_summary', {}).get('net_liquidation_value', 250000.0)
+                
+                # Calculate liability of open positions
+                active_positions = j.get('active_positions', [])
+                liability = 0
+                for pos in active_positions:
+                    if pos.get('type') == 'Option':
+                        price = pos.get('current_premium', pos.get('avg_cost', 0))
+                        liability += price * 100
+                        
+                true_nlv = raw_cash - liability
+                
+                # Overwrites with the latest pulse of the day
+                db_nlv_by_date[date_key] = float(true_nlv)
+            conn.close()
+        except Exception as e:
+            print(f"Error parsing database for NLV: {e}")
+            
+    # Overwrite the most recent/current day with LIVE portfolio data so the chart matches the live metric cards
+    try:
+        live_port = get_portfolio()
+        if live_port:
+            live_cash = live_port.get('total_cash', 250000.0)
+            live_liab = 0
+            for pos in live_port.get('positions', []):
+                if pos.get('type') == 'Option':
+                    # get_portfolio injects current_price automatically
+                    live_liab += (pos.get('current_price', pos.get('avg_cost', 0)) * 100 * pos.get('quantity', 1))
+            db_nlv_by_date[end_date] = float(live_cash - live_liab)
+    except Exception as e:
+        print(f"Error fetching live portfolio for NLV: {e}")
+            
     history = []
     running_cash = 250000.0
+    last_known_nlv = 250000.0
     
-    # Generate daily sequence from May 14 to today
     current_date = start_date
     while current_date <= end_date:
-        # Apply any trade cash flows that occurred on this day
         if current_date in trades_by_date:
             for action, price in trades_by_date[current_date]:
                 if action == 'SELL_PUT' or action == 'SELL_CALL':
@@ -296,9 +332,14 @@ def get_income_history():
                 elif action == 'ROLL_PUT' or action == 'ROLL_CALL':
                     running_cash += price * 100
                     
+        if current_date in db_nlv_by_date:
+            last_known_nlv = db_nlv_by_date[current_date]
+            
         history.append({
             "timestamp": current_date.strftime("%Y-%m-%d"),
-            "balance": round(running_cash, 2)
+            "total_cash": round(running_cash, 2),
+            "net_liquidation": round(last_known_nlv, 2),
+            "balance": round(last_known_nlv, 2)  # Return NLV as balance for existing frontend charts
         })
         current_date += timedelta(days=1)
         

@@ -61,7 +61,7 @@ export default function IncomeTracker() {
             const dateStr = point.timestamp ? point.timestamp.split(' ')[0] : '';
             if (dateStr) {
               if (!dataMap[dateStr]) dataMap[dateStr] = {};
-              dataMap[dateStr].hermes = point.balance;
+              dataMap[dateStr].hermes = point.total_cash;
             }
           });
         }
@@ -72,7 +72,7 @@ export default function IncomeTracker() {
             const dateStr = pt.fullTime ? pt.fullTime.split(' ')[0] : '';
             if (dateStr) {
               if (!dataMap[dateStr]) dataMap[dateStr] = {};
-              dataMap[dateStr].theta = pt.value;
+              dataMap[dateStr].theta = pt.cash;
             }
           });
         }
@@ -96,7 +96,7 @@ export default function IncomeTracker() {
             time: formattedDate,
             fullTime: date,
             "Hermes Total Cash": hVal,
-            "ThetaGang Net Liq": tVal
+            "ThetaGang Total Cash": tVal
           };
         });
 
@@ -193,7 +193,7 @@ export default function IncomeTracker() {
                   <Tooltip content={<CustomTooltip />} />
                   <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
                   <Area type="monotone" dataKey="Hermes Total Cash" stroke="#00E676" fillOpacity={1} fill="url(#colorHermes)" strokeWidth={3} />
-                  <Area type="monotone" dataKey="ThetaGang Net Liq" stroke="#00D6FF" fillOpacity={1} fill="url(#colorTheta)" strokeWidth={3} />
+                  <Area type="monotone" dataKey="ThetaGang Total Cash" stroke="#00D6FF" fillOpacity={1} fill="url(#colorTheta)" strokeWidth={3} />
                 </AreaChart>
               ) : chartType === 'Line' ? (
                 <LineChart data={data} margin={{ top: 20, right: 30, left: 40, bottom: 0 }}>
@@ -203,7 +203,7 @@ export default function IncomeTracker() {
                   <Tooltip content={<CustomTooltip />} />
                   <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
                   <Line type="monotone" dataKey="Hermes Total Cash" stroke="#00E676" strokeWidth={4} dot={false} />
-                  <Line type="monotone" dataKey="ThetaGang Net Liq" stroke="#00D6FF" strokeWidth={4} dot={false} />
+                  <Line type="monotone" dataKey="ThetaGang Total Cash" stroke="#00D6FF" strokeWidth={4} dot={false} />
                 </LineChart>
               ) : (
                 <BarChart data={data} margin={{ top: 20, right: 30, left: 40, bottom: 0 }}>
@@ -213,7 +213,7 @@ export default function IncomeTracker() {
                   <Tooltip content={<CustomTooltip />} />
                   <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
                   <Bar dataKey="Hermes Total Cash" fill="#00E676" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="ThetaGang Net Liq" fill="#00D6FF" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="ThetaGang Total Cash" fill="#00D6FF" radius={[4, 4, 0, 0]} />
                 </BarChart>
               )}
             </ResponsiveContainer>

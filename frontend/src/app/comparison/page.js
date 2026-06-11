@@ -195,7 +195,7 @@ export default function AgentComparison() {
 
       return {
         date: formattedDate,
-        "Hermes Total Cash": hVal, // Being honest about the data we have
+        "Hermes Net Liq": hVal, // Being honest about the data we have
         "ThetaGang Net Liq": tVal
       };
     });
@@ -404,7 +404,7 @@ export default function AgentComparison() {
                   formatter={(value) => [`$${value.toLocaleString()}`]}
                 />
                 <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
-                <Area type="monotone" dataKey="Hermes Total Cash" stroke="#00E676" fillOpacity={1} fill="url(#colorHermes)" strokeWidth={2} />
+                <Area type="monotone" dataKey="Hermes Net Liq" stroke="#00E676" fillOpacity={1} fill="url(#colorHermes)" strokeWidth={2} />
                 <Area type="monotone" dataKey="ThetaGang Net Liq" stroke="#00D6FF" fillOpacity={1} fill="url(#colorTheta)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>

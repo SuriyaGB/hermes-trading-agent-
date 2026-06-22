@@ -117,7 +117,7 @@ hermes-trading-agent/
 │
 ├── 📂 core/                               ← The "Internal Organs" (Python Engine)
 │   ├── sim_executor.py                    ← Simulation executor (paper trading)
-│   ├── executor.py                        ← Live executor (real IBKR trades)
+│   ├── executor.py                        ← Live executor (real trades)
 │   ├── api.py                             ← FastAPI Bridge (Serves data to Vercel)
 │   ├── get_ibkr_analysis.py               ← Market data fetcher (The Eye)
 │   ├── database.py                        ← SQLite Manager (The Institutional Memory)
@@ -317,7 +317,6 @@ Add these values to `.hermes/.env`:
 OPENAI_API_KEY=sk-your-openai-key-here
 TELEGRAM_BOT_TOKEN=your-telegram-bot-token
 TELEGRAM_CHAT_ID=your-telegram-chat-id
-# IBKR Keys not required for local testing
 ```
 
 ### Step 3 — Seed Your Portfolio (CRITICAL)
@@ -388,20 +387,15 @@ npm run dev
 *(You can now view your blank dashboard at http://localhost:3000)*
 
 **Step C: Trigger the AI to Trade (Terminal 3)**
-Because the automated Cron schedule is only for the VPS, you must manually trigger the AI locally to see the dashboard update. Choose your command based on the market hours:
+Because the automated Cron schedule is only for the VPS, you must manually trigger the AI locally to see the dashboard update:
 
-* **Out of Market Hours (Use Mock Data):**
-  When the US market is closed, live data fetching will fail. You must use the 25 test scenarios to verify the agent:
-  ```bash
-  PYTHONPATH=. python3 scripts/run_scenarios.py 10
-  ```
-  *(Refresh your UI to see the mock data).*
+```bash
+bash scripts/run_pulse_sim.sh
+```
 
-* **During US Market Hours (Use Live Data):**
-  Pull real-time AAPL prices and VIX from Yahoo Finance right now to see what the bot would do in the real world:
-  ```bash
-  bash scripts/run_pulse_sim.sh
-  ```
+**What to Expect:**
+* **During US Market Hours:** It will pull real-time AAPL prices and VIX from Yahoo Finance and show exactly what the bot would do right now.
+* **Out of Market Hours:** The live data fetch will fail because the market is closed. To test the bot while the market is closed, use the local test scenarios instead (e.g., `PYTHONPATH=. python3 scripts/run_scenarios.py 10`).
 
 ***
 
@@ -534,9 +528,6 @@ Shield 5 — IV Rank Filter
 | `OPENAI_API_KEY` | ✅ Yes | Your OpenAI API key for GPT-4o |
 | `TELEGRAM_BOT_TOKEN` | ✅ Yes | Your Telegram bot token for alerts |
 | `TELEGRAM_CHAT_ID` | ✅ Yes | Your Telegram chat ID |
-| `IBKR_HOST` | Live only | IBKR TWS host (usually 127.0.0.1) |
-| `IBKR_PORT` | Live only | IBKR TWS port (7497 paper, 7496 live) |
-| `IBKR_CLIENT_ID` | Live only | IBKR client connection ID |
 
 ***
 

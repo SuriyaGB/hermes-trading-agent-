@@ -358,6 +358,46 @@ bash scripts/run_pulse_sim.sh
 
 ***
 
+## 🧪 Testing & Auditing (Zero-Risk Local Testing)
+
+When you clone this repository, you do **not** have access to the live VPS database. Your local `data/` folder will be empty. 
+
+To prove that the Python safety guardrails work and to see the UI in action, we built a comprehensive test suite of 25 edge-case market scenarios.
+
+**The Golden Rule of Testing:**
+The test scripts automatically backup your local data, run the scenario, and then instantly restore your clean local data. They will **never** touch or break the live VPS trading environment.
+
+### 1. Run Tests (Zero API Cost)
+To run all 25 safety guardrail tests without calling the OpenAI API:
+```bash
+PYTHONPATH=. python3 scripts/run_scenarios.py all
+```
+*This uses pre-scripted mock AI decisions to prove that the Python Executor blocks dangerous trades.*
+
+### 2. View a Test in the Local UI (`--keep-state`)
+Because the test script restores your data instantly, you won't see the test in your React dashboard. To "freeze" a test and look at it in the UI, use the `--keep-state` flag:
+```bash
+# E.g., Run Test 5 (Emergency Exit) and keep the data
+PYTHONPATH=. python3 scripts/run_scenarios.py 5 --keep-state
+```
+Now, refresh your local UI (`http://localhost:3000`) and it will populate with the mock data. To clean up your data folder afterward:
+```bash
+cp tests/.scenario_backup/* data/
+```
+
+### 3. Test with the Real AI (`--live`)
+If you want to see if GPT-4o actually makes the right decision on its own (costs API credits):
+```bash
+set -a; source .hermes/.env; set +a
+PYTHONPATH=. python3 scripts/run_scenarios.py 4 --live
+```
+*The script is smart enough to handle situations where the real AI natively guesses the correct safe action!*
+
+### 4. Live Market Testing
+During US market hours, the eye data fetchers (`core/market_data.py`) can pull real-time AAPL prices and VIX from Yahoo Finance (free, no broker needed). You can run a manual simulation pulse (`scripts/run_pulse_sim.sh`) to see exactly what the AI would do right now based on original, live market data.
+
+***
+
 ## ▶️ Running the Bot (Local vs VPS)
 
 You have two entirely different ways to run this system depending on your current phase.

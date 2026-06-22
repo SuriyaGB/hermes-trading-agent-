@@ -1,0 +1,83 @@
+{
+  "case_id": 12,
+  "scenario_name": "TC12 – Max Risk Units Exceeded (4/4 Full)",
+  "category": "Safety Gates",
+  "description": "GOOD_DAY but risk_units is already 4 (the absolute max). AI tries to SELL_NEW_PUT. Python raises PolicyBlockError – max capacity reached.",
+  "rule_tested": "Risk Units Gate – Max 4 contracts absolute cap (any day class)",
+  "expected_decision": "BLOCKED",
+  "expected_outcome": "POLICY_BLOCK_ERROR",
+  "expected_exception": "PolicyBlockError",
+
+  "ai_decision": {
+    "decision": "SELL_NEW_PUT",
+    "strike_to_trade": 280.0,
+    "expiry_to_trade": "20260724",
+    "premium_to_collect": 1.90,
+    "reason": "GOOD_DAY with strong momentum. Opening additional position."
+  },
+
+  "mock_portfolio": {
+    "total_cash": 233600.0,
+    "realized_pnl": 0.0,
+    "positions": [
+      {"type": "Option", "symbol": "AAPL", "strike": 290.0, "avg_cost": 3.17, "option_type": "PUT", "expiry": "20260724"},
+      {"type": "Option", "symbol": "AAPL", "strike": 285.0, "avg_cost": 2.80, "option_type": "PUT", "expiry": "20260731"},
+      {"type": "Option", "symbol": "AAPL", "strike": 285.0, "avg_cost": 2.75, "option_type": "PUT", "expiry": "20260807"},
+      {"type": "Option", "symbol": "AAPL", "strike": 280.0, "avg_cost": 2.60, "option_type": "PUT", "expiry": "20260814"}
+    ]
+  },
+
+  "mock_trade_state": {
+    "current_phase": "CSP_ACTIVE",
+    "last_action": "SELL_PUT",
+    "last_updated": "2026-06-20T10:00:00",
+    "earnings_blackout_active": false,
+    "assignment_confirmed_once": false,
+    "current_option_strike": 290.0,
+    "current_option_expiry": "20260724"
+  },
+
+  "mock_tracker": {
+    "date": "TODAY",
+    "contracts_written_today": 0,
+    "first_strike": null,
+    "first_premium": null
+  },
+
+  "mock_eye_data": {
+    "account_status": "CSP_ACTIVE",
+    "price_seen": 302.00,
+    "vix_seen": 13.50,
+    "iv_current": 18.0,
+    "chosen_expiry": "20260724",
+    "chosen_dte": 32,
+    "warnings": [],
+    "earnings_days": 60,
+    "scan_capacity": {
+      "can_open_new_put": false,
+      "reason": "Max risk units (4) reached. Cannot open new positions."
+    },
+    "portfolio_summary": {
+      "net_liquidation_value": 250000.0,
+      "dynamic_max_contracts": 4,
+      "current_risk_units": 4,
+      "account_status": "CSP_ACTIVE"
+    },
+    "active_positions": [],
+    "market_regime": {
+      "price_seen": 302.00,
+      "daily_change_pct": 1.5,
+      "vix": 13.50,
+      "200_sma": 267.79,
+      "50_sma": 288.63,
+      "day_classification": "GOOD_DAY"
+    },
+    "option_chain": [
+      {"expiry": "20260724", "dte": 32, "strike": 280.0, "bid": 1.85, "ask": 1.95, "mid": 1.90, "delta": -0.15, "iv": 18.0}
+    ],
+    "strike_held": null,
+    "expiry_held": null,
+    "delta_current": 0.0,
+    "dte_current": 99
+  }
+}

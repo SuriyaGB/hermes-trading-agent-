@@ -1,0 +1,92 @@
+{
+  "case_id": 21,
+  "scenario_name": "TC21 – SELL_NEW_CALL: Covered Call Entry Allowed",
+  "category": "Decision Tree Rules",
+  "description": "ASSIGNED phase: bot holds 100 shares of AAPL at avg_cost $290. AI suggests SELL_NEW_CALL at 310 strike. Risk units=0 (shares don't count), written=0. SELL is ALLOWED.",
+  "rule_tested": "Covered Call Entry – Shares held, no active call, all gates clear",
+  "expected_decision": "SELL_NEW_CALL",
+  "expected_outcome": "NO_OVERRIDE",
+  "expected_exception": null,
+
+  "ai_decision": {
+    "decision": "SELL_NEW_CALL",
+    "strike_to_trade": 310.0,
+    "expiry_to_trade": "20260724",
+    "premium_to_collect": 3.80,
+    "reason": "Shares assigned at $290. Selling covered call at $310 strike for $3.80 premium."
+  },
+
+  "mock_portfolio": {
+    "total_cash": 221000.0,
+    "realized_pnl": 0.0,
+    "positions": [
+      {
+        "type": "Stock",
+        "symbol": "AAPL",
+        "quantity": 100,
+        "avg_cost": 290.0
+      }
+    ]
+  },
+
+  "mock_trade_state": {
+    "current_phase": "ASSIGNED",
+    "last_action": "ASSIGNMENT_PUT",
+    "last_updated": "2026-06-20T20:00:00",
+    "earnings_blackout_active": false,
+    "assignment_confirmed_once": false,
+    "current_option_strike": null,
+    "current_option_expiry": null
+  },
+
+  "mock_tracker": {
+    "date": "TODAY",
+    "contracts_written_today": 0,
+    "first_strike": null,
+    "first_premium": null
+  },
+
+  "mock_eye_data": {
+    "account_status": "ASSIGNED",
+    "price_seen": 298.50,
+    "vix_seen": 16.78,
+    "iv_current": 21.5,
+    "chosen_expiry": "20260724",
+    "chosen_dte": 32,
+    "warnings": [],
+    "earnings_days": 45,
+    "scan_capacity": {
+      "can_open_new_put": false,
+      "reason": "ASSIGNED phase. Sell covered call instead."
+    },
+    "portfolio_summary": {
+      "net_liquidation_value": 250000.0,
+      "dynamic_max_contracts": 4,
+      "current_risk_units": 0,
+      "account_status": "ASSIGNED"
+    },
+    "active_positions": [
+      {
+        "type": "Stock",
+        "symbol": "AAPL",
+        "quantity": 100,
+        "avg_cost": 290.0
+      }
+    ],
+    "market_regime": {
+      "price_seen": 298.50,
+      "daily_change_pct": 0.3,
+      "vix": 16.78,
+      "200_sma": 267.79,
+      "50_sma": 288.63,
+      "day_classification": "NORMAL_DAY"
+    },
+    "option_chain": [
+      {"expiry": "20260724", "dte": 32, "strike": 310.0, "bid": 3.75, "ask": 3.85, "mid": 3.80, "delta": 0.20, "iv": 21.5}
+    ],
+    "strike_held": null,
+    "expiry_held": null,
+    "delta_current": 0.0,
+    "dte_current": 99
+  }
+}

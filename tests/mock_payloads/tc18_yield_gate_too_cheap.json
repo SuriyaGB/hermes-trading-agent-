@@ -1,0 +1,78 @@
+{
+  "case_id": 18,
+  "scenario_name": "TC18 – Yield Gate: Premium Too Cheap (0.5% yield)",
+  "category": "Yield Gate",
+  "description": "SELL_NEW_PUT with strike=290 and premium=$1.30. Yield = (1.30/290)*100 = 0.45% which is BELOW the 1.0% floor. The Yield Gate fires and soft-overrides to HOLD.",
+  "rule_tested": "Yield Gate – Reject SELL when (premium/strike)*100 < 1.0%",
+  "expected_decision": "HOLD_PUT_POSITION",
+  "expected_outcome": "YIELD_GATE_OVERRIDE",
+  "expected_exception": null,
+
+  "ai_decision": {
+    "decision": "SELL_NEW_PUT",
+    "strike_to_trade": 290.0,
+    "expiry_to_trade": "20260724",
+    "premium_to_collect": 1.30,
+    "reason": "Strike is safe. Some premium is better than none."
+  },
+
+  "mock_portfolio": {
+    "total_cash": 250000.0,
+    "realized_pnl": 0.0,
+    "positions": []
+  },
+
+  "mock_trade_state": {
+    "current_phase": "CASH_ONLY",
+    "last_action": null,
+    "last_updated": null,
+    "earnings_blackout_active": false,
+    "assignment_confirmed_once": false,
+    "current_option_strike": null,
+    "current_option_expiry": null
+  },
+
+  "mock_tracker": {
+    "date": "TODAY",
+    "contracts_written_today": 0,
+    "first_strike": null,
+    "first_premium": null
+  },
+
+  "mock_eye_data": {
+    "account_status": "CASH_ONLY",
+    "price_seen": 298.01,
+    "vix_seen": 11.50,
+    "iv_current": 14.0,
+    "chosen_expiry": "20260724",
+    "chosen_dte": 32,
+    "warnings": ["VIX=11.5 is low. Premiums are compressed."],
+    "earnings_days": 45,
+    "scan_capacity": {
+      "can_open_new_put": true,
+      "reason": "Gates technically pass, but yield is very low."
+    },
+    "portfolio_summary": {
+      "net_liquidation_value": 250000.0,
+      "dynamic_max_contracts": 4,
+      "current_risk_units": 0,
+      "account_status": "CASH_ONLY"
+    },
+    "active_positions": [],
+    "market_regime": {
+      "price_seen": 298.01,
+      "daily_change_pct": 0.2,
+      "vix": 11.50,
+      "200_sma": 267.79,
+      "50_sma": 288.63,
+      "day_classification": "NORMAL_DAY"
+    },
+    "option_chain": [
+      {"expiry": "20260724", "dte": 32, "strike": 290.0, "bid": 1.25, "ask": 1.35, "mid": 1.30, "delta": -0.18, "iv": 14.0}
+    ],
+    "strike_held": null,
+    "expiry_held": null,
+    "delta_current": 0.0,
+    "dte_current": 99
+  }
+}

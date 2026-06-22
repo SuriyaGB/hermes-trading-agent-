@@ -1,6 +1,6 @@
 export function getApiUrl() {
   if (typeof window === 'undefined') {
-    return process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "https://create-bluish-excavate.ngrok-free.dev";
+    return process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
   }
 
   // 1. Check local storage override first
@@ -12,8 +12,11 @@ export function getApiUrl() {
   if (envUrl) return envUrl;
 
   // 3. Fallback automatically based on hostname
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') {
     return "http://localhost:8000";
+  } else if (host.startsWith('192.168.') || host.startsWith('10.')) {
+    return `http://${host}:8000`;
   }
 
   return "https://create-bluish-excavate.ngrok-free.dev";
@@ -21,7 +24,7 @@ export function getApiUrl() {
 
 export function getThetaGangApiUrl() {
   if (typeof window === 'undefined') {
-    return process.env.NEXT_PUBLIC_THETAGANG_API_URL || "http://76.13.242.106:8080";
+    return process.env.NEXT_PUBLIC_THETAGANG_API_URL || "http://127.0.0.1:8080";
   }
 
   const stored = localStorage.getItem('THETAGANG_API_URL');
@@ -29,6 +32,13 @@ export function getThetaGangApiUrl() {
 
   const envUrl = process.env.NEXT_PUBLIC_THETAGANG_API_URL;
   if (envUrl) return envUrl;
+
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return "http://localhost:8080";
+  } else if (host.startsWith('192.168.') || host.startsWith('10.')) {
+    return `http://${host}:8080`;
+  }
 
   return "http://76.13.242.106:8080";
 }

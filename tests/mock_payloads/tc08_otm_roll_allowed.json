@@ -1,0 +1,110 @@
+{
+  "case_id": 8,
+  "scenario_name": "TC08 – OTM Roll Allowed (Delta Safe)",
+  "category": "Decision Tree Rules",
+  "description": "DTE=10, delta=-0.15 (|delta|=0.15 < 0.30). Put is OTM and near expiry. AI wants to ROLL. Python ALLOWS it because delta is below the 0.30 ITM threshold.",
+  "rule_tested": "Roll Gate – OTM Roll Allowed (DTE<=15 but |delta| < 0.30)",
+  "expected_decision": "ROLL_PUT",
+  "expected_outcome": "NO_OVERRIDE",
+  "expected_exception": null,
+
+  "ai_decision": {
+    "decision": "ROLL_PUT",
+    "position_key": "PUT_285_20260702",
+    "close_strike": 285.0,
+    "close_expiry": "20260702",
+    "close_details": {"premium_to_pay": 0.80},
+    "open_details": {
+      "strike_to_trade": 280.0,
+      "expiry_to_trade": "20260724",
+      "premium_to_collect": 1.20
+    },
+    "reason": "Near expiry and OTM. Rolling to next month for additional credit."
+  },
+
+  "mock_portfolio": {
+    "total_cash": 247250.0,
+    "realized_pnl": 0.0,
+    "positions": [
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "strike": 285.0,
+        "avg_cost": 2.95,
+        "option_type": "PUT",
+        "expiry": "20260702",
+        "entry_time": "2026-06-10T10:00:00"
+      }
+    ]
+  },
+
+  "mock_trade_state": {
+    "current_phase": "CSP_ACTIVE",
+    "last_action": "SELL_PUT",
+    "last_updated": "2026-06-10T10:00:00",
+    "earnings_blackout_active": false,
+    "assignment_confirmed_once": false,
+    "current_option_strike": 285.0,
+    "current_option_expiry": "20260702"
+  },
+
+  "mock_tracker": {
+    "date": "TODAY",
+    "contracts_written_today": 0,
+    "first_strike": null,
+    "first_premium": null
+  },
+
+  "mock_eye_data": {
+    "account_status": "CSP_ACTIVE",
+    "price_seen": 297.00,
+    "vix_seen": 16.00,
+    "iv_current": 20.5,
+    "chosen_expiry": "20260724",
+    "chosen_dte": 32,
+    "warnings": [],
+    "earnings_days": 35,
+    "scan_capacity": {
+      "can_open_new_put": false,
+      "reason": "Position already active."
+    },
+    "portfolio_summary": {
+      "net_liquidation_value": 250000.0,
+      "dynamic_max_contracts": 4,
+      "current_risk_units": 1,
+      "account_status": "CSP_ACTIVE"
+    },
+    "active_positions": [
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "position_key": "PUT_285_20260702",
+        "strike": 285.0,
+        "avg_cost": 2.95,
+        "option_type": "PUT",
+        "expiry": "20260702",
+        "dte": 10,
+        "delta": -0.15,
+        "current_price": 0.80,
+        "profit_pct": 72.9,
+        "pnl_unrealized": 215.0
+      }
+    ],
+    "market_regime": {
+      "price_seen": 297.00,
+      "daily_change_pct": 0.3,
+      "vix": 16.00,
+      "200_sma": 265.00,
+      "50_sma": 285.00,
+      "day_classification": "NORMAL_DAY"
+    },
+    "option_chain": [
+      {"expiry": "20260702", "dte": 10, "strike": 285.0, "bid": 0.75, "ask": 0.85, "mid": 0.80, "delta": -0.15, "iv": 20.5},
+      {"expiry": "20260724", "dte": 32, "strike": 280.0, "bid": 1.15, "ask": 1.25, "mid": 1.20, "delta": -0.12, "iv": 20.8}
+    ],
+    "strike_held": 285.0,
+    "expiry_held": "20260702",
+    "delta_current": -0.15,
+    "dte_current": 10
+  }
+}

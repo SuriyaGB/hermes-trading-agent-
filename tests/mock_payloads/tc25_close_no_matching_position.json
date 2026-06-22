@@ -1,0 +1,80 @@
+{
+  "case_id": 25,
+  "scenario_name": "TC25 – CLOSE_FOR_PROFIT: No Matching Position (Safe No-Op)",
+  "category": "Execution Test",
+  "description": "AI decides CLOSE_FOR_PROFIT for strike 295 expiry 20260724. But portfolio has NO matching position at that strike/expiry. Executor safely returns 'No Action' instead of crashing.",
+  "rule_tested": "execute_decision – CLOSE_FOR_PROFIT with NO matching portfolio position (safe no-op)",
+  "expected_decision": "CLOSE_FOR_PROFIT",
+  "expected_outcome": "EXECUTION_NO_ACTION",
+  "expected_exception": null,
+  "expected_action_result_contains": "No Action",
+
+  "ai_decision": {
+    "decision": "CLOSE_FOR_PROFIT",
+    "position_key": "PUT_295_20260724",
+    "close_strike": 295.0,
+    "close_expiry": "20260724",
+    "premium_to_collect": 1.20,
+    "reason": "Closing position for profit."
+  },
+
+  "mock_portfolio": {
+    "total_cash": 250000.0,
+    "realized_pnl": 0.0,
+    "positions": []
+  },
+
+  "mock_trade_state": {
+    "current_phase": "CASH_ONLY",
+    "last_action": null,
+    "last_updated": null,
+    "earnings_blackout_active": false,
+    "assignment_confirmed_once": false,
+    "current_option_strike": null,
+    "current_option_expiry": null
+  },
+
+  "mock_tracker": {
+    "date": "TODAY",
+    "contracts_written_today": 0,
+    "first_strike": null,
+    "first_premium": null
+  },
+
+  "mock_eye_data": {
+    "account_status": "CASH_ONLY",
+    "price_seen": 298.01,
+    "vix_seen": 16.78,
+    "iv_current": 21.5,
+    "chosen_expiry": "20260724",
+    "chosen_dte": 32,
+    "warnings": [],
+    "earnings_days": 45,
+    "scan_capacity": {
+      "can_open_new_put": true,
+      "reason": "All gates passed."
+    },
+    "portfolio_summary": {
+      "net_liquidation_value": 250000.0,
+      "dynamic_max_contracts": 4,
+      "current_risk_units": 0,
+      "account_status": "CASH_ONLY"
+    },
+    "active_positions": [],
+    "market_regime": {
+      "price_seen": 298.01,
+      "daily_change_pct": 0.7,
+      "vix": 16.78,
+      "200_sma": 267.79,
+      "50_sma": 288.63,
+      "day_classification": "NORMAL_DAY"
+    },
+    "option_chain": [
+      {"expiry": "20260724", "dte": 32, "strike": 295.0, "bid": 1.15, "ask": 1.25, "mid": 1.20, "delta": -0.20, "iv": 21.6}
+    ],
+    "strike_held": null,
+    "expiry_held": null,
+    "delta_current": 0.0,
+    "dte_current": 99
+  }
+}

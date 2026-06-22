@@ -1,0 +1,103 @@
+{
+  "case_id": 11,
+  "scenario_name": "TC11 – Bearish Day Cap: 1 Unit Already Open",
+  "category": "Safety Gates",
+  "description": "BEARISH_DAY (price below 50 SMA). Max allowed risk_units is 1. Bot already has 1 open contract. AI tries SELL_NEW_PUT. Python raises PolicyBlockError immediately.",
+  "rule_tested": "Risk Units Gate – BEARISH_DAY max=1, already at cap",
+  "expected_decision": "BLOCKED",
+  "expected_outcome": "POLICY_BLOCK_ERROR",
+  "expected_exception": "PolicyBlockError",
+
+  "ai_decision": {
+    "decision": "SELL_NEW_PUT",
+    "strike_to_trade": 275.0,
+    "expiry_to_trade": "20260724",
+    "premium_to_collect": 1.85,
+    "reason": "Strike is conservative at 275, well below spot."
+  },
+
+  "mock_portfolio": {
+    "total_cash": 247100.0,
+    "realized_pnl": 0.0,
+    "positions": [
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "strike": 280.0,
+        "avg_cost": 2.90,
+        "option_type": "PUT",
+        "expiry": "20260717",
+        "entry_time": "2026-06-15T10:00:00"
+      }
+    ]
+  },
+
+  "mock_trade_state": {
+    "current_phase": "CSP_ACTIVE",
+    "last_action": "SELL_PUT",
+    "last_updated": "2026-06-15T10:00:00",
+    "earnings_blackout_active": false,
+    "assignment_confirmed_once": false,
+    "current_option_strike": 280.0,
+    "current_option_expiry": "20260717"
+  },
+
+  "mock_tracker": {
+    "date": "TODAY",
+    "contracts_written_today": 0,
+    "first_strike": null,
+    "first_premium": null
+  },
+
+  "mock_eye_data": {
+    "account_status": "CSP_ACTIVE",
+    "price_seen": 283.00,
+    "vix_seen": 24.50,
+    "iv_current": 30.0,
+    "chosen_expiry": "20260724",
+    "chosen_dte": 32,
+    "warnings": ["BEARISH_DAY: Price below 50 SMA. Max 1 contract allowed."],
+    "earnings_days": 40,
+    "scan_capacity": {
+      "can_open_new_put": false,
+      "reason": "BEARISH_DAY cap: 1 contract already open. No new positions."
+    },
+    "portfolio_summary": {
+      "net_liquidation_value": 250000.0,
+      "dynamic_max_contracts": 1,
+      "current_risk_units": 1,
+      "account_status": "CSP_ACTIVE"
+    },
+    "active_positions": [
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "position_key": "PUT_280_20260717",
+        "strike": 280.0,
+        "avg_cost": 2.90,
+        "option_type": "PUT",
+        "expiry": "20260717",
+        "dte": 25,
+        "delta": -0.22,
+        "current_price": 2.10,
+        "profit_pct": 27.6,
+        "pnl_unrealized": 80.0
+      }
+    ],
+    "market_regime": {
+      "price_seen": 283.00,
+      "daily_change_pct": -2.1,
+      "vix": 24.50,
+      "200_sma": 267.79,
+      "50_sma": 288.63,
+      "day_classification": "BEARISH_DAY"
+    },
+    "option_chain": [
+      {"expiry": "20260724", "dte": 32, "strike": 275.0, "bid": 1.80, "ask": 1.90, "mid": 1.85, "delta": -0.19, "iv": 30.0}
+    ],
+    "strike_held": 280.0,
+    "expiry_held": "20260717",
+    "delta_current": -0.22,
+    "dte_current": 25
+  }
+}

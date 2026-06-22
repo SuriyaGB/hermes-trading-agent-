@@ -1,0 +1,96 @@
+{
+  "case_id": 14,
+  "scenario_name": "TC14 – Hard Cap: 2 Contracts Written (Any Day)",
+  "category": "Pacing Rules",
+  "description": "contracts_written_today=2. The hard cap is 2 for any day class. Python soft-overrides the SELL to HOLD. Even GOOD_DAY cannot write a 3rd contract.",
+  "rule_tested": "Pacing Gate – Hard cap at 2 contracts per day (absolute maximum)",
+  "expected_decision": "HOLD_PUT_POSITION",
+  "expected_outcome": "SOFT_HOLD_OVERRIDE",
+  "expected_exception": null,
+
+  "ai_decision": {
+    "decision": "SELL_NEW_PUT",
+    "strike_to_trade": 275.0,
+    "expiry_to_trade": "20260724",
+    "premium_to_collect": 1.20,
+    "reason": "GOOD_DAY. Exceptional opportunity. Third contract at lower strike."
+  },
+
+  "mock_portfolio": {
+    "total_cash": 243200.0,
+    "realized_pnl": 0.0,
+    "positions": [
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "strike": 285.0,
+        "avg_cost": 2.45,
+        "option_type": "PUT",
+        "expiry": "20260724"
+      },
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "strike": 280.0,
+        "avg_cost": 1.90,
+        "option_type": "PUT",
+        "expiry": "20260731"
+      }
+    ]
+  },
+
+  "mock_trade_state": {
+    "current_phase": "CSP_ACTIVE",
+    "last_action": "SELL_PUT",
+    "last_updated": "2026-06-22T15:00:00",
+    "earnings_blackout_active": false,
+    "assignment_confirmed_once": false,
+    "current_option_strike": 280.0,
+    "current_option_expiry": "20260731"
+  },
+
+  "mock_tracker": {
+    "date": "TODAY",
+    "contracts_written_today": 2,
+    "first_strike": 285.0,
+    "first_premium": 2.45
+  },
+
+  "mock_eye_data": {
+    "account_status": "CSP_ACTIVE",
+    "price_seen": 303.00,
+    "vix_seen": 13.50,
+    "iv_current": 18.0,
+    "chosen_expiry": "20260724",
+    "chosen_dte": 32,
+    "warnings": [],
+    "earnings_days": 55,
+    "scan_capacity": {
+      "can_open_new_put": false,
+      "daily_cap_remaining": 0,
+      "reason": "Hard daily cap (2) reached for today."
+    },
+    "portfolio_summary": {
+      "net_liquidation_value": 250000.0,
+      "dynamic_max_contracts": 4,
+      "current_risk_units": 2,
+      "account_status": "CSP_ACTIVE"
+    },
+    "active_positions": [],
+    "market_regime": {
+      "price_seen": 303.00,
+      "daily_change_pct": 1.8,
+      "vix": 13.50,
+      "200_sma": 267.79,
+      "50_sma": 288.63,
+      "day_classification": "GOOD_DAY"
+    },
+    "option_chain": [
+      {"expiry": "20260724", "dte": 32, "strike": 275.0, "bid": 1.15, "ask": 1.25, "mid": 1.20, "delta": -0.11, "iv": 18.0}
+    ],
+    "strike_held": null,
+    "expiry_held": null,
+    "delta_current": 0.0,
+    "dte_current": 99
+  }
+}

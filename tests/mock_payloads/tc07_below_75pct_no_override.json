@@ -1,0 +1,101 @@
+{
+  "case_id": 7,
+  "scenario_name": "TC07 – Just Below 75% (No Override)",
+  "category": "Decision Tree Rules",
+  "description": "DTE=20, profit=74.9% – just 0.1% below the 75% trigger. Rule 3 does NOT fire. HOLD is returned unchanged.",
+  "rule_tested": "Rule 3 – Boundary below threshold (profit < 75% = HOLD)",
+  "expected_decision": "HOLD_PUT_POSITION",
+  "expected_outcome": "NO_OVERRIDE",
+  "expected_exception": null,
+
+  "ai_decision": {
+    "decision": "HOLD_PUT_POSITION",
+    "position_key": "PUT_290_20260712",
+    "reason": "Profit at 74.9%, just below 75% target. Theta still working."
+  },
+
+  "mock_portfolio": {
+    "total_cash": 247100.0,
+    "realized_pnl": 0.0,
+    "positions": [
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "strike": 290.0,
+        "avg_cost": 3.20,
+        "option_type": "PUT",
+        "expiry": "20260712",
+        "entry_time": "2026-06-12T10:00:00"
+      }
+    ]
+  },
+
+  "mock_trade_state": {
+    "current_phase": "CSP_ACTIVE",
+    "last_action": "SELL_PUT",
+    "last_updated": "2026-06-12T10:00:00",
+    "earnings_blackout_active": false,
+    "assignment_confirmed_once": false,
+    "current_option_strike": 290.0,
+    "current_option_expiry": "20260712"
+  },
+
+  "mock_tracker": {
+    "date": "TODAY",
+    "contracts_written_today": 0,
+    "first_strike": null,
+    "first_premium": null
+  },
+
+  "mock_eye_data": {
+    "account_status": "CSP_ACTIVE",
+    "price_seen": 298.01,
+    "vix_seen": 16.78,
+    "iv_current": 21.5,
+    "chosen_expiry": "20260712",
+    "chosen_dte": 20,
+    "warnings": [],
+    "earnings_days": 45,
+    "scan_capacity": {
+      "can_open_new_put": false,
+      "reason": "Position already active."
+    },
+    "portfolio_summary": {
+      "net_liquidation_value": 250000.0,
+      "dynamic_max_contracts": 4,
+      "current_risk_units": 1,
+      "account_status": "CSP_ACTIVE"
+    },
+    "active_positions": [
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "position_key": "PUT_290_20260712",
+        "strike": 290.0,
+        "avg_cost": 3.20,
+        "option_type": "PUT",
+        "expiry": "20260712",
+        "dte": 20,
+        "delta": -0.11,
+        "current_price": 0.81,
+        "profit_pct": 74.9,
+        "pnl_unrealized": 239.0
+      }
+    ],
+    "market_regime": {
+      "price_seen": 298.01,
+      "daily_change_pct": 0.7,
+      "vix": 16.78,
+      "200_sma": 267.79,
+      "50_sma": 288.63,
+      "day_classification": "NORMAL_DAY"
+    },
+    "option_chain": [
+      {"expiry": "20260712", "dte": 20, "strike": 290.0, "bid": 0.76, "ask": 0.86, "mid": 0.81, "delta": -0.11, "iv": 21.5}
+    ],
+    "strike_held": 290.0,
+    "expiry_held": "20260712",
+    "delta_current": -0.11,
+    "dte_current": 20
+  }
+}

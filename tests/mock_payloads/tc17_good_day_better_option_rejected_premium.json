@@ -1,0 +1,87 @@
+{
+  "case_id": 17,
+  "scenario_name": "TC17 – GOOD_DAY: Better Option REJECTED (Premium Too Low)",
+  "category": "Pacing Rules",
+  "description": "GOOD_DAY, written=1. New strike IS lower (280 < 285) but the premium is LESS than first ($1.80 < $2.45). Better Option check FAILS on premium. Python soft-overrides to HOLD.",
+  "rule_tested": "GOOD_DAY Better Option Rule – 2nd contract BLOCKED because new_premium < first_premium",
+  "expected_decision": "HOLD_PUT_POSITION",
+  "expected_outcome": "SOFT_HOLD_OVERRIDE",
+  "expected_exception": null,
+
+  "ai_decision": {
+    "decision": "SELL_NEW_PUT",
+    "strike_to_trade": 280.0,
+    "expiry_to_trade": "20260724",
+    "premium_to_collect": 1.80,
+    "reason": "GOOD_DAY. Lower strike at 280 is safer."
+  },
+
+  "mock_portfolio": {
+    "total_cash": 247550.0,
+    "realized_pnl": 0.0,
+    "positions": [
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "strike": 285.0,
+        "avg_cost": 2.45,
+        "option_type": "PUT",
+        "expiry": "20260724"
+      }
+    ]
+  },
+
+  "mock_trade_state": {
+    "current_phase": "CSP_ACTIVE",
+    "last_action": "SELL_PUT",
+    "last_updated": "2026-06-22T14:00:00",
+    "earnings_blackout_active": false,
+    "assignment_confirmed_once": false,
+    "current_option_strike": 285.0,
+    "current_option_expiry": "20260724"
+  },
+
+  "mock_tracker": {
+    "date": "TODAY",
+    "contracts_written_today": 1,
+    "first_strike": 285.0,
+    "first_premium": 2.45
+  },
+
+  "mock_eye_data": {
+    "account_status": "CSP_ACTIVE",
+    "price_seen": 304.00,
+    "vix_seen": 13.00,
+    "iv_current": 17.5,
+    "chosen_expiry": "20260724",
+    "chosen_dte": 32,
+    "warnings": [],
+    "earnings_days": 55,
+    "scan_capacity": {
+      "can_open_new_put": true,
+      "reason": "GOOD_DAY. 2nd contract eligible if Better Option check passes."
+    },
+    "portfolio_summary": {
+      "net_liquidation_value": 250000.0,
+      "dynamic_max_contracts": 4,
+      "current_risk_units": 1,
+      "account_status": "CSP_ACTIVE"
+    },
+    "active_positions": [],
+    "market_regime": {
+      "price_seen": 304.00,
+      "daily_change_pct": 2.1,
+      "vix": 13.00,
+      "200_sma": 267.79,
+      "50_sma": 288.63,
+      "day_classification": "GOOD_DAY"
+    },
+    "option_chain": [
+      {"expiry": "20260724", "dte": 32, "strike": 280.0, "bid": 1.75, "ask": 1.85, "mid": 1.80, "delta": -0.13, "iv": 17.5}
+    ],
+    "strike_held": null,
+    "expiry_held": null,
+    "delta_current": 0.0,
+    "dte_current": 99
+  }
+}

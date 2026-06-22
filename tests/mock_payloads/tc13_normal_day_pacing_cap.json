@@ -1,0 +1,88 @@
+{
+  "case_id": 13,
+  "scenario_name": "TC13 – NORMAL_DAY Pacing: 1 Contract Already Written",
+  "category": "Pacing Rules",
+  "description": "NORMAL_DAY. 1 contract already written today. Daily cap for NORMAL_DAY is 1. AI tries SELL_NEW_PUT. Python soft-overrides to HOLD_PUT_POSITION (PacingBlockError caught and converted to HOLD).",
+  "rule_tested": "Pacing Gate – NORMAL_DAY daily cap=1, contracts_written_today=1",
+  "expected_decision": "HOLD_PUT_POSITION",
+  "expected_outcome": "SOFT_HOLD_OVERRIDE",
+  "expected_exception": null,
+
+  "ai_decision": {
+    "decision": "SELL_NEW_PUT",
+    "strike_to_trade": 280.0,
+    "expiry_to_trade": "20260724",
+    "premium_to_collect": 1.90,
+    "reason": "Another entry opportunity. Strike safe at 280."
+  },
+
+  "mock_portfolio": {
+    "total_cash": 247100.0,
+    "realized_pnl": 0.0,
+    "positions": [
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "strike": 285.0,
+        "avg_cost": 2.45,
+        "option_type": "PUT",
+        "expiry": "20260724"
+      }
+    ]
+  },
+
+  "mock_trade_state": {
+    "current_phase": "CSP_ACTIVE",
+    "last_action": "SELL_PUT",
+    "last_updated": "2026-06-22T14:00:00",
+    "earnings_blackout_active": false,
+    "assignment_confirmed_once": false,
+    "current_option_strike": 285.0,
+    "current_option_expiry": "20260724"
+  },
+
+  "mock_tracker": {
+    "date": "TODAY",
+    "contracts_written_today": 1,
+    "first_strike": 285.0,
+    "first_premium": 2.45
+  },
+
+  "mock_eye_data": {
+    "account_status": "CSP_ACTIVE",
+    "price_seen": 298.01,
+    "vix_seen": 16.78,
+    "iv_current": 21.5,
+    "chosen_expiry": "20260724",
+    "chosen_dte": 32,
+    "warnings": [],
+    "earnings_days": 45,
+    "scan_capacity": {
+      "can_open_new_put": false,
+      "daily_cap_remaining": 0,
+      "reason": "NORMAL_DAY daily cap (1) reached."
+    },
+    "portfolio_summary": {
+      "net_liquidation_value": 250000.0,
+      "dynamic_max_contracts": 4,
+      "current_risk_units": 1,
+      "account_status": "CSP_ACTIVE"
+    },
+    "active_positions": [],
+    "market_regime": {
+      "price_seen": 298.01,
+      "daily_change_pct": 0.7,
+      "vix": 16.78,
+      "200_sma": 267.79,
+      "50_sma": 288.63,
+      "day_classification": "NORMAL_DAY"
+    },
+    "option_chain": [
+      {"expiry": "20260724", "dte": 32, "strike": 280.0, "bid": 1.85, "ask": 1.95, "mid": 1.90, "delta": -0.15, "iv": 21.5}
+    ],
+    "strike_held": null,
+    "expiry_held": null,
+    "delta_current": 0.0,
+    "dte_current": 99
+  }
+}

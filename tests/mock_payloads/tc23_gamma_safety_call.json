@@ -1,0 +1,107 @@
+{
+  "case_id": 23,
+  "scenario_name": "TC23 – Gamma Safety on Call (DTE=11, profit=52%)",
+  "category": "Decision Tree Rules",
+  "description": "Active Covered Call. DTE=11 (<=15), profit=52% (>=50%). Rule 4 (Gamma Safety) fires for CALL position too. Python overrides AI HOLD to CLOSE_FOR_PROFIT.",
+  "rule_tested": "Rule 4 – Gamma Safety applies to Calls: DTE<=15 AND profit>=50%",
+  "expected_decision": "CLOSE_FOR_PROFIT",
+  "expected_outcome": "PYTHON_OVERRIDE",
+  "expected_exception": null,
+
+  "ai_decision": {
+    "decision": "HOLD_CALL_POSITION",
+    "position_key": "CALL_310_20260704",
+    "reason": "Still 11 days left. Will monitor."
+  },
+
+  "mock_portfolio": {
+    "total_cash": 221380.0,
+    "realized_pnl": 0.0,
+    "positions": [
+      {
+        "type": "Stock",
+        "symbol": "AAPL",
+        "quantity": 100,
+        "avg_cost": 290.0
+      },
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "strike": 310.0,
+        "avg_cost": 3.80,
+        "option_type": "CALL",
+        "expiry": "20260704",
+        "entry_time": "2026-06-10T10:00:00"
+      }
+    ]
+  },
+
+  "mock_trade_state": {
+    "current_phase": "CC_ACTIVE",
+    "last_action": "SELL_CALL",
+    "last_updated": "2026-06-10T10:00:00",
+    "earnings_blackout_active": false,
+    "assignment_confirmed_once": false,
+    "current_option_strike": 310.0,
+    "current_option_expiry": "20260704"
+  },
+
+  "mock_tracker": {
+    "date": "TODAY",
+    "contracts_written_today": 0,
+    "first_strike": null,
+    "first_premium": null
+  },
+
+  "mock_eye_data": {
+    "account_status": "CC_ACTIVE",
+    "price_seen": 298.50,
+    "vix_seen": 16.78,
+    "iv_current": 21.5,
+    "chosen_expiry": "20260704",
+    "chosen_dte": 11,
+    "warnings": [],
+    "earnings_days": 45,
+    "scan_capacity": {
+      "can_open_new_put": false,
+      "reason": "CC_ACTIVE. Managing open call position."
+    },
+    "portfolio_summary": {
+      "net_liquidation_value": 250000.0,
+      "dynamic_max_contracts": 4,
+      "current_risk_units": 1,
+      "account_status": "CC_ACTIVE"
+    },
+    "active_positions": [
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "position_key": "CALL_310_20260704",
+        "strike": 310.0,
+        "avg_cost": 3.80,
+        "option_type": "CALL",
+        "expiry": "20260704",
+        "dte": 11,
+        "delta": 0.06,
+        "current_price": 1.82,
+        "profit_pct": 52.1,
+        "pnl_unrealized": 198.0
+      }
+    ],
+    "market_regime": {
+      "price_seen": 298.50,
+      "daily_change_pct": 0.3,
+      "vix": 16.78,
+      "200_sma": 267.79,
+      "50_sma": 288.63,
+      "day_classification": "NORMAL_DAY"
+    },
+    "option_chain": [
+      {"expiry": "20260704", "dte": 11, "strike": 310.0, "bid": 1.77, "ask": 1.87, "mid": 1.82, "delta": 0.06, "iv": 21.5}
+    ],
+    "strike_held": 310.0,
+    "expiry_held": "20260704",
+    "delta_current": 0.06,
+    "dte_current": 11
+  }
+}

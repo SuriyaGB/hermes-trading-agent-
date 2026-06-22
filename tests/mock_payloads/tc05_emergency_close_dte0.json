@@ -1,0 +1,101 @@
+{
+  "case_id": 5,
+  "scenario_name": "TC05 – Emergency Close (DTE=0)",
+  "category": "Decision Tree Rules",
+  "description": "DTE=0 – Expiration day. Python Rule 1 immediately triggers an emergency close. No matter what the AI says, the position MUST close today to avoid auto-assignment.",
+  "rule_tested": "Rule 1 – Emergency Close (DTE < 1)",
+  "expected_decision": "CLOSE_FOR_PROFIT",
+  "expected_outcome": "PYTHON_OVERRIDE",
+  "expected_exception": null,
+
+  "ai_decision": {
+    "decision": "HOLD_PUT_POSITION",
+    "position_key": "PUT_285_20260622",
+    "reason": "Position is OTM, safe to hold."
+  },
+
+  "mock_portfolio": {
+    "total_cash": 247250.0,
+    "realized_pnl": 0.0,
+    "positions": [
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "strike": 285.0,
+        "avg_cost": 2.95,
+        "option_type": "PUT",
+        "expiry": "20260622",
+        "entry_time": "2026-05-25T10:00:00"
+      }
+    ]
+  },
+
+  "mock_trade_state": {
+    "current_phase": "CSP_ACTIVE",
+    "last_action": "SELL_PUT",
+    "last_updated": "2026-05-25T10:00:00",
+    "earnings_blackout_active": false,
+    "assignment_confirmed_once": false,
+    "current_option_strike": 285.0,
+    "current_option_expiry": "20260622"
+  },
+
+  "mock_tracker": {
+    "date": "TODAY",
+    "contracts_written_today": 0,
+    "first_strike": null,
+    "first_premium": null
+  },
+
+  "mock_eye_data": {
+    "account_status": "CSP_ACTIVE",
+    "price_seen": 298.50,
+    "vix_seen": 16.00,
+    "iv_current": 20.5,
+    "chosen_expiry": "20260622",
+    "chosen_dte": 0,
+    "warnings": ["EXPIRATION DAY: DTE=0 detected."],
+    "earnings_days": 40,
+    "scan_capacity": {
+      "can_open_new_put": false,
+      "reason": "Position already active."
+    },
+    "portfolio_summary": {
+      "net_liquidation_value": 250000.0,
+      "dynamic_max_contracts": 4,
+      "current_risk_units": 1,
+      "account_status": "CSP_ACTIVE"
+    },
+    "active_positions": [
+      {
+        "type": "Option",
+        "symbol": "AAPL",
+        "position_key": "PUT_285_20260622",
+        "strike": 285.0,
+        "avg_cost": 2.95,
+        "option_type": "PUT",
+        "expiry": "20260622",
+        "dte": 0,
+        "delta": -0.02,
+        "current_price": 0.05,
+        "profit_pct": 98.3,
+        "pnl_unrealized": 290.0
+      }
+    ],
+    "market_regime": {
+      "price_seen": 298.50,
+      "daily_change_pct": 0.1,
+      "vix": 16.00,
+      "200_sma": 267.79,
+      "50_sma": 288.63,
+      "day_classification": "NORMAL_DAY"
+    },
+    "option_chain": [
+      {"expiry": "20260622", "dte": 0, "strike": 285.0, "bid": 0.03, "ask": 0.07, "mid": 0.05, "delta": -0.02, "iv": 20.5}
+    ],
+    "strike_held": 285.0,
+    "expiry_held": "20260622",
+    "delta_current": -0.02,
+    "dte_current": 0
+  }
+}

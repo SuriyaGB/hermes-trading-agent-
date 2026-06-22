@@ -363,50 +363,7 @@ bash scripts/run_pulse_sim.sh
 2. **Database:** Open `data/trades_log.csv` and ensure a new row was added.
 3. **Dashboard:** Open your Vercel Dashboard (or local `http://localhost:3000/history`). The pulse should appear instantly in the Pulse History audit log.
 
-***
 
-## 🧪 Testing & Auditing (Zero-Risk Local Testing)
-
-When you clone this repository, you do **not** have access to the live VPS database. Your local `data/` folder will be empty. 
-
-To prove that the Python safety guardrails work and to see the UI in action, we built a comprehensive test suite of 25 edge-case market scenarios.
-
-**The Golden Rule of Testing:**
-The test scripts automatically backup your local data, run the scenario, and then instantly restore your clean local data. They will **never** touch or break the live VPS trading environment.
-
-### 1. Run Tests (Zero API Cost)
-To run all 25 safety guardrail tests without calling the OpenAI API:
-```bash
-PYTHONPATH=. python3 scripts/run_scenarios.py all
-```
-*This uses pre-scripted mock AI decisions to prove that the Python Executor blocks dangerous trades.*
-
-### 2. View a Test in the Local UI 
-By default, the test script automatically populates your UI dashboard with the mock data from the test you just ran. You don't need any special flags.
-```bash
-# E.g., Run Test 5 (Emergency Exit)
-PYTHONPATH=. python3 scripts/run_scenarios.py 5
-```
-Now, refresh your local UI (`http://localhost:3000`) and it will display exactly what happened in the test. If you want to clean up your data folder afterward and restore it to its previous state:
-```bash
-PYTHONPATH=. python3 scripts/run_scenarios.py 1 --restore
-```
-
-### 3. Test with the Real AI (`--live`)
-If you want to see if GPT-4o actually makes the right decision on its own (costs API credits):
-```bash
-set -a; source .hermes/.env; set +a
-PYTHONPATH=. python3 scripts/run_scenarios.py 4 --live
-```
-*The script is smart enough to handle situations where the real AI natively guesses the correct safe action!*
-
-### 4. Live Market Testing
-During US market hours, the eye data fetchers (`core/market_data.py`) can pull real-time AAPL prices and VIX from Yahoo Finance (free, no broker needed). You can run a manual simulation pulse to see exactly what the AI would do right now based on original, live market data.
-```bash
-bash scripts/run_pulse_sim.sh
-```
-
-***
 
 ## ▶️ Running the Bot (Local vs VPS)
 
@@ -431,20 +388,51 @@ npm run dev
 *(You can now view your blank dashboard at http://localhost:3000)*
 
 **Step C: Trigger the AI to Trade (Terminal 3)**
-Because the automated Cron schedule is only for the VPS, you must manually trigger the AI locally to see the dashboard update. You have two choices:
+Because the automated Cron schedule is only for the VPS, you must manually trigger the AI locally to see the dashboard update. Choose your command based on the market hours:
 
-* **Choice 1: During Non-Market Hours (Use Mock Data)**
-  When the US market is closed, live data fetching will fail. You must use the test scenarios to verify how the agent works:
+* **Out of Market Hours (Use Mock Data):**
+  When the US market is closed, live data fetching will fail. You must use the 25 test scenarios to verify the agent:
   ```bash
   PYTHONPATH=. python3 scripts/run_scenarios.py 10
   ```
-  *(Refresh your UI, and it will instantly populate with Test Case 10's data).*
+  *(Refresh your UI to see the mock data).*
 
-* **Choice 2: During US Market Hours (Use Live Data)**
-  You can fetch real-time AAPL prices right now to see what the bot would do in the real world today:
+* **During US Market Hours (Use Live Data):**
+  Pull real-time AAPL prices and VIX from Yahoo Finance right now to see what the bot would do in the real world:
   ```bash
   bash scripts/run_pulse_sim.sh
   ```
+
+***
+
+## 🧪 Testing & Auditing (Zero-Risk Local Testing)
+
+When you clone this repository, you do **not** have access to the live VPS database. Your local `data/` folder will be empty. 
+
+To prove that the Python safety guardrails work and to see the UI in action, we built a comprehensive test suite of 25 edge-case market scenarios.
+
+### 1. Run Tests (Zero API Cost)
+To run all 25 safety guardrail tests without calling the OpenAI API:
+```bash
+PYTHONPATH=. python3 scripts/run_scenarios.py all
+```
+*This uses pre-scripted mock AI decisions to prove that the Python Executor blocks dangerous trades.*
+
+### 2. View a Test in the Local UI 
+By default, the test script automatically populates your UI dashboard with the mock data from the test you just ran.
+```bash
+# E.g., Run Test 5 (Emergency Exit)
+PYTHONPATH=. python3 scripts/run_scenarios.py 5
+```
+*(Refresh your UI `http://localhost:3000` to see the test).* To clean up: `PYTHONPATH=. python3 scripts/run_scenarios.py 1 --restore`
+
+### 3. Test with the Real AI (`--live`)
+If you want to see if GPT-4o actually makes the right decision on its own (costs API credits):
+```bash
+set -a; source .hermes/.env; set +a
+PYTHONPATH=. python3 scripts/run_scenarios.py 4 --live
+```
+*The script is smart enough to handle situations where the real AI natively guesses the correct safe action!*
 
 ---
 

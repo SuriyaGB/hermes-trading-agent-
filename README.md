@@ -399,11 +399,11 @@ bash scripts/run_pulse_sim.sh
 
 ***
 
-## 🧪 Testing & Auditing (Zero-Risk Local Testing)
+## 🧪 Testing & Auditing (Local Environment)
 
-When you clone this repository, you do **not** have access to the live VPS database. Your local `data/` folder will be empty. 
+Hermes enforces strict **State Isolation** between the production VPS and local development clones. Local repositories do not inherit live trading databases. 
 
-To prove that the Python safety guardrails work and to see the UI in action, we built a comprehensive test suite of 25 edge-case market scenarios.
+To safely audit the Python execution guardrails and visualize the UI without risking capital or live state corruption, utilize the integrated test suite. This suite validates 25 extreme edge-case market scenarios.
 
 ### 1. Run Tests (Zero API Cost)
 To run all 25 safety guardrail tests without calling the OpenAI API:

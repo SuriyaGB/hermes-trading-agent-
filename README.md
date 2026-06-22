@@ -401,7 +401,10 @@ PYTHONPATH=. python3 scripts/run_scenarios.py 4 --live
 *The script is smart enough to handle situations where the real AI natively guesses the correct safe action!*
 
 ### 4. Live Market Testing
-During US market hours, the eye data fetchers (`core/market_data.py`) can pull real-time AAPL prices and VIX from Yahoo Finance (free, no broker needed). You can run a manual simulation pulse (`scripts/run_pulse_sim.sh`) to see exactly what the AI would do right now based on original, live market data.
+During US market hours, the eye data fetchers (`core/market_data.py`) can pull real-time AAPL prices and VIX from Yahoo Finance (free, no broker needed). You can run a manual simulation pulse to see exactly what the AI would do right now based on original, live market data.
+```bash
+bash scripts/run_pulse_sim.sh
+```
 
 ***
 
@@ -411,25 +414,37 @@ You have two entirely different ways to run this system depending on your curren
 
 ### 💻 1. Running Locally (On Your Laptop / PC)
 
-When testing on your personal computer, you do NOT use PM2 or Cron. You must run the servers manually using two separate terminal windows.
+Running the system locally requires three separate parts. The API and the UI are just **read-only dashboards**. To actually make the bot "think" and trade locally, you have to trigger it manually.
 
-**Terminal 1 (The Python API):**
+**Step A: Start the Python API (Terminal 1)**
 ```bash
-# Activate virtual environment
-source .venv/bin/activate
-# Run the API in development mode
+source krc_venv/bin/activate
 uvicorn core.api:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-**Terminal 2 (The Next.js Dashboard):**
+**Step B: Start the React Dashboard (Terminal 2)**
 ```bash
 cd frontend
-# Install node modules if you haven't yet
 npm install
-# Start the React development server
 npm run dev
 ```
-*(You can now view your dashboard at http://localhost:3000)*
+*(You can now view your blank dashboard at http://localhost:3000)*
+
+**Step C: Trigger the AI to Trade (Terminal 3)**
+Because the automated Cron schedule is only for the VPS, you must manually trigger the AI locally to see the dashboard update. You have two choices:
+
+* **Choice 1: During Non-Market Hours (Use Mock Data)**
+  When the US market is closed, live data fetching will fail. You must use the test scenarios to verify how the agent works:
+  ```bash
+  PYTHONPATH=. python3 scripts/run_scenarios.py 10
+  ```
+  *(Refresh your UI, and it will instantly populate with Test Case 10's data).*
+
+* **Choice 2: During US Market Hours (Use Live Data)**
+  You can fetch real-time AAPL prices right now to see what the bot would do in the real world today:
+  ```bash
+  bash scripts/run_pulse_sim.sh
+  ```
 
 ---
 

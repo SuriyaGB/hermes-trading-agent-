@@ -529,9 +529,9 @@ Shield 5 — IV Rank Filter
 
 | Variable | Required | Description |
 |---|---|---|
-| `OPENAI_API_KEY` | ✅ Yes | Your OpenAI API key for GPT-4o |
-| `TELEGRAM_BOT_TOKEN` | ✅ Yes | Your Telegram bot token for alerts |
-| `TELEGRAM_CHAT_ID` | ✅ Yes | Your Telegram chat ID |
+| `OPENAI_API_KEY` | ✅ Yes | OpenAI API key for GPT-4o |
+| `TELEGRAM_BOT_TOKEN` | ✅ Yes | Telegram bot token for alerts |
+| `TELEGRAM_CHAT_ID` | ✅ Yes | Telegram chat ID |
 
 ***
 

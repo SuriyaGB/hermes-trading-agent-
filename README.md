@@ -288,7 +288,12 @@ Stored in `data/trade_state.json`:
 ```bash
 # Python 3.11+
 python3 --version
+
+# Node.js 18+ (Required for the React Dashboard)
+node -v
 ```
+
+> **Windows Users:** Please use Git Bash or WSL to run the setup and `.sh` commands, as they are natively designed for Linux/Mac environments.
 
 ### Step 1 — Clone the Repository & Setup Virtual Environment
 
@@ -395,13 +400,14 @@ bash scripts/run_pulse_sim.sh
 
 **What to Expect:**
 * **During US Market Hours:** It will pull real-time AAPL prices and VIX from Yahoo Finance and show exactly what the bot would do right now.
-* **Out of Market Hours:** The live data fetch will fail because the market is closed. To test the bot while the market is closed, use the local test scenarios instead (e.g., `PYTHONPATH=. python3 scripts/run_scenarios.py 10`).
-
+* **Out of Market Hours:** The script automatically blocks execution and will output:
+  ```text
+  [HERMES] Market closed at 12:30 UTC. Strategy hours: 14:00-20:00 UTC (7:30 PM - 1:30 AM IST). Skipping.
+  ```
+  *(To see the bot in action while the market is closed, refer to the Testing & Auditing section below).*
 ***
 
 ## 🧪 Testing & Auditing (Local Environment)
-
-Hermes enforces strict **State Isolation** between the production VPS and local development clones. Local repositories do not inherit live trading databases. 
 
 To safely audit the Python execution guardrails and visualize the UI without risking capital or live state corruption, utilize the integrated test suite. This suite validates 25 extreme edge-case market scenarios.
 
@@ -422,7 +428,7 @@ By default, the test script automatically populates your UI dashboard with the m
 # E.g., Run Test 5 (Emergency Exit)
 PYTHONPATH=. python3 scripts/run_scenarios.py 5
 ```
-*(Refresh your UI `http://localhost:3000` to see the test).* To clean up: `PYTHONPATH=. python3 scripts/run_scenarios.py 1 --restore`
+*(Refresh your UI `http://localhost:3000` to see the test).* To completely reset the local data and database back to a fresh state: `PYTHONPATH=. python3 scripts/run_scenarios.py 1 --restore`
 
 ### 3. Test with the Real AI (`--live`)
 If you want to see if GPT-4o actually makes the right decision on its own (costs API credits):

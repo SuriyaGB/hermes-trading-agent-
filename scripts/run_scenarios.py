@@ -46,6 +46,7 @@ PORTFOLIO_PATH  = DATA_DIR / "portfolio.json"
 STATE_PATH      = DATA_DIR / "trade_state.json"
 TRACKER_PATH    = DATA_DIR / "intraday_tracker.json"
 EYE_CACHE_PATH  = PROJECT_ROOT / ".eye_cache.json"
+DB_PATH         = DATA_DIR / "hermes_brain.db"
 
 # ── Import Hermes Core Modules ──────────────────────────────────────────────
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -90,12 +91,12 @@ def list_scenarios():
 # ═══════════════════════════════════════════════════════════════════════════
 def backup_data():
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-    for path in [PORTFOLIO_PATH, STATE_PATH, TRACKER_PATH, EYE_CACHE_PATH]:
+    for path in [PORTFOLIO_PATH, STATE_PATH, TRACKER_PATH, EYE_CACHE_PATH, DB_PATH]:
         if path.exists():
             shutil.copy2(path, BACKUP_DIR / path.name)
 
 def restore_data():
-    for path in [PORTFOLIO_PATH, STATE_PATH, TRACKER_PATH, EYE_CACHE_PATH]:
+    for path in [PORTFOLIO_PATH, STATE_PATH, TRACKER_PATH, EYE_CACHE_PATH, DB_PATH]:
         backup = BACKUP_DIR / path.name
         if backup.exists():
             shutil.copy2(backup, path)
@@ -220,11 +221,13 @@ def run_single(case_id: int, scenario: dict, quiet: bool = False, live: bool = F
                 if not actual_override:
                     print(f"  {GREEN}✓ No override. Decision passed through unchanged.{RESET}")
 
-            # ═══ STEP 2: Execute Decision (for execution test cases) ══════
+            # ═══ STEP 2: Write Pulse to Database for UI Audit ═════════════
+            db = HermesDatabase()
+            pulse_id = db.save_pulse(eye_data, dec)
+
+            # ═══ STEP 3: Execute Decision (for execution test cases) ══════
             action_result = None
             if expected in ("EXECUTION_SUCCESS", "EXECUTION_NO_ACTION"):
-                db = HermesDatabase(db_path=str(BACKUP_DIR / "test_run.db"))
-                pulse_id = db.save_pulse(eye_data, dec)
                 portfolio = load_json(PORTFOLIO_PATH)
                 action_result = executor.execute_decision(dec, db, pulse_id, eye_data)
                 if not quiet:

@@ -408,6 +408,10 @@ To prove that the Python safety guardrails work and to see the UI in action, we 
 ### 1. Run Tests (Zero API Cost)
 To run all 25 safety guardrail tests without calling the OpenAI API:
 ```bash
+# To see all available tests:
+PYTHONPATH=. python3 scripts/run_scenarios.py list
+
+# To run all 25 tests:
 PYTHONPATH=. python3 scripts/run_scenarios.py all
 ```
 *This uses pre-scripted mock AI decisions to prove that the Python Executor blocks dangerous trades.*

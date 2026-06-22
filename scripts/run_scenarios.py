@@ -130,7 +130,7 @@ def seed_mock_data(scenario: dict):
 # ═══════════════════════════════════════════════════════════════════════════
 #  CORE: Run a single scenario test
 # ═══════════════════════════════════════════════════════════════════════════
-def run_single(case_id: int, scenario: dict, quiet: bool = False, live: bool = False, keep_state: bool = False) -> bool:
+def run_single(case_id: int, scenario: dict, quiet: bool = False, live: bool = False, auto_restore: bool = False) -> bool:
     name        = scenario.get("scenario_name", f"TC{case_id:02d}")
     description = scenario.get("description", "")
     rule        = scenario.get("rule_tested", "")
@@ -272,10 +272,8 @@ def run_single(case_id: int, scenario: dict, quiet: bool = False, live: bool = F
             passed = False
 
     finally:
-        # ── ALWAYS restore original files unless --keep-state ──────────────
-        if keep_state:
-            print(f"  {YELLOW}Leaving mock data in place for UI inspection.{RESET}")
-        else:
+        # ── ONLY restore original files if --restore is passed ──────────────
+        if auto_restore:
             restore_data()
 
     # ── Print final PASS / FAIL ────────────────────────────────────────────
@@ -294,8 +292,8 @@ def main():
     args   = sys.argv[1:]
     quiet  = "--quiet" in args
     live   = "--live" in args
-    keep   = "--keep-state" in args
-    args   = [a for a in args if a not in ("--quiet", "--live", "--keep-state")]
+    auto_restore = "--restore" in args
+    args   = [a for a in args if a not in ("--quiet", "--live", "--restore")]
 
     if not args:
         print(f"{YELLOW}Usage:{RESET}")
@@ -303,7 +301,7 @@ def main():
         print(f"  python3 scripts/run_scenarios.py all             (run all 25)")
         print(f"  python3 scripts/run_scenarios.py list            (list all cases)")
         print(f"  python3 scripts/run_scenarios.py 1 --live        (call REAL GPT-4o, uses credits)")
-        print(f"  python3 scripts/run_scenarios.py 1 --keep-state  (leave mock data in data/ for UI)")
+        print(f"  python3 scripts/run_scenarios.py 1 --restore     (restore data to original after test)")
         print(f"  python3 scripts/run_scenarios.py 1 --quiet       (suppress verbose)")
         sys.exit(0)
 
@@ -342,15 +340,15 @@ def main():
     results = []
     try:
         for case_id, fpath, data in to_run:
-            passed = run_single(case_id, data, quiet=quiet, live=live, keep_state=keep)
+            passed = run_single(case_id, data, quiet=quiet, live=live, auto_restore=auto_restore)
             results.append((case_id, passed))
     finally:
-        if keep:
-            print(f"\n{YELLOW}⚠️ --keep-state flag used. Live data NOT restored.{RESET}")
-            print(f"   The UI dashboard will now show the data from the last run scenario.")
-            print(f"   To restore your data manually, run: cp tests/.scenario_backup/* data/ {RESET}")
+        if auto_restore:
+            print(f"\n{GREEN}✓ Data restored to original state.{RESET}")
         else:
-            restore_data()
+            print(f"\n{YELLOW}⚠️  Mock data left in place for UI inspection.{RESET}")
+            print(f"   The UI dashboard will now show the data from the last run scenario.")
+            print(f"   To restore your data manually, run: python3 scripts/run_scenarios.py 1 --restore {RESET}")
 
     # ── Final Summary ────────────────────────────────────────────────────────
     total   = len(results)

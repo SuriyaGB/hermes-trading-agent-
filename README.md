@@ -132,11 +132,16 @@ hermes-trading-agent/
 │   └── src/app/health/page.js             ← Bot Health & Shield Telemetry
 │
 ├── 📂 scripts/                            ← The "Hands" (Operational Tools)
+│   ├── run_scenarios.py                   ← Edge-case safety testing suite
 │   ├── run_pulse_sim.sh                   ← Manually run one simulation pulse
 │   ├── run_pulse.sh                       ← Manually run one live pulse
 │   ├── setup_cron.sh                      ← Enable 24/7 automated schedule
 │   ├── stop_cron.sh                       ← Stop the automated schedule
 │   └── assistant.sh                       ← Hardened shell wrapper for the AI Assistant
+│
+├── 📂 tests/                              ← The "Proving Grounds" (Mock Data)
+│   ├── mock_payloads/                     ← 25 Edge-case scenario JSON files
+│   └── .scenario_backup/                  ← Auto-generated backups during tests
 │
 ├── 📂 data/                               ← The "Money Memory" (NOT on GitHub)
 │   ├── portfolio.json                     ← Current cash, shares, P&L
@@ -283,16 +288,20 @@ Stored in `data/trade_state.json`:
 ```bash
 # Python 3.11+
 python3 --version
-
-# Install all required packages (FastAPI, OpenAI, yfinance, etc.)
-pip install -r requirements.txt
 ```
 
-### Step 1 — Clone the Repository
+### Step 1 — Clone the Repository & Setup Virtual Environment
 
 ```bash
-git clone https://github.com/ravichandranai712-droid/hermes-trading-agent.git
-cd hermes-trading-agent
+git clone https://github.com/SuriyaGB/hermes-trading-agent-.git
+cd hermes-trading-agent-
+
+# Create and activate virtual environment
+python3 -m venv krc_venv
+source krc_venv/bin/activate
+
+# Install all required packages
+pip install -r requirements.txt
 ```
 
 ### Step 2 — Create Your .env File
@@ -308,9 +317,7 @@ Add these values to `.hermes/.env`:
 OPENAI_API_KEY=sk-your-openai-key-here
 TELEGRAM_BOT_TOKEN=your-telegram-bot-token
 TELEGRAM_CHAT_ID=your-telegram-chat-id
-IBKR_HOST=127.0.0.1
-IBKR_PORT=7497
-IBKR_CLIENT_ID=1
+# IBKR Keys not required for local testing
 ```
 
 ### Step 3 — Seed Your Portfolio (CRITICAL)
@@ -374,15 +381,15 @@ PYTHONPATH=. python3 scripts/run_scenarios.py all
 ```
 *This uses pre-scripted mock AI decisions to prove that the Python Executor blocks dangerous trades.*
 
-### 2. View a Test in the Local UI (`--keep-state`)
-Because the test script restores your data instantly, you won't see the test in your React dashboard. To "freeze" a test and look at it in the UI, use the `--keep-state` flag:
+### 2. View a Test in the Local UI 
+By default, the test script automatically populates your UI dashboard with the mock data from the test you just ran. You don't need any special flags.
 ```bash
-# E.g., Run Test 5 (Emergency Exit) and keep the data
-PYTHONPATH=. python3 scripts/run_scenarios.py 5 --keep-state
+# E.g., Run Test 5 (Emergency Exit)
+PYTHONPATH=. python3 scripts/run_scenarios.py 5
 ```
-Now, refresh your local UI (`http://localhost:3000`) and it will populate with the mock data. To clean up your data folder afterward:
+Now, refresh your local UI (`http://localhost:3000`) and it will display exactly what happened in the test. If you want to clean up your data folder afterward and restore it to its previous state:
 ```bash
-cp tests/.scenario_backup/* data/
+PYTHONPATH=. python3 scripts/run_scenarios.py 1 --restore
 ```
 
 ### 3. Test with the Real AI (`--live`)

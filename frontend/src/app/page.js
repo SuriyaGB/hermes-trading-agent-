@@ -1,530 +1,489 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { 
-  ArrowUpRight, 
-  ShieldCheck, 
-  Zap, 
-  Activity, 
-  Cpu, 
-  TrendingUp, 
-  Target, 
-  Calendar, 
-  DollarSign, 
-  AlertTriangle,
-  Info,
-  ChevronLeft,
-  ChevronRight
+import {
+  ShieldCheck, Zap, Activity, Cpu, TrendingUp, Target,
+  DollarSign, AlertTriangle, Calendar, BarChart2, Award,
+  ChevronRight, Clock
 } from 'lucide-react';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, ReferenceLine
 } from 'recharts';
-
 import { getApiUrl } from '../utils/api';
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function fmt$(v, dec = 2) {
+  if (v === null || v === undefined || isNaN(v)) return '--';
+  return `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
+}
+function fmtPct(v, dec = 1) {
+  if (v === null || v === undefined || isNaN(v)) return '--';
+  const n = Number(v);
+  return `${n >= 0 ? '+' : ''}${n.toFixed(dec)}%`;
+}
+function formatExpiry(s) {
+  if (!s) return '--';
+  const st = String(s).trim();
+  if (st.length === 8) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const m = parseInt(st.substring(4,6),10)-1;
+    const d = parseInt(st.substring(6,8),10);
+    const y = st.substring(0,4);
+    return `${months[m]} ${d}, ${y}`;
+  }
+  return s;
+}
+function formatTs(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+function computeDte(expiryStr) {
+  if (!expiryStr || expiryStr === 'N/A') return null;
+  try {
+    const s = String(expiryStr).trim();
+    const y = parseInt(s.substring(0,4),10);
+    const m = parseInt(s.substring(4,6),10)-1;
+    const d = parseInt(s.substring(6,8),10);
+    const exp = new Date(y,m,d);
+    const now = new Date();
+    now.setHours(0,0,0,0);
+    return Math.max(0, Math.round((exp-now)/(1000*60*60*24)));
+  } catch { return null; }
+}
+
+// Slot color palette
+const SLOT_COLORS = ['#00E676','#38BDF8','#A78BFA','#FB923C'];
+const SLOT_LABELS = ['Slot 1','Slot 2','Slot 3','Slot 4'];
+
+// Delta risk classification
+function deltaRisk(delta) {
+  const d = Math.abs(parseFloat(delta || 0));
+  if (d >= 0.60) return { label: 'CRITICAL', color: '#FF1744', bg: 'rgba(255,23,68,0.15)' };
+  if (d >= 0.40) return { label: 'ELEVATED', color: '#FFB300', bg: 'rgba(255,179,0,0.15)' };
+  if (d >= 0.20) return { label: 'MODERATE', color: '#FFEA00', bg: 'rgba(255,234,0,0.1)' };
+  return { label: 'SAFE', color: '#00E676', bg: 'rgba(0,230,118,0.1)' };
+}
+
+// Event badge color mapping
+const EVENT_COLORS = {
+  SELL_PUT: { color: '#38BDF8', label: 'SELL PUT', symbol: '▼' },
+  SELL_CALL: { color: '#A78BFA', label: 'SELL CALL', symbol: '▼' },
+  ROLL_PUT_CLOSE: { color: '#FB923C', label: 'ROLL ✕', symbol: '○' },
+  ROLL_PUT_OPEN: { color: '#FB923C', label: 'ROLL ↺', symbol: '●' },
+  CLOSE_FOR_PROFIT: { color: '#00E676', label: 'CLOSE ✓', symbol: '★' },
+};
+
+// Custom recharts tooltip
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        background: '#0d1117', border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 8, padding: '10px 14px', fontFamily: 'monospace', fontSize: 11
+      }}>
+        <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>{label}</p>
+        {payload.map((p, i) => (
+          <p key={i} style={{ color: p.color, marginBottom: 2 }}>
+            {p.name}: {p.name.includes('VIX') ? p.value?.toFixed(2) : fmt$(p.value)}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function CommandCentre() {
   const [portfolio, setPortfolio] = useState({ total_cash: 0, realized_pnl: 0, positions: [] });
-  const [status, setStatus] = useState({ current_phase: 'LOADING' });
   const [pulses, setPulses] = useState([]);
   const [lastPulse, setLastPulse] = useState(null);
+  const [kpi, setKpi] = useState(null);
+  const [chartData, setChartData] = useState({ pulses: [], events: [] });
   const [loading, setLoading] = useState(true);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeSlot, setActiveSlot] = useState(null);
 
-  // Fetch data from our Python FastAPI backend
   useEffect(() => {
-    const fetchData = async () => {
+    const fetch_all = async () => {
+      const base = getApiUrl();
+      const proxy = (url) => `/api/proxy?url=${encodeURIComponent(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now())}`;
+
       try {
-        const apiUrl = getApiUrl();        
-        
-        // 1. Fetch Portfolio
-        const portRes = await fetch(`/api/proxy?url=${encodeURIComponent(`${apiUrl}/api/portfolio?t=${Date.now()}`)}`);
-        if (portRes.ok) {
-          const portData = await portRes.json();
-          if (portData && typeof portData.total_cash === 'number') {
-            setPortfolio(portData);
+        // Portfolio
+        const pr = await fetch(proxy(`${base}/api/portfolio`));
+        if (pr.ok) { const d = await pr.json(); if (d?.positions) setPortfolio(d); }
+
+        // Pulses (last 80 for chart)
+        const pRes = await fetch(proxy(`${base}/api/pulses?limit=80`));
+        if (pRes.ok) {
+          const pd = await pRes.json();
+          if (Array.isArray(pd) && pd.length > 0) {
+            setLastPulse(pd[0]);
+            setPulses([...pd].reverse());
           }
         }
 
-        // 2. Fetch Status
-        const statRes = await fetch(`/api/proxy?url=${encodeURIComponent(`${apiUrl}/api/status?t=${Date.now()}`)}`);
-        if (statRes.ok) {
-          const statData = await statRes.json();
-          setStatus(statData);
-        }
+        // KPI
+        const kRes = await fetch(proxy(`${base}/api/analytics/kpi_summary`));
+        if (kRes.ok) { const kd = await kRes.json(); setKpi(kd); }
 
-        // 3. Fetch Last 20 Pulses for the chart
-        const pulseRes = await fetch(`/api/proxy?url=${encodeURIComponent(`${apiUrl}/api/pulses?limit=20&t=${Date.now()}`)}`);
-        if (pulseRes.ok) {
-          const pulseData = await pulseRes.json();
-          if (Array.isArray(pulseData) && pulseData.length > 0) {
-            setLastPulse(pulseData[0]);
-            // Reverse so oldest is on left, newest is on right
-            setPulses([...pulseData].reverse());
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
+        // Master chart (full history)
+        const cRes = await fetch(proxy(`${base}/api/analytics/master_chart`));
+        if (cRes.ok) { const cd = await cRes.json(); setChartData(cd); }
+
+      } catch (err) {
+        console.error('Fetch error:', err);
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchData();
-    const interval = setInterval(fetchData, 60000);
-    return () => clearInterval(interval);
+
+    fetch_all();
+    const iv = setInterval(fetch_all, 60000);
+    return () => clearInterval(iv);
   }, []);
 
-  const totalPositions = portfolio.positions?.length || 0;
-  const activePosition = portfolio.positions?.[activeIndex] || portfolio.positions?.[0] || null;
-  // Calculate dynamic metrics for the specific active position
-  const posDelta = activePosition?.delta || (activeIndex === 0 && lastPulse ? lastPulse.delta_current : '--');
-  const posDte = activePosition?.dte || (activeIndex === 0 && lastPulse ? lastPulse.dte_current : '--');
-  const currentYield = activePosition?.avg_cost ? (activePosition.avg_cost * 100).toFixed(2) : '0.00';
-  const currentYieldPct = (activePosition?.avg_cost && activePosition?.strike) ? ((activePosition.avg_cost / activePosition.strike) * 100).toFixed(2) : '0.00';
+  const positions = portfolio.positions || [];
 
-  // Wheel Phase Node Coordinates for the SVG Visualizer
-  const phaseNodes = [
-    { id: 'CASH_ONLY', label: '1. CASH ONLY', x: 200, y: 50, color: '#3B82F6', desc: 'Selling Put Options' },
-    { id: 'CSP_ACTIVE', label: '2. PUT SOLD', x: 350, y: 150, color: '#00E676', desc: 'Cash Secured Put active' },
-    { id: 'SHARES_ASSIGNED', label: '3. ASSIGNED', x: 200, y: 250, color: '#FFEA00', desc: 'Stock shares assigned' },
-    { id: 'CC_ACTIVE', label: '4. CALL SOLD', x: 50, y: 150, color: '#A855F7', desc: 'Covered Call active' }
-  ];
+  // Compute total option liability (unrealized) and active open premium
+  const totalLiability = positions.reduce((acc, p) => {
+    if (p.type === 'Option') acc += (p.current_price ?? p.avg_cost ?? 0) * 100;
+    return acc;
+  }, 0);
+  const activeOpenPremium = positions.reduce((acc, p) => {
+    if (p.type === 'Option') acc += (parseFloat(p.avg_cost) || 0) * 100;
+    return acc;
+  }, 0);
+  const netLiquidation = (portfolio.total_cash || 0) - totalLiability;
 
-  // Derive phase dynamically from activePosition to bypass backend global state
-  let derivedPhase = status?.current_phase || 'LOADING';
-  if (activePosition) {
-    if (activePosition.option_type === 'PUT') derivedPhase = 'CSP_ACTIVE';
-    else if (activePosition.option_type === 'CALL') derivedPhase = 'CC_ACTIVE';
-    else if (activePosition.type === 'Stock') derivedPhase = 'SHARES_ASSIGNED';
+  // Unguided zone alert: DTE > 15 AND |delta| > 0.55
+  const unguidedSlots = positions.filter(p => {
+    const dte = p.dte ?? computeDte(p.expiry);
+    const d = Math.abs(parseFloat(p.delta || 0));
+    return dte > 15 && d >= 0.55;
+  });
+
+  // Chart data — use full history if available, else the pulses API data
+  const displayChart = (chartData.pulses && chartData.pulses.length > 0)
+    ? chartData.pulses.map(p => ({
+        timestamp: formatTs(p.timestamp),
+        aapl_price: p.aapl_price,
+        vix_level: p.vix_level,
+        sma_200: p.sma_200,
+        day_classification: p.day_classification,
+      }))
+    : pulses.map(p => ({
+        timestamp: formatTs(p.timestamp),
+        aapl_price: p.aapl_price,
+        vix_level: p.vix_level,
+        sma_200: null,
+      }));
+
+  const chartEvents = chartData.events || [];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div style={{ textAlign: 'center', fontFamily: 'monospace' }}>
+          <div style={{ color: '#00E676', fontSize: 24, marginBottom: 8 }}>⚡</div>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, letterSpacing: '0.15em' }}>INITIALISING HERMES QUANTUM...</p>
+        </div>
+      </div>
+    );
   }
 
-  // Helper to format date strings for chart X-axis
-  const formatChartDate = (timestamp) => {
-    if (!timestamp) return '';
-    const d = new Date(timestamp);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  // Helper to format option expiry date YYYYMMDD to human-readable
-  const formatExpiryDate = (dateStr) => {
-    if (!dateStr) return '--';
-    const dateStrClean = String(dateStr).trim();
-    if (dateStrClean.length === 8) {
-      const year = dateStrClean.substring(0, 4);
-      const month = dateStrClean.substring(4, 6);
-      const day = dateStrClean.substring(6, 8);
-      
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const monthIdx = parseInt(month, 10) - 1;
-      if (monthIdx >= 0 && monthIdx < 12) {
-        return `${months[monthIdx]} ${parseInt(day, 10)}, ${year}`;
-      }
-      return `${year}-${month}-${day}`;
-    }
-    return dateStr;
-  };
-
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-10">
-      {/* Header */}
-      <div className="flex justify-between items-end border-b border-white/10 pb-6">
+    <div className="max-w-screen-2xl mx-auto space-y-6 pb-12 animate-in fade-in duration-500">
+
+      {/* ── PAGE HEADER ─────────────────────────────────────────────── */}
+      <div className="flex justify-between items-end border-b border-white/10 pb-5">
         <div>
-          <h1 className="text-4xl font-light tracking-tight bg-gradient-to-r from-white via-white/90 to-white/50 bg-clip-text text-transparent">Command Centre</h1>
-          <p className="text-white/50 mt-2 font-mono text-xs flex items-center tracking-widest">
-            <Zap size={12} className="text-cyber-green mr-2 animate-pulse" />
-            HERMES QUANTUM RUNNING
+          <h1 style={{
+            fontSize: 32, fontWeight: 300, letterSpacing: '-0.02em',
+            background: 'linear-gradient(90deg, #fff 0%, rgba(255,255,255,0.55) 100%)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+          }}>Command Centre</h1>
+          <p style={{ color: 'rgba(255,255,255,0.4)', marginTop: 4, fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.15em', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Zap size={11} color="#00E676" /> HERMES QUANTUM · AAPL WHEEL STRATEGY
           </p>
         </div>
-        <div className="hidden sm:flex items-center space-x-2 text-xs font-mono bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
-          <span className="w-2 h-2 rounded-full bg-cyber-green animate-pulse"></span>
-          <span className="text-white/40">FEED DELAY: </span>
-          <span className="text-white/80">REALTIME</span>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          background: 'rgba(0,0,0,0.4)', padding: '6px 12px',
+          borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)',
+          fontFamily: 'monospace', fontSize: 11
+        }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#00E676', display: 'inline-block', animation: 'pulse 2s infinite' }} />
+          <span style={{ color: 'rgba(255,255,255,0.4)' }}>LIVE FEED</span>
+          <span style={{ color: 'rgba(255,255,255,0.8)' }}>ACTIVE</span>
         </div>
       </div>
 
-      {/* Top HUD Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="glass-panel p-6 relative overflow-hidden group transition-all duration-300 hover:border-white/10">
-          <div className="absolute -top-10 -right-10 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all"></div>
-          <div className="flex items-center space-x-2 text-white/40 font-mono text-xs mb-2 tracking-widest">
-            <DollarSign size={12} />
-            <span>ACCOUNT EQUITY (NET LIQ)</span>
-          </div>
-          <h2 className="text-3xl font-light tracking-tight">
-            ${((portfolio?.total_cash || 250000) - (portfolio?.positions || []).reduce((acc, pos) => {
-              if (pos.type === 'Option') {
-                const price = pos.current_price !== undefined ? pos.current_price : (pos.avg_cost || 0);
-                const qty = Math.abs(pos.quantity || 1);
-                return acc + (price * qty * 100);
-              }
-              return acc;
-            }, 0)).toLocaleString('en-US', {minimumFractionDigits: 2})}
-          </h2>
-        </div>
-        
-        <div className="glass-panel p-6 relative overflow-hidden group transition-all duration-300 hover:border-white/10">
-          <div className="absolute -top-10 -right-10 w-24 h-24 bg-cyber-green/5 rounded-full blur-2xl group-hover:bg-cyber-green/10 transition-all"></div>
-          <div className="flex items-center space-x-2 text-white/40 font-mono text-xs mb-2 tracking-widest">
-            <TrendingUp size={12} className="text-cyber-green" />
-            <span>REALIZED PREMIUM</span>
-          </div>
-          <div className="flex items-baseline space-x-1">
-            <h2 className="text-3xl font-light text-cyber-green">
-              ${(portfolio?.realized_pnl ?? 0).toLocaleString('en-US', {minimumFractionDigits: 2})}
-            </h2>
-            <span className="text-[10px] text-cyber-green/50 font-mono">USD</span>
+      {/* ── GUARDRAIL RADAR ALERT ────────────────────────────────────── */}
+      {unguidedSlots.length > 0 && (
+        <div style={{
+          background: 'rgba(255,23,68,0.08)', border: '1px solid rgba(255,23,68,0.35)',
+          borderRadius: 10, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 10
+        }}>
+          <AlertTriangle size={18} color="#FF1744" />
+          <div style={{ flex: 1 }}>
+            <p style={{ color: '#FF1744', fontFamily: 'monospace', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', marginBottom: 2 }}>
+              ⚠ UNGUIDED AI ZONE DETECTED
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>
+              {unguidedSlots.map(p => `${p.strike}P (DTE ${p.dte ?? computeDte(p.expiry)}, Δ ${p.delta})`).join(' · ')} — Hardcoded rules inactive above DTE 15. AI operating on open-ended judgment.
+            </p>
           </div>
         </div>
+      )}
 
-        <div className="glass-panel p-6 relative overflow-hidden group transition-all duration-300 hover:border-white/10">
-          <div className="absolute -top-10 -right-10 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl group-hover:bg-yellow-500/10 transition-all"></div>
-          <div className="flex items-center space-x-2 text-white/40 font-mono text-xs mb-2 tracking-widest">
-            <Activity size={12} className="text-yellow-500" />
-            <span>LIQUID CASH</span>
+      {/* ── KPI PERFORMANCE BANNER (CORE PORTFOLIO) ─────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+        {[
+          { icon: DollarSign, label: 'NET LIQUIDATION', value: fmt$(netLiquidation), sub: `Total Return: ${fmt$((netLiquidation || 250000) - 250000)}`, color: '#38BDF8', glow: '#38BDF8' },
+          { icon: DollarSign, label: 'LIQUID CASH IN ACCOUNT', value: fmt$(portfolio.total_cash), sub: 'Initial Capital: $250,000.00', color: '#00E676', glow: '#00E676' },
+          { icon: TrendingUp, label: 'ACTIVE OPEN PREMIUM', value: fmt$(activeOpenPremium), sub: `Gross Collected: ${fmt$(kpi?.total_premium_collected)}`, color: '#A78BFA', glow: '#A78BFA' },
+          { icon: BarChart2, label: 'NET REALIZED P&L', value: fmt$(kpi?.net_realized_pnl), sub: `Closed Trades: ${(kpi?.profit_closes || 0) + (kpi?.defensive_rolls || 0)}`, color: kpi?.net_realized_pnl >= 0 ? '#00E676' : '#FF1744', glow: kpi?.net_realized_pnl >= 0 ? '#00E676' : '#FF1744' },
+        ].map((item, i) => (
+          <div key={i} className="glass-panel" style={{ padding: '16px 20px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: `${item.glow}08`, borderRadius: '50%', filter: 'blur(20px)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <item.icon size={11} color={item.color} />
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.12em' }}>{item.label}</span>
+            </div>
+            <p style={{ fontSize: 24, fontWeight: 300, color: item.color, fontFamily: 'monospace', letterSpacing: '-0.02em' }}>{item.value}</p>
+            {item.sub && <p style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', fontSize: 11, marginTop: 4 }}>{item.sub}</p>}
           </div>
-          <h2 className="text-3xl font-light">
-            ${(portfolio?.total_cash ?? 250000).toLocaleString('en-US', {minimumFractionDigits: 2})}
-          </h2>
-        </div>
-        
-        <div className="glass-panel p-6 relative overflow-hidden group transition-all duration-300 hover:border-white/10">
-          <div className="absolute -top-10 -right-10 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl group-hover:bg-purple-500/10 transition-all"></div>
-          <div className="flex items-center space-x-2 text-white/40 font-mono text-xs mb-2 tracking-widest">
-            <Cpu size={12} className="text-purple-400" />
-            <span>ACTIVE STRATEGY</span>
-          </div>
-          <div className="flex items-center space-x-2 mt-1">
-            <span className="w-2 h-2 rounded-full bg-cyber-green animate-pulse"></span>
-            <span className="text-lg font-mono tracking-wider text-white">{derivedPhase}</span>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Interactive Visualizer Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Left Column: Visual State Machine (SVG Diagram) */}
-        <div key={`flowmap-${activeIndex}`} className="glass-panel p-6 col-span-1 lg:col-span-5 flex flex-col items-center justify-center text-center min-h-[380px] animate-in fade-in zoom-in-95 duration-500">
-          <h3 className="text-sm font-mono text-white/60 tracking-wider mb-6 flex items-center self-start">
-            <Activity size={14} className="mr-2 text-cyber-green" /> WHEEL STATE FLOWMAP
-          </h3>
+      {/* ── LIVE 4-SLOT GRID ────────────────────────────────────────── */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <Target size={14} color="#00E676" />
+          <span style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.14em' }}>LIVE POSITION GRID — ALL 4 SLOTS</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+          {positions.length === 0 ? (
+            <div className="glass-panel" style={{ gridColumn: '1/-1', padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace', fontSize: 12 }}>
+              <AlertTriangle size={24} style={{ margin: '0 auto 10px', opacity: 0.3 }} />
+              NO ACTIVE POSITIONS DEPLOYED
+            </div>
+          ) : (
+            positions.map((pos, i) => {
+              const slotColor = SLOT_COLORS[i % SLOT_COLORS.length];
+              const dte = pos.dte ?? computeDte(pos.expiry);
+              const risk = deltaRisk(pos.delta);
+              const unrealized = pos.unrealized_pnl;
+              const unrealizedPct = pos.unrealized_pnl_percent;
+              const isUnguided = dte > 15 && Math.abs(parseFloat(pos.delta || 0)) >= 0.55;
+              return (
+                <div
+                  key={i}
+                  className="glass-panel"
+                  style={{
+                    padding: 18, cursor: 'pointer', transition: 'all 0.2s',
+                    border: `1px solid ${activeSlot === i ? slotColor + '40' : 'rgba(255,255,255,0.05)'}`,
+                    boxShadow: activeSlot === i ? `0 0 20px ${slotColor}15` : undefined
+                  }}
+                  onClick={() => setActiveSlot(activeSlot === i ? null : i)}
+                >
+                  {/* Slot header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: slotColor, boxShadow: `0 0 8px ${slotColor}`, display: 'inline-block' }} />
+                      <span style={{ fontFamily: 'monospace', fontSize: 10, color: slotColor, letterSpacing: '0.12em' }}>{SLOT_LABELS[i]}</span>
+                    </div>
+                    <span style={{
+                      background: pos.option_type === 'PUT' ? 'rgba(251,146,60,0.15)' : 'rgba(167,139,250,0.15)',
+                      color: pos.option_type === 'PUT' ? '#FB923C' : '#A78BFA',
+                      fontFamily: 'monospace', fontSize: 9, padding: '2px 7px', borderRadius: 4,
+                      border: `1px solid ${pos.option_type === 'PUT' ? 'rgba(251,146,60,0.3)' : 'rgba(167,139,250,0.3)'}`
+                    }}>{pos.option_type}</span>
+                  </div>
 
-          <div className="relative w-full max-w-[360px] aspect-[4/3] flex items-center justify-center">
-            <svg viewBox="0 0 400 300" className="w-full h-full">
-              {/* Connecting Curved Lines */}
-              <path d="M 200,50 Q 300,50 350,150" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2" />
-              <path d="M 350,150 Q 350,250 200,250" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2" />
-              <path d="M 200,250 Q 100,250 50,150" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2" />
-              <path d="M 50,150 Q 100,50 200,50" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2" />
+                  {/* Contract identity */}
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={{ fontSize: 22, fontWeight: 300, color: '#fff', fontFamily: 'monospace', letterSpacing: '-0.02em' }}>
+                      {pos.symbol} {pos.strike}P
+                    </p>
+                    <p style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace', fontSize: 10, marginTop: 2 }}>
+                      Expires: {formatExpiry(pos.expiry)}
+                    </p>
+                  </div>
 
-              {/* Glowing active arrow */}
-              {derivedPhase === 'CASH_ONLY' && (
-                <path d="M 50,150 Q 100,50 200,50" fill="none" stroke="#3B82F6" strokeWidth="3" className="animate-pulse" />
-              )}
-              {derivedPhase === 'CSP_ACTIVE' && (
-                <path d="M 200,50 Q 300,50 350,150" fill="none" stroke="#00E676" strokeWidth="3" className="animate-pulse" />
-              )}
-              {derivedPhase === 'SHARES_ASSIGNED' && (
-                <path d="M 350,150 Q 350,250 200,250" fill="none" stroke="#FFEA00" strokeWidth="3" className="animate-pulse" />
-              )}
-              {derivedPhase === 'CC_ACTIVE' && (
-                <path d="M 200,250 Q 100,250 50,150" fill="none" stroke="#A855F7" strokeWidth="3" className="animate-pulse" />
-              )}
+                  {/* Metrics grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                    <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 6, padding: '8px 10px' }}>
+                      <p style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace', fontSize: 9, marginBottom: 4, letterSpacing: '0.1em' }}>DELTA Δ</p>
+                      <p style={{ color: risk.color, fontFamily: 'monospace', fontSize: 14, fontWeight: 600 }}>{pos.delta || '--'}</p>
+                    </div>
+                    <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 6, padding: '8px 10px' }}>
+                      <p style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace', fontSize: 9, marginBottom: 4, letterSpacing: '0.1em' }}>DTE</p>
+                      <p style={{ color: dte <= 15 ? '#FFEA00' : '#fff', fontFamily: 'monospace', fontSize: 14, fontWeight: 600 }}>{dte !== null ? `${dte}d` : '--'}</p>
+                    </div>
+                    <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 6, padding: '8px 10px' }}>
+                      <p style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace', fontSize: 9, marginBottom: 4, letterSpacing: '0.1em' }}>ENTRY</p>
+                      <p style={{ color: '#fff', fontFamily: 'monospace', fontSize: 14 }}>{fmt$(pos.avg_cost)}</p>
+                    </div>
+                    <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 6, padding: '8px 10px' }}>
+                      <p style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace', fontSize: 9, marginBottom: 4, letterSpacing: '0.1em' }}>CURR PRICE</p>
+                      <p style={{ color: '#fff', fontFamily: 'monospace', fontSize: 14 }}>{pos.current_price !== undefined ? fmt$(pos.current_price) : '--'}</p>
+                    </div>
+                  </div>
 
-              {/* Render Nodes */}
-              {phaseNodes.map((node) => {
-                const isActive = derivedPhase === node.id;
-                return (
-                  <g key={node.id}>
-                    {/* Pulsing Backlight for Active Node */}
-                    {isActive && (
-                      <circle 
-                        cx={node.x} 
-                        cy={node.y} 
-                        r="32" 
-                        fill={node.color} 
-                        opacity="0.15" 
-                        className="animate-ping" 
-                        style={{ transformOrigin: `${node.x}px ${node.y}px` }} 
-                      />
+                  {/* Unrealized PnL bar */}
+                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 6, padding: '10px 12px', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace', fontSize: 9, letterSpacing: '0.1em' }}>UNREALIZED P&L</span>
+                      <span style={{ color: unrealized >= 0 ? '#00E676' : '#FF1744', fontFamily: 'monospace', fontSize: 11, fontWeight: 700 }}>
+                        {unrealized !== undefined ? `${unrealized >= 0 ? '+' : ''}${fmt$(unrealized)} (${fmtPct(unrealizedPct)})` : '--'}
+                      </span>
+                    </div>
+                    {unrealized !== undefined && (
+                      <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', borderRadius: 2,
+                          width: `${Math.min(100, Math.abs(unrealizedPct || 0))}%`,
+                          background: unrealized >= 0 ? '#00E676' : '#FF1744',
+                          transition: 'width 0.5s ease'
+                        }} />
+                      </div>
                     )}
-                    {/* Node Core */}
-                    <circle 
-                      cx={node.x} 
-                      cy={node.y} 
-                      r="20" 
-                      fill={isActive ? node.color : '#161b22'} 
-                      stroke={isActive ? '#ffffff' : 'rgba(255,255,255,0.1)'} 
-                      strokeWidth={isActive ? 3 : 1}
-                      style={{ transition: 'all 0.5s ease', filter: isActive ? `drop-shadow(0 0 10px ${node.color})` : 'none' }}
-                    />
-                    {/* Node Dot */}
-                    <circle cx={node.x} cy={node.y} r="6" fill={isActive ? '#000' : '#8b949e'} />
-                    
-                    {/* Node Label Text */}
-                    <text 
-                      x={node.x} 
-                      y={node.y - 30} 
-                      textAnchor="middle" 
-                      fill={isActive ? '#ffffff' : 'rgba(255,255,255,0.4)'} 
-                      fontSize="10" 
-                      fontFamily="monospace"
-                      fontWeight={isActive ? 'bold' : 'normal'}
-                    >
-                      {node.label}
-                    </text>
-                  </g>
+                  </div>
+
+                  {/* Delta risk badge */}
+                  <div style={{ background: risk.bg, border: `1px solid ${risk.color}30`, borderRadius: 6, padding: '5px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: risk.color, fontFamily: 'monospace', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em' }}>
+                      {risk.label}
+                    </span>
+                    {isUnguided && (
+                      <span style={{ color: '#FF1744', fontFamily: 'monospace', fontSize: 9, letterSpacing: '0.08em' }}>⚠ UNGUIDED ZONE</span>
+                    )}
+                  </div>
+
+                  {/* Stale data badge */}
+                  {pos.is_fallback_data && (
+                    <div style={{ marginTop: 8, background: 'rgba(255,179,0,0.08)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: 5, padding: '3px 8px' }}>
+                      <span style={{ color: '#FFB300', fontFamily: 'monospace', fontSize: 9 }}>⚠ STALE DELTA DATA</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* ── MASTER MARKET CHART ─────────────────────────────────────── */}
+      <div className="glass-panel" style={{ padding: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Activity size={14} color="#38BDF8" />
+            <span style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.14em' }}>
+              AAPL MARKET REGIME — FULL HISTORY ({displayChart.length} DATA POINTS)
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 16, fontFamily: 'monospace', fontSize: 10 }}>
+            <span style={{ color: '#00E676' }}>● AAPL PRICE</span>
+            <span style={{ color: '#38BDF8' }}>— 200 SMA</span>
+            <span style={{ color: '#FFEA00' }}>● VIX</span>
+          </div>
+        </div>
+
+        <div style={{ height: 320, position: 'relative' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={displayChart} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gAAPL" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#00E676" stopOpacity={0.25}/>
+                  <stop offset="95%" stopColor="#00E676" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="gVIX" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#FFEA00" stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor="#FFEA00" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+              <XAxis dataKey="timestamp" stroke="rgba(255,255,255,0.15)" tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 9, fontFamily: 'monospace' }} interval="preserveStartEnd" />
+              <YAxis yAxisId="price" stroke="rgba(255,255,255,0.15)" tick={{ fill: '#00E676', fontSize: 9, fontFamily: 'monospace' }} tickFormatter={v => `$${v}`} domain={['auto','auto']} />
+              <YAxis yAxisId="vix" orientation="right" stroke="rgba(255,255,255,0.15)" tick={{ fill: '#FFEA00', fontSize: 9, fontFamily: 'monospace' }} domain={['auto','auto']} />
+              <Tooltip content={<CustomTooltip />} />
+              {/* 200 SMA line overlay */}
+              <Area yAxisId="price" type="monotone" dataKey="sma_200" stroke="#38BDF8" strokeWidth={1.5} strokeDasharray="4 4" fill="none" name="200 SMA" dot={false} />
+              <Area yAxisId="price" type="monotone" dataKey="aapl_price" stroke="#00E676" strokeWidth={2} fill="url(#gAAPL)" name="AAPL" dot={false} />
+              <Area yAxisId="vix" type="monotone" dataKey="vix_level" stroke="#FFEA00" strokeWidth={1.2} fill="url(#gVIX)" name="VIX" dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Trade event legend strip below chart */}
+        {chartEvents.length > 0 && (
+          <div style={{ marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 14 }}>
+            <p style={{ color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.12em', marginBottom: 10 }}>TRADE EVENTS</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {chartEvents.slice(0, 20).map((ev, i) => {
+                const cfg = EVENT_COLORS[ev.action] || { color: '#fff', label: ev.action, symbol: '·' };
+                return (
+                  <div key={i} title={`${ev.action}: ${ev.strike}P ${ev.expiry} @ $${ev.price}`} style={{
+                    background: `${cfg.color}15`, border: `1px solid ${cfg.color}30`,
+                    borderRadius: 5, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 5,
+                    fontFamily: 'monospace', fontSize: 9, cursor: 'default', transition: 'all 0.15s'
+                  }}>
+                    <span style={{ color: cfg.color }}>{cfg.symbol}</span>
+                    <span style={{ color: cfg.color }}>{cfg.label}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>{ev.strike}P</span>
+                  </div>
                 );
               })}
-            </svg>
-          </div>
-          
-          {/* Active Phase details panel */}
-          <div className="mt-4 px-4 py-2 bg-white/5 border border-white/5 rounded-lg w-full">
-            {phaseNodes.map((n) => {
-              if (derivedPhase === n.id) {
-                return (
-                  <div key={n.id} className="animate-in fade-in duration-300">
-                    <p className="text-xs font-mono text-white/50 tracking-wider">ACTIVE STATE DESCRIPTION</p>
-                    <p className="text-sm font-medium mt-1" style={{ color: n.color }}>{n.desc}</p>
-                  </div>
-                );
-              }
-              return null;
-            })}
-          </div>
-        </div>
-
-        {/* Right Column: Live Position Card */}
-        <div className="glass-panel p-6 col-span-1 lg:col-span-7 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-sm font-mono text-white/60 tracking-wider flex items-center">
-                <Target size={14} className="mr-2 text-cyber-green" /> ACTIVE WHEEL POSITION
-              </h3>
-              
-              {totalPositions > 1 && (
-                <div className="flex items-center space-x-3 bg-black/40 px-3 py-1.5 rounded-full border border-white/10">
-                  <button 
-                    onClick={() => setActiveIndex(prev => prev > 0 ? prev - 1 : totalPositions - 1)}
-                    className="text-white/40 hover:text-white transition-colors"
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  <span className="text-xs font-mono text-white/60">
-                    POS {activeIndex + 1} <span className="opacity-50">/ {totalPositions}</span>
-                  </span>
-                  <button 
-                    onClick={() => setActiveIndex(prev => prev < totalPositions - 1 ? prev + 1 : 0)}
-                    className="text-white/40 hover:text-white transition-colors"
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              )}
-              {totalPositions <= 1 && (
-                <span className="text-xs opacity-50 font-normal">100 SHARES BIND</span>
-              )}
-            </div>
-
-            {activePosition ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-500">
-                {/* Visual Position Card */}
-                <div className="relative p-6 rounded-xl border border-white/10 overflow-hidden" 
-                     style={{
-                       background: 'linear-gradient(135deg, rgba(25,25,35,0.6) 0%, rgba(10,10,15,0.8) 100%)',
-                       boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-                     }}>
-                  {/* Glowing background badge */}
-                  <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-cyber-green/5 rounded-full blur-xl"></div>
-                  
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <span className="text-[10px] font-mono bg-cyber-green/20 text-cyber-green px-2 py-0.5 rounded border border-cyber-green/30">
-                        {activePosition.option_type || 'STOCK'}
-                      </span>
-                      <h4 className="text-3xl font-light mt-1 tracking-tight">{activePosition.symbol || 'AAPL'}</h4>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-mono text-white/40">STRIKE</p>
-                      <p className="text-xl font-mono text-white">${activePosition.strike || '--'}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 font-mono mt-6">
-                    <div className="flex justify-between text-xs pb-2 border-b border-white/5">
-                      <span className="text-white/40">Entry Price</span>
-                      <span className="text-white">${activePosition.avg_cost ? activePosition.avg_cost.toFixed(2) : '--'}</span>
-                    </div>
-                    <div className="flex justify-between text-xs pb-2 border-b border-white/5">
-                      <span className="text-white/40">Current Option Price</span>
-                      <span className="text-white">${activePosition.current_price !== undefined ? activePosition.current_price.toFixed(2) : '--'}</span>
-                    </div>
-                    <div className="flex justify-between text-xs pb-2 border-b border-white/5">
-                      <span className="text-white/40">Unrealized P&L</span>
-                      <span className={activePosition.unrealized_pnl >= 0 ? "text-cyber-green" : "text-red-500"}>
-                        {activePosition.unrealized_pnl !== undefined
-                          ? `${activePosition.unrealized_pnl >= 0 ? '+' : ''}$${activePosition.unrealized_pnl.toFixed(2)} (${activePosition.unrealized_pnl_percent >= 0 ? '+' : ''}${activePosition.unrealized_pnl_percent.toFixed(1)}%)`
-                          : '--'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-t border-white/5">
-                      <span className="text-white/40 text-xs">Trade Entered (EST)</span>
-                      <span className="text-white font-mono text-xs">
-                        {activePosition?.entry_time && activePosition.entry_time !== 'N/A'
-                          ? new Date(activePosition.entry_time).toLocaleString("en-US", {
-                              timeZone: "America/New_York",
-                              month: "short",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                              hour12: true
-                            })
-                          : '--'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-xs py-2 border-t border-white/5">
-                      <span className="text-white/40">Contract Expiry</span>
-                      <span className="text-white">{formatExpiryDate(activePosition.expiry)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Metrics Breakdown Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-black/30 border border-white/5 p-4 rounded-lg flex flex-col justify-center">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-[10px] font-mono text-white/40">CONTRACT DELTA</p>
-                      {activePosition?.is_fallback_data && (
-                        <span className="text-[8px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded border border-red-500/30">
-                          ⚠️ STALE DATA
-                        </span>
-                      )}
-                    </div>
-                    <p className={`text-xl font-mono ${parseFloat(posDelta) < 0 ? 'text-fuchsia-400' : 'text-emerald-400'}`}>
-                      {posDelta}
-                    </p>
-                    <span className="text-[9px] font-mono text-white/30 mt-1">Bound: ±0.20</span>
-                  </div>
-
-                  <div className="bg-black/30 border border-white/5 p-4 rounded-lg flex flex-col justify-center">
-                    <p className="text-[10px] font-mono text-white/40 mb-1">DAYS TO EXPIRY</p>
-                    <p className="text-xl font-mono text-yellow-500">{posDte !== '--' ? `${posDte} Days` : '--'}</p>
-                    <span className="text-[9px] font-mono text-white/30 mt-1">Roll limit: 21</span>
-                  </div>
-
-                  <div className="bg-black/30 border border-white/5 p-4 rounded-lg flex flex-col justify-center col-span-2">
-                    <p className="text-[10px] font-mono text-white/40 mb-1">YIELD AT RISK CAP</p>
-                    <div className="flex justify-between items-baseline mt-1">
-                      <p className="text-lg font-mono text-cyber-green">+${currentYield}</p>
-                      <span className="text-[10px] font-mono text-cyber-green/60">+{currentYieldPct}% return</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center border border-white/5 border-dashed rounded-xl p-12 text-center text-white/30 font-mono text-sm">
-                <AlertTriangle size={28} className="text-white/20 mb-3" />
-                NO ACTIVE POSITION DEPLOYED
-                <span className="text-[10px] text-white/20 mt-1">Waiting for entry threshold triggers...</span>
-              </div>
-            )}
-          </div>
-
-          {/* Quick Shields status summary */}
-          <div className="grid grid-cols-3 gap-3 border-t border-white/5 pt-4 mt-6">
-            <div className="flex items-center space-x-2 text-xs">
-              <ShieldCheck size={14} className="text-cyber-green" />
-              <span className="text-white/60">VIX: {lastPulse ? lastPulse.vix_level : '--'}</span>
-            </div>
-            <div className="flex items-center space-x-2 text-xs">
-              <ShieldCheck size={14} className="text-cyber-green" />
-              <span className="text-white/60">EARNINGS: {lastPulse ? `${lastPulse.earnings_days}d` : '--'}</span>
-            </div>
-            <div className="flex items-center space-x-2 text-xs">
-              <ShieldCheck size={14} className="text-cyber-green" />
-              <span className="text-white/60">AUTO-CRON: OK</span>
             </div>
           </div>
-        </div>
-
+        )}
       </div>
 
-      {/* Live Market Chart & AI Brain Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Left Column: Mini Chart */}
-        <div className="glass-panel p-6 col-span-1 lg:col-span-7 h-[420px] flex flex-col relative">
-          <h3 className="text-sm font-mono text-white/60 tracking-wider mb-6 flex items-center">
-            <Calendar size={14} className="mr-2 text-blue-400" /> CORRELATION TIMELINE (AAPL VS VIX)
-          </h3>
-
-          {pulses.length > 0 ? (
-            <div className="flex-1 w-full relative">
-              <ResponsiveContainer width="100%" height="90%">
-                <AreaChart data={pulses} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00E676" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#00E676" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorVix" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#FFEA00" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#FFEA00" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                  <XAxis dataKey="timestamp" stroke="rgba(255,255,255,0.2)" tick={{fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontFamily: 'monospace'}} tickFormatter={formatChartDate} />
-                  <YAxis yAxisId="left" stroke="rgba(255,255,255,0.2)" tick={{fill: '#00E676', fontSize: 10, fontFamily: 'monospace'}} domain={['auto', 'auto']} tickFormatter={(v) => `$${v}`} />
-                  <YAxis yAxisId="right" orientation="right" stroke="rgba(255,255,255,0.2)" tick={{fill: '#FFEA00', fontSize: 10, fontFamily: 'monospace'}} domain={['auto', 'auto']} />
-                  <Tooltip 
-                    contentStyle={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                    labelStyle={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', fontSize: '11px' }}
-                    itemStyle={{ fontFamily: 'monospace', fontSize: '12px' }}
-                  />
-                  <Area yAxisId="left" type="monotone" dataKey="aapl_price" stroke="#00E676" fillOpacity={1} fill="url(#colorPrice)" strokeWidth={2} name="AAPL" />
-                  <Area yAxisId="right" type="monotone" dataKey="vix_level" stroke="#FFEA00" fillOpacity={1} fill="url(#colorVix)" strokeWidth={1.5} name="VIX" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="flex-grow flex items-center justify-center font-mono text-white/30 border border-white/5 border-dashed rounded-lg">
-              LOADING TRACKER TIMELINE...
-            </div>
+      {/* ── AI BRAIN FEED ───────────────────────────────────────────── */}
+      <div className="glass-panel" style={{ padding: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Cpu size={14} color="#A78BFA" />
+            <span style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.14em' }}>AI QUANTUM REASONING — LAST PULSE</span>
+          </div>
+          {lastPulse && (
+            <span style={{ background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 5, padding: '3px 10px', fontFamily: 'monospace', fontSize: 10, color: '#A78BFA' }}>
+              {lastPulse.ai_decision}
+            </span>
           )}
         </div>
-
-        {/* Right Column: AI Brain feed */}
-        <div className="glass-panel p-6 col-span-1 lg:col-span-5 h-[420px] flex flex-col">
-          <h3 className="text-sm font-mono text-white/60 tracking-wider mb-6 flex items-center justify-between">
-            <span className="flex items-center"><Cpu size={14} className="mr-2 text-purple-400" /> AI QUANTUM REASONING</span>
-            <span className="text-[10px] font-mono text-purple-400/70 bg-purple-500/10 px-2 py-0.5 border border-purple-500/20 rounded">LLM LOG</span>
-          </h3>
-
-          {lastPulse ? (
-            <div className="flex-grow flex flex-col justify-between overflow-hidden">
-              <div className="flex justify-between items-center bg-white/5 px-4 py-2.5 rounded-lg border border-white/5 mb-4">
-                <span className="text-[10px] font-mono text-white/40">{new Date(lastPulse.timestamp).toLocaleString()}</span>
-                <span className="text-xs font-mono text-cyber-green">{lastPulse.ai_decision}</span>
-              </div>
-              
-              <div className="flex-1 bg-black/40 border border-white/5 p-4 rounded-lg overflow-y-auto leading-relaxed text-xs font-mono text-cyber-green/80 hover:text-cyber-green transition-colors">
-                {lastPulse.ai_reasoning}
-              </div>
+        {lastPulse ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                { label: 'TIMESTAMP', value: new Date(lastPulse.timestamp).toLocaleString() },
+                { label: 'AAPL PRICE', value: fmt$(lastPulse.aapl_price) },
+                { label: 'VIX LEVEL', value: lastPulse.vix_level?.toFixed(2) || '--' },
+                { label: 'EARNINGS IN', value: lastPulse.earnings_days !== null ? `${lastPulse.earnings_days} days` : '--' },
+              ].map((item, i) => (
+                <div key={i} style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 6, padding: '8px 12px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace', fontSize: 10 }}>{item.label}</span>
+                  <span style={{ color: '#fff', fontFamily: 'monospace', fontSize: 10 }}>{item.value}</span>
+                </div>
+              ))}
             </div>
-          ) : (
-            <div className="flex-grow flex items-center justify-center text-white/30 font-mono text-sm border border-white/5 border-dashed rounded-lg p-12">
-              AWAITING PULSE REASONING FEED...
+            <div style={{
+              background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.05)',
+              borderRadius: 8, padding: 16, overflowY: 'auto', maxHeight: 200,
+              fontFamily: 'monospace', fontSize: 11, color: 'rgba(0,230,118,0.85)',
+              lineHeight: 1.7
+            }}>
+              {lastPulse.ai_reasoning || 'No reasoning recorded.'}
             </div>
-          )}
-        </div>
-
+          </div>
+        ) : (
+          <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace', fontSize: 12, border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 8 }}>
+            AWAITING PULSE REASONING FEED...
+          </div>
+        )}
       </div>
 
     </div>

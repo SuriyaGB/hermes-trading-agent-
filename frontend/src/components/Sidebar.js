@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, TrendingUp, History, LineChart, Activity, Settings, X, Check, Link2, GitCompare } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, History, LineChart, Activity, Settings, X, Check, Link2, GitCompare, FileText, GitBranch, BarChart2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 import { getApiUrl, getThetaGangApiUrl } from '../utils/api';
@@ -29,11 +29,14 @@ export default function Sidebar() {
   const links = [
     { href: '/', icon: LayoutDashboard, label: 'Command Centre' },
     { href: '/comparison', icon: GitCompare, label: 'Agent Comparison' },
+    { href: '/ledger', icon: FileText, label: 'Transaction Ledger' },
+    { href: '/lifecycle', icon: GitBranch, label: 'Contract Lifecycle' },
     { href: '/income', icon: TrendingUp, label: 'Income Tracker' },
     { href: '/history', icon: History, label: 'Pulse History' },
     { href: '/market', icon: LineChart, label: 'Market View' },
     { href: '/health', icon: Activity, label: 'Bot Health' },
   ];
+
 
   const handleSave = () => {
     const cleaned = urlInput.trim().replace(/\/$/, '');

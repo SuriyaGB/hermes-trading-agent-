@@ -21,7 +21,11 @@ app.add_middleware(
 
 # Find the absolute path to the data directory securely
 BASE_DIR = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DATA_DIR = BASE_DIR / "data"
+
+# Use scratch/vps_data when running locally for audit (pulled VPS snapshot).
+# Fall back to data/ when running on the VPS itself in production.
+_SCRATCH_DIR = BASE_DIR / "scratch" / "vps_data"
+DATA_DIR = _SCRATCH_DIR if _SCRATCH_DIR.exists() else BASE_DIR / "data"
 
 @app.get("/api/portfolio")
 def get_portfolio():
@@ -38,23 +42,29 @@ def get_portfolio():
         try:
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
-            # Fetch the raw_input_json of the latest pulse
-            row = cursor.execute("SELECT raw_input_json FROM pulse_history ORDER BY id DESC LIMIT 1").fetchone()
+            # Fetch recent pulse chains from SQLite (up to 10 recent pulses)
+            rows = cursor.execute("SELECT id, timestamp, raw_input_json FROM pulse_history ORDER BY id DESC LIMIT 10").fetchall()
             conn.close()
             
-            if row and row[0]:
-                raw_data = json.loads(row[0])
-                option_chain = raw_data.get("option_chain", [])
-                
-
-                # Build option chain lookup by (strike, expiry)
-                chain_by_key = {}
-                for item in option_chain:
-                    if "strike" in item and "expiry" in item:
-                        key = (float(item["strike"]), item["expiry"])
-                        chain_by_key[key] = item
-                        # Also save a strike-only fallback for N/A expiries
-                        chain_by_key[float(item["strike"])] = item
+            pulses_chain_data = []
+            for r_id, r_ts, r_json in rows:
+                if r_json:
+                    try:
+                        p_data = json.loads(r_json)
+                        p_chain = p_data.get("option_chain", [])
+                        chain_lookup = {}
+                        strike_lookup = {}
+                        for item in p_chain:
+                            if "strike" in item and "expiry" in item:
+                                chain_lookup[(float(item["strike"]), item["expiry"])] = item
+                                strike_lookup[float(item["strike"])] = item
+                        pulses_chain_data.append({"timestamp": str(r_ts).replace(" ", "T"), "chain": chain_lookup, "strike_chain": strike_lookup})
+                    except Exception:
+                        pass
+            
+            if pulses_chain_data:
+                latest_chain = pulses_chain_data[0]["chain"]
+                latest_strike_chain = pulses_chain_data[0]["strike_chain"]
                 
                 for pos in portfolio.get("positions", []):
                     if pos.get("type") == "Option":
@@ -76,8 +86,8 @@ def get_portfolio():
                             if log_path.exists():
                                 try:
                                     with open(log_path, "r") as f:
-                                        rows = list(csv.DictReader(f))
-                                        for r in reversed(rows):
+                                        rows_csv = list(csv.DictReader(f))
+                                        for r in reversed(rows_csv):
                                             log_strike = float(r.get("strike", 0))
                                             log_expiry = r.get("expiry", "N/A")
                                             if r.get("symbol") == pos.get("symbol", "") and log_strike == strike and log_expiry == pos_expiry:
@@ -105,14 +115,26 @@ def get_portfolio():
                                     except Exception:
                                         pass
                         
-                        # Find matching strike and expiry in the option chain
+                        # Find matching strike and expiry across recent pulses (only after entry_time)
                         chain_item = None
-                        if pos_expiry != "N/A" and (strike, pos_expiry) in chain_by_key:
-                            chain_item = chain_by_key[(strike, pos_expiry)]
+                        pos_entry_time = str(pos.get("entry_time", ""))
+                        
+                        # 1. Try exact match in latest pulse
+                        if pos_expiry != "N/A" and (strike, pos_expiry) in latest_chain:
+                            chain_item = latest_chain[(strike, pos_expiry)]
                             pos["is_fallback_data"] = False
-                        elif strike in chain_by_key:
-                            # ⚠️ FALLBACK TRIGGERED ⚠️
-                            chain_item = chain_by_key[strike]
+                        else:
+                            # 2. Search backward in recent pulses (max 3 previous pulses = 1.5 hours, and only >= entry_time)
+                            for p_obj in pulses_chain_data[1:4]:
+                                if not pos_entry_time or p_obj["timestamp"] >= pos_entry_time[:19]:
+                                    if pos_expiry != "N/A" and (strike, pos_expiry) in p_obj["chain"]:
+                                        chain_item = p_obj["chain"][(strike, pos_expiry)]
+                                        pos["is_fallback_data"] = False
+                                        break
+                        
+                        # 3. If still not found, fallback to strike match in latest pulse
+                        if not chain_item and strike in latest_strike_chain:
+                            chain_item = latest_strike_chain[strike]
                             pos["is_fallback_data"] = True
                             
                         if chain_item:
@@ -344,3 +366,348 @@ def get_income_history():
         current_date += timedelta(days=1)
         
     return history
+
+
+# ===========================================================================
+# INSTITUTIONAL ANALYTICS ENDPOINTS — Added for Full Dashboard Build
+# ===========================================================================
+
+@app.get("/api/analytics/master_chart")
+def get_master_chart():
+    """
+    Returns the COMPLETE market regime timeline from the very first pulse to now.
+    Every 30-min data point. Includes AAPL price, VIX, 200 SMA, 50 SMA, IV30 rank,
+    day classification, earnings countdown, and all trade event markers.
+    This powers the full multi-indicator Chart A in the dashboard.
+    """
+    db_path = DATA_DIR / "hermes_brain.db"
+    trades_path = DATA_DIR / "trades_log.csv"
+
+    if not db_path.exists():
+        return {"pulses": [], "events": []}
+
+    pulses = []
+    events = []
+
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, timestamp, aapl_price, vix_level, earnings_days,
+                   ai_decision, ai_reasoning, raw_input_json
+            FROM pulse_history
+            ORDER BY timestamp ASC
+        """)
+        rows = cursor.fetchall()
+
+        for row in rows:
+            row_dict = dict(row)
+            pulse_point = {
+                "id": row_dict["id"],
+                "timestamp": row_dict["timestamp"],
+                "aapl_price": row_dict["aapl_price"],
+                "vix_level": row_dict["vix_level"],
+                "earnings_days": row_dict["earnings_days"],
+                "ai_decision": row_dict["ai_decision"],
+                "sma_200": None,
+                "sma_50": None,
+                "iv_rank": None,
+                "day_classification": None,
+            }
+
+            # Parse the rich raw_input_json for market regime data
+            if row_dict.get("raw_input_json"):
+                try:
+                    raw = json.loads(row_dict["raw_input_json"])
+                    # Market regime keys (varies slightly by version)
+                    regime = raw.get("market_regime", raw.get("regime", {}))
+                    if isinstance(regime, dict):
+                        pulse_point["sma_200"] = regime.get("sma_200") or regime.get("200_sma")
+                        pulse_point["sma_50"] = regime.get("sma_50") or regime.get("50_sma")
+                        pulse_point["day_classification"] = regime.get("day_classification") or regime.get("classification")
+
+                    # IV rank stored at top level or in market_data
+                    pulse_point["iv_rank"] = (
+                        raw.get("iv30_rank")
+                        or raw.get("iv_rank")
+                        or raw.get("market_data", {}).get("iv30_rank")
+                    )
+                except Exception:
+                    pass
+
+            pulses.append(pulse_point)
+
+        conn.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DB error: {str(e)}")
+
+    # Build trade event markers from trades_log.csv
+    if trades_path.exists():
+        try:
+            with open(trades_path, "r") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    action = row.get("action", "")
+                    if action in ("SELL_PUT", "ROLL_PUT_CLOSE", "ROLL_PUT_OPEN",
+                                  "CLOSE_FOR_PROFIT", "SELL_CALL", "BUY_CLOSE"):
+                        events.append({
+                            "timestamp": row.get("timestamp", ""),
+                            "action": action,
+                            "strike": row.get("strike"),
+                            "expiry": row.get("expiry"),
+                            "price": row.get("price"),
+                            "pnl_realized": row.get("pnl_realized"),
+                        })
+        except Exception:
+            pass
+
+    return {"pulses": pulses, "events": events}
+
+
+@app.get("/api/analytics/slot_lifecycle")
+def get_slot_lifecycle():
+    """
+    Reconstructs the complete per-slot contract genealogy from trades_log.csv
+    and overlays per-pulse Delta, DTE, and unrealized PnL% by parsing raw_input_json.
+    Returns one entry per slot (1-4) with its full roll chain and time-series metrics.
+    Powers the Slot Lifecycle Swimlane charts (Graph B) in the dashboard.
+    """
+    db_path = DATA_DIR / "hermes_brain.db"
+    trades_path = DATA_DIR / "trades_log.csv"
+
+    # ---- Step 1: Build raw trade list ordered by time ----
+    raw_trades = []
+    if trades_path.exists():
+        try:
+            with open(trades_path, "r") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    raw_trades.append({
+                        "timestamp": row.get("timestamp", ""),
+                        "action": row.get("action", ""),
+                        "strike": float(row.get("strike", 0) or 0),
+                        "expiry": row.get("expiry", ""),
+                        "price": float(row.get("price", 0) or 0),
+                        "pnl_realized": float(row.get("pnl_realized", 0) or 0),
+                    })
+        except Exception:
+            pass
+
+    # ---- Step 2: Assign slots by first-sell ordering ----
+    slots = {}       # slot_num -> list of generations {open, close, events}
+    slot_contract = {}  # slot_num -> current (strike, expiry)
+    sell_events = [t for t in raw_trades if t["action"] in ("SELL_PUT", "SELL_CALL", "ROLL_PUT_OPEN")]
+    slot_counter = 1
+
+    # Reconstruct slot assignment: each SELL_PUT that is NOT a ROLL_PUT_OPEN gets a slot
+    slot_opens = [t for t in raw_trades if t["action"] == "SELL_PUT"]
+    for i, ev in enumerate(slot_opens):
+        snum = i + 1
+        slots[snum] = [{
+            "generation": 1,
+            "open_time": ev["timestamp"],
+            "open_strike": ev["strike"],
+            "open_expiry": ev["expiry"],
+            "open_price": ev["price"],
+            "close_time": None,
+            "close_price": None,
+            "pnl_realized": None,
+            "close_action": None,
+            "rolls": []
+        }]
+        slot_contract[snum] = (ev["strike"], ev["expiry"])
+
+    # ---- Step 3: Attach rolls and closes ----
+    # Match ROLL_PUT_CLOSE → ROLL_PUT_OPEN pairs by timestamp+pulse alignment
+    i = 0
+    while i < len(raw_trades):
+        ev = raw_trades[i]
+        if ev["action"] == "ROLL_PUT_CLOSE":
+            # Find the matching slot by (strike, expiry)
+            matched_slot = None
+            for snum, current in slot_contract.items():
+                if current[0] == ev["strike"] and current[1] == ev["expiry"]:
+                    matched_slot = snum
+                    break
+            # Find the matching ROLL_PUT_OPEN at same timestamp
+            open_ev = None
+            for j in range(i + 1, min(i + 10, len(raw_trades))):
+                if (raw_trades[j]["action"] == "ROLL_PUT_OPEN"
+                        and raw_trades[j]["timestamp"] == ev["timestamp"]
+                        and raw_trades[j]["strike"] != ev["strike"] or
+                        raw_trades[j]["expiry"] != ev["expiry"]):
+                    open_ev = raw_trades[j]
+                    break
+            if matched_slot and open_ev:
+                # Close current generation
+                if slots[matched_slot]:
+                    slots[matched_slot][-1]["close_time"] = ev["timestamp"]
+                    slots[matched_slot][-1]["close_price"] = ev["price"]
+                    slots[matched_slot][-1]["close_action"] = "ROLLED"
+                    slots[matched_slot][-1]["pnl_realized"] = ev["pnl_realized"]
+                # Open new generation
+                gen_num = len(slots[matched_slot]) + 1
+                slots[matched_slot].append({
+                    "generation": gen_num,
+                    "open_time": open_ev["timestamp"],
+                    "open_strike": open_ev["strike"],
+                    "open_expiry": open_ev["expiry"],
+                    "open_price": open_ev["price"],
+                    "close_time": None,
+                    "close_price": None,
+                    "pnl_realized": None,
+                    "close_action": None,
+                    "rolls": []
+                })
+                slot_contract[matched_slot] = (open_ev["strike"], open_ev["expiry"])
+        elif ev["action"] in ("CLOSE_FOR_PROFIT", "BUY_CLOSE"):
+            for snum, current in slot_contract.items():
+                if current[0] == ev["strike"] and current[1] == ev["expiry"]:
+                    if slots[snum]:
+                        slots[snum][-1]["close_time"] = ev["timestamp"]
+                        slots[snum][-1]["close_price"] = ev["price"]
+                        slots[snum][-1]["close_action"] = "CLOSED_PROFIT"
+                        slots[snum][-1]["pnl_realized"] = ev["pnl_realized"]
+                    break
+        i += 1
+
+    # ---- Step 4: Extract per-pulse per-slot time series from DB ----
+    pulse_series = {}  # (strike, expiry) -> list of {timestamp, delta, dte, pnl_pct}
+    if db_path.exists():
+        try:
+            conn = sqlite3.connect(str(db_path))
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("SELECT timestamp, raw_input_json FROM pulse_history ORDER BY timestamp ASC")
+            for row in cur.fetchall():
+                ts = row[0]
+                if not row[1]:
+                    continue
+                try:
+                    raw = json.loads(row[1])
+                    positions = raw.get("active_positions", raw.get("positions", []))
+                    for pos in positions:
+                        strike = float(pos.get("strike", 0) or pos.get("current_option_strike", 0) or 0)
+                        expiry = str(pos.get("expiry", "") or pos.get("current_option_expiry", "") or "")
+                        if strike == 0 or not expiry:
+                            continue
+                        key = (strike, expiry)
+                        delta = pos.get("delta") or pos.get("current_delta")
+                        dte = pos.get("dte") or pos.get("days_to_expiry")
+                        pnl_pct = pos.get("profit_pct") or pos.get("pnl_pct") or pos.get("unrealized_pnl_pct")
+                        if key not in pulse_series:
+                            pulse_series[key] = []
+                        pulse_series[key].append({
+                            "timestamp": ts,
+                            "delta": delta,
+                            "dte": dte,
+                            "pnl_pct": pnl_pct
+                        })
+                except Exception:
+                    continue
+            conn.close()
+        except Exception:
+            pass
+
+    # ---- Step 5: Attach time series to each generation ----
+    result = []
+    for snum in sorted(slots.keys()):
+        generations = slots[snum]
+        enriched_gens = []
+        for gen in generations:
+            key = (gen["open_strike"], gen["open_expiry"])
+            series = pulse_series.get(key, [])
+            enriched_gens.append({**gen, "time_series": series})
+        result.append({
+            "slot": snum,
+            "generations": enriched_gens,
+            "current_contract": slot_contract.get(snum)
+        })
+
+    return result
+
+
+@app.get("/api/analytics/kpi_summary")
+def get_kpi_summary():
+    """
+    Computes the key performance indicators for the KPI banner:
+    - Win rate (% contracts closed for profit vs rolled defensively)
+    - Total premium collected (gross)
+    - Total roll costs (defensive debit payments)
+    - Net realized PnL
+    - Days since strategy inception
+    - Annualized yield on $250k capital
+    - Estimated daily theta velocity (avg cash per day)
+    - Total pulses run
+    """
+    trades_path = DATA_DIR / "trades_log.csv"
+    db_path = DATA_DIR / "hermes_brain.db"
+
+    STARTING_CAPITAL = 250000.0
+    inception_date = datetime(2026, 5, 27).date()
+    today = datetime.now().date()
+    days_running = max((today - inception_date).days, 1)
+
+    total_premium_collected = 0.0
+    total_roll_debits = 0.0
+    net_realized_pnl = 0.0
+    profit_closes = 0
+    defensive_rolls = 0
+    total_trades = 0
+
+    if trades_path.exists():
+        try:
+            with open(trades_path, "r") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    action = row.get("action", "")
+                    price = float(row.get("price", 0) or 0)
+                    pnl = float(row.get("pnl_realized", 0) or 0)
+                    total_trades += 1
+
+                    if action in ("SELL_PUT", "SELL_CALL", "ROLL_PUT_OPEN"):
+                        total_premium_collected += price * 100
+                    elif action in ("ROLL_PUT_CLOSE", "BUY_CLOSE"):
+                        total_roll_debits += price * 100
+                        net_realized_pnl += pnl
+                        if pnl < 0:
+                            defensive_rolls += 1
+                    elif action == "CLOSE_FOR_PROFIT":
+                        profit_closes += 1
+                        net_realized_pnl += pnl
+        except Exception:
+            pass
+
+    total_closes = profit_closes + defensive_rolls
+    win_rate = round((profit_closes / total_closes * 100), 1) if total_closes > 0 else 0.0
+    annualized_yield = round((net_realized_pnl / STARTING_CAPITAL) * (365 / days_running) * 100, 2)
+    daily_theta = round(net_realized_pnl / days_running, 2)
+
+    # Pulse count from DB
+    total_pulses = 0
+    if db_path.exists():
+        try:
+            conn = sqlite3.connect(str(db_path))
+            row = conn.execute("SELECT COUNT(*) FROM pulse_history").fetchone()
+            total_pulses = row[0] if row else 0
+            conn.close()
+        except Exception:
+            pass
+
+    return {
+        "days_running": days_running,
+        "inception_date": str(inception_date),
+        "total_pulses": total_pulses,
+        "total_premium_collected": round(total_premium_collected, 2),
+        "net_premium_retained": round(total_premium_collected - total_roll_debits, 2),
+        "total_roll_debits": round(total_roll_debits, 2),
+        "net_realized_pnl": round(net_realized_pnl, 2),
+        "profit_closes": profit_closes,
+        "defensive_rolls": defensive_rolls,
+        "win_rate_pct": win_rate,
+        "annualized_yield_pct": annualized_yield,
+        "daily_theta_velocity": daily_theta,
+        "starting_capital": STARTING_CAPITAL,
+    }

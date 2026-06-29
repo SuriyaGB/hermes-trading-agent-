@@ -30,10 +30,8 @@ export default function Sidebar() {
     { href: '/', icon: LayoutDashboard, label: 'Command Centre' },
     { href: '/comparison', icon: GitCompare, label: 'Agent Comparison' },
     { href: '/ledger', icon: FileText, label: 'Transaction Ledger' },
-    { href: '/lifecycle', icon: GitBranch, label: 'Contract Lifecycle' },
     { href: '/income', icon: TrendingUp, label: 'Income Tracker' },
     { href: '/history', icon: History, label: 'Pulse History' },
-    { href: '/market', icon: LineChart, label: 'Market View' },
     { href: '/health', icon: Activity, label: 'Bot Health' },
   ];
 

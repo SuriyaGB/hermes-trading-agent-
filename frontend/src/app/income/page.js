@@ -30,11 +30,57 @@ export default function IncomeTracker() {
         const hermesApi = getApiUrl();
         const thetaApi = getThetaGangApiUrl();
 
-        // 1. Fetch Hermes Income History
-        const hermesRes = await fetch(`/api/proxy?url=${encodeURIComponent(`${hermesApi}/api/income_history?t=${Date.now()}`)}`);
-        let hermesJson = [];
-        if (hermesRes.ok) {
-          hermesJson = await hermesRes.json();
+        // 1. Fetch live portfolio and master chart events to calculate accurate running cash on the frontend
+        const portRes = await fetch(`/api/proxy?url=${encodeURIComponent(`${hermesApi}/api/portfolio?t=${Date.now()}`)}`);
+        let liveCash = null;
+        if (portRes.ok) {
+          const portData = await portRes.json();
+          if (portData && portData.total_cash) liveCash = portData.total_cash;
+        }
+
+        const chartRes = await fetch(`/api/proxy?url=${encodeURIComponent(`${hermesApi}/api/analytics/master_chart?t=${Date.now()}`)}`);
+        let events = [];
+        if (chartRes.ok) {
+          const chartData = await chartRes.json();
+          if (chartData && Array.isArray(chartData.events)) events = chartData.events;
+        }
+
+        const dailyCashChanges = {};
+        events.forEach(ev => {
+          if (!ev.timestamp || !ev.price) return;
+          const dateStr = ev.timestamp.split(' ')[0].split('T')[0];
+          const p = parseFloat(ev.price) * 100;
+          if (isNaN(p)) return;
+          if (!dailyCashChanges[dateStr]) dailyCashChanges[dateStr] = 0;
+          const act = (ev.action || '').toUpperCase();
+          if (act.includes('SELL') || act.includes('OPEN')) {
+            dailyCashChanges[dateStr] += p;
+          } else if (act.includes('BUY') || act.includes('CLOSE')) {
+            dailyCashChanges[dateStr] -= p;
+          }
+        });
+
+        const dataMap = {};
+        Object.keys(dailyCashChanges).forEach(d => {
+          if (!dataMap[d]) dataMap[d] = {};
+        });
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (!dataMap[todayStr]) dataMap[todayStr] = {};
+
+        // Also fetch Hermes Income History to collect baseline dates
+        try {
+          const hermesRes = await fetch(`/api/proxy?url=${encodeURIComponent(`${hermesApi}/api/income_history?t=${Date.now()}`)}`);
+          if (hermesRes.ok) {
+            const hermesJson = await hermesRes.json();
+            if (Array.isArray(hermesJson)) {
+              hermesJson.forEach(point => {
+                const dateStr = point.timestamp ? point.timestamp.split(' ')[0].split('T')[0] : '';
+                if (dateStr && !dataMap[dateStr]) dataMap[dateStr] = {};
+              });
+            }
+          }
+        } catch (e) {
+          console.error("Error loading baseline history dates", e);
         }
 
         // 2. Fetch ThetaGang Data
@@ -52,20 +98,6 @@ export default function IncomeTracker() {
           console.error("Error loading ThetaGang data", err);
         }
 
-        // 3. Combine both data sets by date
-        const dataMap = {};
-
-        // Process Hermes History
-        if (Array.isArray(hermesJson)) {
-          hermesJson.forEach(point => {
-            const dateStr = point.timestamp ? point.timestamp.split(' ')[0] : '';
-            if (dateStr) {
-              if (!dataMap[dateStr]) dataMap[dateStr] = {};
-              dataMap[dateStr].hermes = point.total_cash;
-            }
-          });
-        }
-
         // Process ThetaGang History
         if (thetaJson?.performance) {
           thetaJson.performance.forEach(pt => {
@@ -80,13 +112,17 @@ export default function IncomeTracker() {
         // Sort dates chronologically and build combined points
         const sortedDates = Object.keys(dataMap).filter(date => date >= '2026-05-27').sort();
 
-        let lastHermes = 250000;
-        let lastTheta = 250000;
+        let runningHermes = 250000.0;
+        let lastTheta = 250000.0;
 
-        const combined = sortedDates.map(date => {
-          const hVal = dataMap[date].hermes || lastHermes;
+        const combined = sortedDates.map((date, idx) => {
+          if (dailyCashChanges[date]) {
+            runningHermes += dailyCashChanges[date];
+          }
+          if (idx === sortedDates.length - 1 && liveCash !== null) {
+            runningHermes = liveCash;
+          }
           const tVal = dataMap[date].theta || lastTheta;
-          lastHermes = hVal;
           lastTheta = tVal;
 
           const parts = date.split('-');
@@ -95,7 +131,7 @@ export default function IncomeTracker() {
           return {
             time: formattedDate,
             fullTime: date,
-            "Hermes Total Cash": hVal,
+            "Hermes Total Cash": runningHermes,
             "ThetaGang Total Cash": tVal
           };
         });
@@ -168,6 +204,36 @@ export default function IncomeTracker() {
           </button>
         </div>
       </div>
+
+      {/* Summary KPI Cards */}
+      {(() => {
+        const latestData = data.length > 0 ? data[data.length - 1] : null;
+        const curHermes = latestData ? latestData["Hermes Total Cash"] : 250000;
+        const curTheta = latestData ? latestData["ThetaGang Total Cash"] : 250000;
+        const diff = curHermes - curTheta;
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="glass-panel p-5 border-l-4 border-l-cyber-green bg-white/[0.01]">
+              <p className="text-xs font-mono text-white/40 tracking-wider">HERMES TOTAL CASH</p>
+              <p className="text-2xl font-light text-cyber-green mt-1">
+                ${curHermes.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[10px] font-mono text-white/50 mt-2">
+                Growth: <span className={curHermes >= 250000 ? 'text-cyber-green' : 'text-red-400'}>{curHermes >= 250000 ? '+' : ''}${(curHermes - 250000).toFixed(2)}</span>
+              </p>
+            </div>
+            <div className="glass-panel p-5 border-l-4 border-l-cyan-400 bg-white/[0.01]">
+              <p className="text-xs font-mono text-white/40 tracking-wider">THETAGANG TOTAL CASH</p>
+              <p className="text-2xl font-light text-cyan-400 mt-1">
+                ${curTheta.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[10px] font-mono text-white/50 mt-2">
+                Growth: <span className={curTheta >= 250000 ? 'text-cyan-400' : 'text-red-400'}>{curTheta >= 250000 ? '+' : ''}${(curTheta - 250000).toFixed(2)}</span>
+              </p>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Recharts Graph Area */}
       <div className="glass-panel p-6 h-[600px] w-full relative">

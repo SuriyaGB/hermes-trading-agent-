@@ -23,8 +23,11 @@ jobs:
             # Navigate to project directory
             cd /root/hermes-trading-agent-
 
-            # Safely reset temporary intraday price cache file (leaving all real trade logs & databases untouched)
-            git checkout -- data/intraday_tracker.json 2>/dev/null || true
+            # 1. 100% BULLETPROOF SAFETY GUARANTEE: Backup entire 30-day live data folder before Git touches anything!
+            mkdir -p /root/hermes_data_backups
+            cp -r /root/hermes-trading-agent-/data /root/hermes_data_backups/data_backup_$(date +"%Y%m%d_%H%M%S")
+
+            # 2. Safely pull latest code while auto-stashing and restoring any live VPS data files without resetting them
             git pull origin main --autostash
 
             # Activate virtual environment

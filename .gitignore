@@ -35,8 +35,11 @@ hermes_cache.sqlite
 # =========================
 data/trade_state.json
 data/portfolio.json
+data/intraday_tracker.json
 data/hermes_brain.db
 data/trades_log.csv
+data/*.json
+data/*.db*
 trade_state_history.jsonl
 .hermes/MEMORY.md
 .eye_cache.json

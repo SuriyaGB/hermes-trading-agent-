@@ -23,8 +23,9 @@ jobs:
             # Navigate to project directory
             cd /root/hermes-trading-agent-
 
-            # Pull latest code
-            git pull origin main
+            # Safely reset temporary intraday price cache file (leaving all real trade logs & databases untouched)
+            git checkout -- data/intraday_tracker.json 2>/dev/null || true
+            git pull origin main --autostash
 
             # Activate virtual environment
             source .venv/bin/activate

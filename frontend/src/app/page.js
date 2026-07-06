@@ -230,6 +230,9 @@ export default function CommandCentre() {
   const [lastPulse, setLastPulse] = useState(null);
   const [kpi, setKpi] = useState(null);
   const [chartData, setChartData] = useState({ pulses: [], events: [] });
+  const [kpiHistory, setKpiHistory] = useState([]);
+  const [selectedKpiModal, setSelectedKpiModal] = useState(null);
+  const [kpiTimeframe, setKpiTimeframe] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [activeSlot, setActiveSlot] = useState(null);
   const [hoveredNode, setHoveredNode] = useState({});
@@ -266,6 +269,10 @@ export default function CommandCentre() {
         // Master chart (full history)
         const cRes = await fetch(proxy(`${base}/api/analytics/master_chart`));
         if (cRes.ok) { const cd = await cRes.json(); setChartData(cd); }
+
+        // Income / KPI History
+        const hRes = await fetch(proxy(`${base}/api/income_history`));
+        if (hRes.ok) { const hd = await hRes.json(); if (Array.isArray(hd)) setKpiHistory(hd); }
 
       } catch (err) {
         console.error('Fetch error:', err);
@@ -482,19 +489,54 @@ export default function CommandCentre() {
       {/* ── KPI PERFORMANCE BANNER (CORE PORTFOLIO) ─────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
         {[
-          { icon: DollarSign, label: 'NET LIQUIDATION', value: fmt$(netLiquidation), sub: `Total Return: ${fmt$((netLiquidation || 250000) - 250000)}`, color: '#38BDF8', glow: '#38BDF8' },
-          { icon: DollarSign, label: 'LIQUID CASH IN ACCOUNT', value: fmt$(portfolio.total_cash), sub: 'Initial Capital: $250,000.00', color: '#00E676', glow: '#00E676' },
-          { icon: TrendingUp, label: 'ACTIVE OPEN PREMIUM', value: fmt$(activeOpenPremium), sub: `Gross Collected: ${fmt$(kpi?.total_premium_collected)}`, color: '#A78BFA', glow: '#A78BFA' },
-          { icon: BarChart2, label: 'NET REALIZED P&L', value: fmt$(kpi?.net_realized_pnl), sub: `Closed Trades: ${(kpi?.profit_closes || 0) + (kpi?.defensive_rolls || 0)}`, color: kpi?.net_realized_pnl >= 0 ? '#00E676' : '#FF1744', glow: kpi?.net_realized_pnl >= 0 ? '#00E676' : '#FF1744' },
+          { id: 'net_liquidation', icon: DollarSign, label: 'NET LIQUIDATION', value: fmt$(netLiquidation), sub: `Total Return: ${fmt$((netLiquidation || 250000) - 250000)}`, color: '#38BDF8', glow: '#38BDF8', dataKey: 'net_liquidation', clickable: true },
+          { id: 'total_cash', icon: DollarSign, label: 'LIQUID CASH IN ACCOUNT', value: fmt$(portfolio.total_cash), sub: 'Initial Capital: $250,000.00', color: '#00E676', glow: '#00E676', dataKey: 'total_cash', clickable: true },
+          { id: 'premium', icon: TrendingUp, label: 'ACTIVE OPEN PREMIUM', value: fmt$(activeOpenPremium), sub: `Gross Collected: ${fmt$(kpi?.total_premium_collected)}`, color: '#A78BFA', glow: '#A78BFA', dataKey: null, clickable: false },
+          { id: 'realized_pnl', icon: BarChart2, label: 'NET REALIZED P&L', value: fmt$(kpi?.net_realized_pnl), sub: `Closed Trades: ${(kpi?.profit_closes || 0) + (kpi?.defensive_rolls || 0)}`, color: kpi?.net_realized_pnl >= 0 ? '#00E676' : '#FF1744', glow: kpi?.net_realized_pnl >= 0 ? '#00E676' : '#FF1744', dataKey: 'net_realized_pnl', clickable: true },
         ].map((item, i) => (
-          <div key={i} className="glass-panel" style={{ padding: '16px 20px', position: 'relative', overflow: 'hidden' }}>
+          <div
+            key={i}
+            className="glass-panel"
+            style={{
+              padding: '16px 20px', position: 'relative', overflow: 'hidden', cursor: item.clickable ? 'pointer' : 'default',
+              transition: 'all 0.25s ease', border: '1px solid rgba(255,255,255,0.06)'
+            }}
+            onClick={() => item.clickable && setSelectedKpiModal(item.id)}
+            onMouseEnter={(e) => { if (item.clickable) { e.currentTarget.style.borderColor = `${item.color}60`; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
+            onMouseLeave={(e) => { if (item.clickable) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateY(0)'; } }}
+            title={item.clickable ? "Click to view full historical chart from May 27, 2026 to today" : ""}
+          >
             <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: `${item.glow}08`, borderRadius: '50%', filter: 'blur(20px)' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <item.icon size={11} color={item.color} />
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.12em' }}>{item.label}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <item.icon size={11} color={item.color} />
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.12em' }}>{item.label}</span>
+              </div>
+              {item.clickable && (
+                <span style={{ fontSize: 9, fontFamily: 'monospace', color: item.color, background: `${item.color}15`, padding: '2px 5px', borderRadius: 4, border: `1px solid ${item.color}30` }}>
+                  ↗ CLICK CHART
+                </span>
+              )}
             </div>
             <p style={{ fontSize: 24, fontWeight: 300, color: item.color, fontFamily: 'monospace', letterSpacing: '-0.02em' }}>{item.value}</p>
             {item.sub && <p style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', fontSize: 11, marginTop: 4 }}>{item.sub}</p>}
+            
+            {/* Embedded Mini Sparkline Graph */}
+            {item.clickable && kpiHistory && kpiHistory.length > 0 && (
+              <div style={{ width: '100%', height: 45, marginTop: 12, marginRight: -20, marginLeft: -5, marginBottom: -10 }}>
+                <ResponsiveContainer width="100%" height={45}>
+                  <AreaChart data={kpiHistory.slice(-30)}>
+                    <defs>
+                      <linearGradient id={`spark-${item.id}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={item.color} stopOpacity={0.35}/>
+                        <stop offset="95%" stopColor={item.color} stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey={item.dataKey} stroke={item.color} strokeWidth={1.5} fill={`url(#spark-${item.id})`} dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -535,7 +577,51 @@ export default function CommandCentre() {
               const unrealized = pos.unrealized_pnl;
               const unrealizedPct = pos.unrealized_pnl_percent;
               const isUnguided = dte > 15 && Math.abs(parseFloat(pos.delta || 0)) >= 0.55;
-              const isRolled = pos.expiry && pos.expiry.includes('0828');
+              
+              const getRollDetail = (p) => {
+                const pStrike = parseFloat(p.strike || 0);
+                const pExpiry = String(p.expiry || '');
+                const openIdx = rawEvents.findIndex(ev => ev.action === 'ROLL_PUT_OPEN' && parseFloat(ev.strike || 0) === pStrike && String(ev.expiry || '') === pExpiry);
+                if (openIdx !== -1) {
+                  const openEv = rawEvents[openIdx];
+                  const pulseId = openEv.pulse_id || openEv.timestamp;
+                  let closeEv = null;
+                  for (let j = openIdx - 1; j >= 0; j--) {
+                    const ev = rawEvents[j];
+                    if (ev.action === 'ROLL_PUT_CLOSE' && (ev.pulse_id === pulseId || ev.timestamp === openEv.timestamp)) {
+                      closeEv = ev;
+                      break;
+                    }
+                  }
+                  if (closeEv) {
+                    const oldStrike = parseFloat(closeEv.strike || 0);
+                    const oldExpiry = String(closeEv.expiry || '');
+                    const oldBuybackPrice = parseFloat(closeEv.price || 0);
+                    const initEv = rawEvents.find(ev => (ev.action === 'SELL_PUT' || ev.action === 'ROLL_PUT_OPEN') && parseFloat(ev.strike || 0) === oldStrike && String(ev.expiry || '') === oldExpiry);
+                    const oldSoldEntryPrice = initEv ? parseFloat(initEv.price || 0) : oldBuybackPrice;
+                    return {
+                      is_rolled: true,
+                      old_strike: oldStrike,
+                      old_expiry: oldExpiry,
+                      old_sold_entry_price: oldSoldEntryPrice,
+                      old_buyback_price: oldBuybackPrice,
+                      old_realized_pnl: oldSoldEntryPrice - oldBuybackPrice,
+                      new_sold_price: parseFloat(openEv.price || 0),
+                      net_roll_credit: parseFloat(openEv.price || 0) - oldBuybackPrice,
+                      strike_change: oldStrike - pStrike
+                    };
+                  }
+                }
+                return p.roll_detail || null;
+              };
+
+              const rdCalc = getRollDetail(pos);
+              const isRolled = Boolean(rdCalc || (pos.expiry && pos.expiry.includes('0828')));
+              const rd = rdCalc || { old_strike: pos.strike, old_expiry: pos.expiry || 'N/A', old_sold_entry_price: pos.avg_cost || 0, old_buyback_price: pos.avg_cost || 0, old_realized_pnl: 0, new_sold_price: pos.avg_cost || 0, net_roll_credit: 0, strike_change: 0 };
+              const oldStrikeStr = `${rd.old_strike}P ${formatExpiry(rd.old_expiry)}`;
+              const newStrikeStr = `${pos.strike}P ${formatExpiry(pos.expiry)}`;
+              const strikeChangeText = rd.strike_change > 0 ? `lowered strike risk by $${rd.strike_change}` : rd.strike_change < 0 ? `raised strike by $${Math.abs(rd.strike_change)}` : `maintained strike at $${pos.strike}`;
+              const dteExt = Math.max(0, computeDte(pos.expiry) - computeDte(rd.old_expiry));
               const isCall = pos.option_type === 'CALL';
               const isStock = pos.type === 'Stock';
               const isPut = pos.option_type === 'PUT' && !isStock;
@@ -693,7 +779,7 @@ export default function CommandCentre() {
                             {isRolled ? 'ACTIVE DEFENSIVE ROLL' : isPut ? 'CASH-SECURED PUT ACTIVE' : isStock ? 'SHARES ASSIGNED' : isCall ? 'COVERED CALL ACTIVE' : 'AWAITING TRADE'}
                           </h4>
                           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, lineHeight: 1.5, marginBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
-                            {isRolled ? `This put option was rolled to ${formatExpiry(pos.expiry)} to defend collateral and collect premium. The circular loop confirms the strategy remains in Phase 2.` : isPut ? `Collateral is locked while short put generates theta decay. If AAPL stays above $${pos.strike}, contract expires worthless for 100% profit.` : isStock ? `Shares were assigned at $${pos.strike} cost basis. Holding physical stock debt-free while preparing covered call strategy.` : isCall ? `Active covered call generating income against assigned share inventory.` : 'Active Wheel strategy lifecycle phase.'}
+                            {isRolled ? `Rolled from [Old ${oldStrikeStr} @ +$${rd.old_sold_entry_price.toFixed(2)} entry / -$${rd.old_buyback_price.toFixed(2)} buyback (${rd.old_realized_pnl >= 0 ? '+' : ''}$${rd.old_realized_pnl.toFixed(2)}/sh P&L)] ➔ [New ${newStrikeStr} @ +$${rd.new_sold_price.toFixed(2)} sold]. This defensive roll ${strikeChangeText}, extended DTE time by +${dteExt} days, and added +$${(rd.net_roll_credit * 100 * qty).toFixed(2)} net cash credit!` : isPut ? `Collateral is locked while short put generates theta decay. If AAPL stays above $${pos.strike}, contract expires worthless for 100% profit.` : isStock ? `Shares were assigned at $${pos.strike} cost basis. Holding physical stock debt-free while preparing covered call strategy.` : isCall ? `Active covered call generating income against assigned share inventory.` : 'Active Wheel strategy lifecycle phase.'}
                           </p>
 
                           {/* Interactive Sleek Glassmorphic Node Metrics Card */}
@@ -738,14 +824,20 @@ export default function CommandCentre() {
                                 )}
 
                                 {currentHover === 'ROLL' && (() => {
-                                  const newPrem = pos.avg_cost || 18.25;
-                                  const netRoll = 1.45;
-                                  const oldBuyback = (newPrem - netRoll).toFixed(2);
+                                  const rdHover = getRollDetail(pos) || rd;
+                                  const oldStrikeStrHover = `${rdHover.old_strike}P ${formatExpiry(rdHover.old_expiry)}`;
+                                  const newStrikeStrHover = `${pos.strike}P ${formatExpiry(pos.expiry)}`;
+                                  const strikeChangeTextHover = rdHover.strike_change > 0 ? `Strike lowered $${rdHover.strike_change}` : rdHover.strike_change < 0 ? `Strike raised $${Math.abs(rdHover.strike_change)}` : `Strike maintained ($${pos.strike})`;
+                                  const dteExtHover = Math.max(0, computeDte(pos.expiry) - computeDte(rdHover.old_expiry));
+                                  const pnlColor = rdHover.old_realized_pnl >= 0 ? '#00E676' : '#FF5252';
                                   return (
-                                    <div style={{ fontSize: 13, color: '#fff', lineHeight: 1.8 }}>
-                                      <div>New Expiry: <span style={{ color: '#FB923C', fontWeight: 700 }}>{formatExpiry(pos.expiry)} ({dte} DTE)</span></div>
-                                      <div>Roll Breakdown: <span style={{ color: 'rgba(255,255,255,0.85)' }}>Sold New +{fmt$(newPrem)} − Bought Old -${oldBuyback}</span></div>
-                                      <div>Net Roll Credit: <span style={{ color: '#00E676', fontWeight: 700 }}>+${netRoll} / share (+${(netRoll * 100 * qty).toFixed(2)} total)</span></div>
+                                    <div style={{ fontSize: 12, color: '#fff', lineHeight: 1.8, background: 'rgba(56, 189, 248, 0.08)', padding: '10px 12px', borderRadius: 6, border: '1px solid rgba(56, 189, 248, 0.25)' }}>
+                                      <div style={{ color: '#38BDF8', fontWeight: 700, marginBottom: 4 }}>🔄 ROLL TRANSITION SUMMARY (FROM TRADES LOG):</div>
+                                      <div>● <span style={{ color: 'rgba(255,255,255,0.5)' }}>FROM (Old Contract):</span> <span style={{ color: '#fff', fontWeight: 600 }}>{oldStrikeStrHover}</span> <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>(Sold Entry <span style={{ color: '#00E676' }}>+${rdHover.old_sold_entry_price.toFixed(2)}</span> ➔ Buyback <span style={{ color: '#FF5252' }}>-${rdHover.old_buyback_price.toFixed(2)}</span> = <span style={{ color: pnlColor, fontWeight: 700 }}>{rdHover.old_realized_pnl >= 0 ? '+' : ''}${rdHover.old_realized_pnl.toFixed(2)}/sh P&L</span>)</span></div>
+                                      <div>● <span style={{ color: 'rgba(255,255,255,0.5)' }}>TO (New Contract):</span> <span style={{ color: '#38BDF8', fontWeight: 600 }}>{newStrikeStrHover} ({dte} DTE) (Sold New Entry @ +${rdHover.new_sold_price.toFixed(2)})</span></div>
+                                      <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed rgba(255,255,255,0.15)' }}>
+                                        ● <span style={{ color: 'rgba(255,255,255,0.5)' }}>NET BENEFIT:</span> <span style={{ color: '#00E676', fontWeight: 700 }}>{strikeChangeTextHover} · +${rdHover.net_roll_credit.toFixed(2)}/sh (+${(rdHover.net_roll_credit * 100 * qty).toFixed(2)} cash credit)</span>
+                                      </div>
                                     </div>
                                   );
                                 })()}
@@ -1019,6 +1111,154 @@ export default function CommandCentre() {
           </div>
         </div>
       )}
+
+      {/* ── KPI DRILLDOWN MODAL (NET LIQUIDATION, CASH, REALIZED P&L) ── */}
+      {selectedKpiModal && (() => {
+        const modalConfig = {
+          net_liquidation: {
+            title: 'NET LIQUIDATION VALUE — HISTORICAL TRAJECTORY (MAY 27 TO TODAY)',
+            color: '#38BDF8',
+            dataKey: 'net_liquidation',
+            desc: 'Total portfolio equity value combining liquid cash and open option liability.',
+            unit: '$',
+          },
+          total_cash: {
+            title: 'LIQUID CASH IN ACCOUNT — BALANCE GROWTH HISTORY',
+            color: '#00E676',
+            dataKey: 'total_cash',
+            desc: 'Available unencumbered cash balance in the account over time.',
+            unit: '$',
+          },
+          realized_pnl: {
+            title: 'NET REALIZED P&L — HISTORICAL PROFIT & LOSS PERFORMANCE',
+            color: (kpi?.net_realized_pnl ?? -1) >= 0 ? '#00E676' : '#FF1744',
+            dataKey: 'net_realized_pnl',
+            desc: 'Cumulative realized gains and losses from closed profit trades and defensive roll adjustments.',
+            unit: '$',
+          },
+        }[selectedKpiModal];
+
+        if (!modalConfig) return null;
+
+        const filteredKpiData = (() => {
+          if (!kpiHistory || kpiHistory.length === 0) return [];
+          if (kpiTimeframe === '1W') return kpiHistory.slice(-7);
+          if (kpiTimeframe === '2W') return kpiHistory.slice(-14);
+          if (kpiTimeframe === '1M') return kpiHistory.slice(-30);
+          return kpiHistory;
+        })();
+
+        const currentVal = filteredKpiData.length > 0 ? filteredKpiData[filteredKpiData.length - 1][modalConfig.dataKey] : 0;
+        const startVal = filteredKpiData.length > 0 ? filteredKpiData[0][modalConfig.dataKey] : 0;
+        const totalChange = currentVal - startVal;
+        const allTimeHigh = filteredKpiData.length > 0 ? Math.max(...filteredKpiData.map(d => d[modalConfig.dataKey] || 0)) : 0;
+        const allTimeLow = filteredKpiData.length > 0 ? Math.min(...filteredKpiData.map(d => d[modalConfig.dataKey] || 0)) : 0;
+
+        return (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 99999,
+            background: 'rgba(5, 8, 16, 0.94)', backdropFilter: 'blur(16px)',
+            padding: '30px 40px', display: 'flex', flexDirection: 'column'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <BarChart2 size={18} color={modalConfig.color} />
+                  <span style={{ color: '#fff', fontFamily: 'monospace', fontSize: 16, fontWeight: 700, letterSpacing: '0.12em' }}>
+                    {modalConfig.title}
+                  </span>
+                </div>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', fontSize: 11, marginTop: 4 }}>
+                  {modalConfig.desc}
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ display: 'flex', gap: 4, background: 'rgba(0,0,0,0.6)', padding: 4, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)' }}>
+                  {[{ id: '1W', label: '1W' }, { id: '2W', label: '2W' }, { id: '1M', label: '1M' }, { id: 'ALL', label: 'ALL (From May 27)' }].map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setKpiTimeframe(t.id)}
+                      style={{
+                        padding: '4px 12px', borderRadius: 4, fontSize: 11, fontFamily: 'monospace', cursor: 'pointer', transition: 'all 0.15s',
+                        background: kpiTimeframe === t.id ? modalConfig.color : 'transparent',
+                        color: kpiTimeframe === t.id ? '#0f172a' : 'rgba(255,255,255,0.7)',
+                        fontWeight: kpiTimeframe === t.id ? 700 : 400, border: 'none'
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => { setSelectedKpiModal(null); setKpiTimeframe('ALL'); }}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+                    color: '#fff', padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'monospace', fontSize: 12, fontWeight: 700
+                  }}
+                >
+                  <X size={16} /> CLOSE
+                </button>
+              </div>
+            </div>
+
+            {/* Stats Bar */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14, marginBottom: 20 }}>
+              {[
+                { label: 'CURRENT VALUE', val: fmt$(currentVal), color: modalConfig.color },
+                { label: 'PERIOD START', val: fmt$(startVal), color: '#fff' },
+                { label: 'PERIOD CHANGE', val: `${totalChange >= 0 ? '+' : ''}${fmt$(totalChange)}`, color: totalChange >= 0 ? '#00E676' : '#FF1744' },
+                { label: 'ALL-TIME HIGH', val: fmt$(allTimeHigh), color: allTimeHigh >= 0 ? '#00E676' : '#FF1744' },
+                { label: 'ALL-TIME LOW', val: fmt$(allTimeLow), color: allTimeLow >= 0 ? '#00E676' : '#FF1744' },
+              ].map((st, i) => (
+                <div key={i} style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', fontFamily: 'monospace' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em', marginBottom: 4 }}>{st.label}</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: st.color }}>{st.val}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Main Recharts Graph */}
+            <div style={{ flex: 1, width: '100%', minHeight: 380, background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: 20, border: '1px solid rgba(255,255,255,0.06)' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={filteredKpiData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
+                  <defs>
+                    <linearGradient id="gModalMain" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={modalConfig.color} stopOpacity={0.35}/>
+                      <stop offset="95%" stopColor={modalConfig.color} stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={true} horizontal={true} />
+                  <XAxis dataKey="timestamp" stroke="rgba(255,255,255,0.25)" tick={{ fill: 'rgba(255,255,255,0.85)', fontSize: 11, fontFamily: 'monospace', fontWeight: 600 }} />
+                  <YAxis stroke="rgba(255,255,255,0.25)" tick={{ fill: modalConfig.color, fontSize: 11, fontFamily: 'monospace', fontWeight: 700 }} tickFormatter={v => `$${v.toLocaleString()}`} domain={['auto', 'auto']} />
+                  <Tooltip content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div style={{
+                          background: 'rgba(10, 15, 25, 0.95)', border: `1px solid ${modalConfig.color}50`,
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.5)', borderRadius: 8, padding: '12px 14px', fontFamily: 'monospace', fontSize: 12
+                        }}>
+                          <div style={{ color: '#fff', fontWeight: 700, marginBottom: 8, borderBottom: '1px dashed rgba(255,255,255,0.2)', paddingBottom: 4 }}>
+                            Date: {label}
+                          </div>
+                          {payload.map((p, idx) => (
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: 20, color: p.color, marginBottom: 4 }}>
+                              <span>● {p.name}:</span>
+                              <span style={{ fontWeight: 700 }}>{fmt$(p.value)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
+                  }} />
+                  <Area type="monotone" dataKey={modalConfig.dataKey} name={modalConfig.title.split('—')[0].trim()} stroke={modalConfig.color} strokeWidth={3} fill="url(#gModalMain)" dot={false} activeDot={{ r: 6 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

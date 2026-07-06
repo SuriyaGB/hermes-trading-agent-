@@ -17,7 +17,7 @@ export default function PulseHistory() {
     const fetchPulses = async () => {
       try {
         const apiUrl = getApiUrl();
-        const res = await fetch(`${apiUrl}/api/pulses?limit=200&t=${Date.now()}`, {
+        const res = await fetch(`${apiUrl}/api/pulses?limit=2000&t=${Date.now()}`, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
         if (res.ok) {

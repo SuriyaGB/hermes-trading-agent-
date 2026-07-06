@@ -157,6 +157,59 @@ def get_portfolio():
         except Exception as e:
             print(f"Error enriching portfolio with unrealized PnL: {e}")
             
+    # Enrich positions with exact Roll History from trades_log.csv
+    try:
+        trades_path = DATA_DIR / "trades_log.csv"
+        if trades_path.exists():
+            with open(trades_path, "r") as tf:
+                t_reader = csv.DictReader(tf)
+                t_rows = list(t_reader)
+                
+            for pos in portfolio.get("positions", []):
+                p_strike = float(pos.get("strike", 0))
+                p_expiry = str(pos.get("expiry", ""))
+                
+                # Find matching ROLL_PUT_OPEN for this position
+                for i, row in enumerate(t_rows):
+                    if row.get("action") == "ROLL_PUT_OPEN" and float(row.get("strike", 0)) == p_strike and str(row.get("expiry", "")) == p_expiry:
+                        pulse_id = row.get("pulse_id")
+                        new_sold_price = float(row.get("price", 0))
+                        
+                        # Find matching ROLL_PUT_CLOSE immediately before this open in the same pulse
+                        for j in range(i - 1, -1, -1):
+                            crow = t_rows[j]
+                            if crow.get("action") == "ROLL_PUT_CLOSE" and crow.get("pulse_id") == pulse_id:
+                                old_strike = float(crow.get("strike", 0))
+                                old_expiry = str(crow.get("expiry", ""))
+                                old_buyback_price = float(crow.get("price", 0))
+                                
+                                old_sold_entry_price = old_buyback_price # fallback
+                                for erow in t_rows:
+                                    if erow == crow:
+                                        break
+                                    if erow.get("action") in ["SELL_PUT", "ROLL_PUT_OPEN"] and float(erow.get("strike", 0)) == old_strike and str(erow.get("expiry", "")) == old_expiry:
+                                        old_sold_entry_price = float(erow.get("price", 0))
+                                        
+                                old_realized_pnl = round(old_sold_entry_price - old_buyback_price, 2)
+                                net_roll_credit = round(new_sold_price - old_buyback_price, 2)
+                                strike_change = round(old_strike - p_strike, 2)
+                                
+                                pos["roll_detail"] = {
+                                    "is_rolled": True,
+                                    "old_strike": old_strike,
+                                    "old_expiry": old_expiry,
+                                    "old_sold_entry_price": old_sold_entry_price,
+                                    "old_buyback_price": old_buyback_price,
+                                    "old_realized_pnl": old_realized_pnl,
+                                    "new_sold_price": new_sold_price,
+                                    "net_roll_credit": net_roll_credit,
+                                    "strike_change": strike_change
+                                }
+                                break
+                        break
+    except Exception as e:
+        print(f"Error enriching roll details: {e}")
+
     return portfolio
 
 @app.get("/api/status")
@@ -183,7 +236,7 @@ def get_trades():
     return trades
 
 @app.get("/api/pulses")
-def get_pulses(limit: int = 50):
+def get_pulses(limit: int = 2000):
     """Fetches the AI's exact history from the SQLite brain for the Time Machine chart."""
     db_path = DATA_DIR / "hermes_brain.db"
     trade_state_path = DATA_DIR / "trade_state.json"
@@ -263,7 +316,7 @@ def get_health():
 
 @app.get("/api/income_history")
 def get_income_history():
-    """Dynamically reconstructs account balance and net liquidation history using trades log and DB snapshots."""
+    """Dynamically reconstructs account balance, net liquidation, premium, and realized PnL history using trades log and DB snapshots."""
     portfolio_path = DATA_DIR / "portfolio.json"
     trades_path = DATA_DIR / "trades_log.csv"
     db_path = DATA_DIR / "hermes_brain.db"
@@ -271,10 +324,10 @@ def get_income_history():
     if not portfolio_path.exists():
         return []
         
-    start_date = datetime(2026, 5, 14).date()
+    start_date = datetime(2026, 5, 27).date()
     end_date = datetime.now().date()
     
-    # 1. Reconstruct Cash from trades_log.csv
+    # 1. Reconstruct Cash, Premium, and PnL from trades_log.csv
     trades_by_date = {}
     if trades_path.exists():
         try:
@@ -284,19 +337,24 @@ def get_income_history():
                     action = row.get('action', '')
                     timestamp_str = row.get('timestamp', '')
                     try:
-                        price = float(row.get('price', 0.0))
+                        price = float(row.get('price', 0.0) or 0.0)
                     except ValueError:
                         price = 0.0
+                    try:
+                        pnl_realized = float(row.get('pnl_realized', 0.0) or 0.0)
+                    except ValueError:
+                        pnl_realized = 0.0
                     if timestamp_str:
                         date_key = datetime.strptime(timestamp_str.split(' ')[0], "%Y-%m-%d").date()
                         if date_key not in trades_by_date:
                             trades_by_date[date_key] = []
-                        trades_by_date[date_key].append((action, price))
+                        trades_by_date[date_key].append((action, price, pnl_realized))
         except Exception as e:
             print(f"Error parsing trades log: {e}")
             
-    # 2. Reconstruct Net Liquidation from hermes_brain.db
+    # 2. Reconstruct Net Liquidation and Active Premium from hermes_brain.db
     db_nlv_by_date = {}
+    db_premium_by_date = {}
     if db_path.exists():
         try:
             conn = sqlite3.connect(str(db_path))
@@ -309,59 +367,89 @@ def get_income_history():
                 # The DB 'net_liquidation_value' historically just tracked Total Cash
                 raw_cash = j.get('portfolio_summary', {}).get('net_liquidation_value', 250000.0)
                 
-                # Calculate liability of open positions
+                # Calculate liability and open premium of active positions
                 active_positions = j.get('active_positions', [])
                 liability = 0
+                active_prem = 0
                 for pos in active_positions:
                     if pos.get('type') == 'Option':
+                        qty = abs(int(pos.get('quantity', 1) or 1))
                         price = pos.get('current_premium', pos.get('avg_cost', 0))
-                        liability += price * 100
+                        cost = pos.get('avg_cost', 0)
+                        liability += price * 100 * qty
+                        active_prem += cost * 100 * qty
                         
                 true_nlv = raw_cash - liability
                 
                 # Overwrites with the latest pulse of the day
                 db_nlv_by_date[date_key] = float(true_nlv)
+                db_premium_by_date[date_key] = float(active_prem)
             conn.close()
         except Exception as e:
             print(f"Error parsing database for NLV: {e}")
             
-    # Overwrite the most recent/current day with LIVE portfolio data so the chart matches the live metric cards
+    # Overwrite the most recent/current day with LIVE portfolio & KPI data so the chart matches the live metric cards exactly
+    live_cash_val = None
+    live_prem_val = None
+    live_kpi = None
     try:
         live_port = get_portfolio()
         if live_port:
-            live_cash = live_port.get('total_cash', 250000.0)
+            live_cash_val = live_port.get('total_cash', 250000.0)
             live_liab = 0
+            live_prem = 0
             for pos in live_port.get('positions', []):
                 if pos.get('type') == 'Option':
-                    # get_portfolio injects current_price automatically
-                    live_liab += (pos.get('current_price', pos.get('avg_cost', 0)) * 100 * pos.get('quantity', 1))
-            db_nlv_by_date[end_date] = float(live_cash - live_liab)
+                    qty = abs(int(pos.get('quantity', 1) or 1))
+                    live_liab += (pos.get('current_price', pos.get('avg_cost', 0)) * 100 * qty)
+                    live_prem += (pos.get('avg_cost', 0) * 100 * qty)
+            db_nlv_by_date[end_date] = float(live_cash_val - live_liab)
+            live_prem_val = float(live_prem)
+            db_premium_by_date[end_date] = live_prem_val
+        live_kpi = get_kpi_summary()
     except Exception as e:
         print(f"Error fetching live portfolio for NLV: {e}")
             
     history = []
     running_cash = 250000.0
     last_known_nlv = 250000.0
+    running_gross_premium = 0.0
+    last_known_active_prem = 0.0
+    running_realized_pnl = 0.0
     
     current_date = start_date
     while current_date <= end_date:
         if current_date in trades_by_date:
-            for action, price in trades_by_date[current_date]:
-                if action == 'SELL_PUT' or action == 'SELL_CALL':
+            for action, price, pnl_realized in trades_by_date[current_date]:
+                if 'SELL' in action or 'ROLL_PUT_OPEN' in action:
                     running_cash += price * 100
-                elif action == 'BUY_CLOSE' or action == 'BUY_TO_CLOSE':
+                    running_gross_premium += price * 100
+                elif 'BUY' in action or 'ROLL_PUT_CLOSE' in action or 'CLOSE' in action:
                     running_cash -= price * 100
-                elif action == 'ROLL_PUT' or action == 'ROLL_CALL':
-                    running_cash += price * 100
+                    running_realized_pnl += pnl_realized
+                    
+        if current_date == end_date:
+            if live_cash_val is not None:
+                running_cash = live_cash_val
+            if live_kpi:
+                running_realized_pnl = live_kpi.get('net_realized_pnl', running_realized_pnl)
+                running_gross_premium = live_kpi.get('total_premium_collected', running_gross_premium)
+            if live_prem_val is not None:
+                last_known_active_prem = live_prem_val
                     
         if current_date in db_nlv_by_date:
             last_known_nlv = db_nlv_by_date[current_date]
+        if current_date in db_premium_by_date:
+            last_known_active_prem = db_premium_by_date[current_date]
             
         history.append({
             "timestamp": current_date.strftime("%Y-%m-%d"),
             "total_cash": round(running_cash, 2),
             "net_liquidation": round(last_known_nlv, 2),
-            "balance": round(last_known_nlv, 2)  # Return NLV as balance for existing frontend charts
+            "balance": round(last_known_nlv, 2),
+            "gross_premium_collected": round(running_gross_premium, 2),
+            "active_open_premium": round(last_known_active_prem, 2),
+            "net_realized_pnl": round(running_realized_pnl, 2)
         })
         current_date += timedelta(days=1)
         

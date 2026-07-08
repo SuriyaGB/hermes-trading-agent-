@@ -20,6 +20,9 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
 
           script: |
+            # Exit immediately if any command fails (Guarantees RED TICK ❌ if deployment fails!)
+            set -e
+
             # Navigate to project directory
             cd /root/hermes-trading-agent-
 
@@ -27,8 +30,9 @@ jobs:
             mkdir -p /root/hermes_data_backups
             cp -r /root/hermes-trading-agent-/data /root/hermes_data_backups/data_backup_$(date +"%Y%m%d_%H%M%S")
 
-            # 2. Safely pull latest code while auto-stashing and restoring any live VPS data files without resetting them
-            git pull origin main --autostash
+            # 2. Clean, Simple, Professional Pull (No autostash hacks or blind hard resets!)
+            # If any local code difference exists, set -e will catch it and alert you with a RED TICK ❌!
+            git pull origin main
 
             # Activate virtual environment
             source .venv/bin/activate

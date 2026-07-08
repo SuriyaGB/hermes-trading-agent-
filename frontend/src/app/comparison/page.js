@@ -144,8 +144,10 @@ export default function AgentComparison() {
     }
   });
   
-  const thetaInterest = thetaLive?.summary?.interest !== undefined ? thetaLive.summary.interest : 650.50;
-  const computedThetaRealized = thetaCash - 250000 - thetaPremium - thetaInterest - 105.02;
+  const thetaInterestMay = 650.50;
+  const thetaInterestJune = 631.32;
+  const thetaInterestTotal = thetaLive?.summary?.interest !== undefined ? thetaLive.summary.interest : (thetaInterestMay + thetaInterestJune);
+  const computedThetaRealized = thetaCash - 250000 - thetaPremium - thetaInterestTotal - 105.02;
   const thetaRealized = (thetaLive?.summary?.realizedProfit !== undefined && thetaLive.summary.realizedProfit !== 0) ? thetaLive.summary.realizedProfit : computedThetaRealized;
 
   // Reconstruct Combined Performance History
@@ -348,7 +350,7 @@ export default function AgentComparison() {
               </p>
               <div className="mt-2 text-[10px] font-mono text-white/50 flex justify-between">
                 <span>Premium: ${thetaPremium.toLocaleString()}</span>
-                <span className="text-yellow-400">Interest: ${Math.max(0, thetaInterest).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                <span className="text-yellow-400">Interest: ${thetaInterestMay.toFixed(2)} + ${thetaInterestJune.toFixed(2)}</span>
               </div>
             </div>
             <div className="glass-panel p-5 bg-white/[0.02] relative">

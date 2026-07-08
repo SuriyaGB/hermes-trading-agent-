@@ -88,6 +88,7 @@
     → Execute ROLL_PUT (buy to close current, sell next monthly expiry for net credit).
     REASON: Approaching expiry with insufficient profit. Extend to next cycle for more premium.
              Only roll if net credit is achievable. Never roll for a debit.
+    IMPORTANT CONSTRAINT: The new expiry MUST be selected from the valid_expiries list (between 30 and 50 DTE). Never select an expiry > 50 DTE or an unlisted date. If no valid expiry offers a net credit >= $0.25 per contract ($25 total), output HOLD_PUT_POSITION instead of rolling beyond 50 DTE or locking capital for pennies.
 
   RULE 6 — ACCEPT ASSIGNMENT (DTE <= 15 and ITM):
     If dte <= 15 AND delta <= -0.30 (ITM/ATM):
@@ -130,6 +131,7 @@
     → Execute ROLL_CALL (buy to close current Call, sell new Call at higher strike, next monthly expiry, for net credit).
     REASON: Stock rallying toward strike with little time left. Roll up and out to defend shares
              and collect more premium. Only roll if net credit. Never roll for a debit.
+    IMPORTANT CONSTRAINT: The new expiry MUST be selected from the valid_expiries list (between 30 and 50 DTE). Never select an expiry > 50 DTE or an unlisted date. If no valid expiry offers a net credit >= $0.25 per contract ($25 total), output HOLD_CALL_POSITION instead of rolling beyond 50 DTE or locking shares for pennies.
 
   RULE 6 — HOLD (Default, all other conditions):
     → Execute HOLD_CALL_POSITION.
@@ -175,13 +177,20 @@
     Each row contains: expiry (YYYYMMDD), dte, strike, bid, ask, mid, delta, iv.
     You MUST compare across expiry rows and choose the single best strike+expiry combination.
 
-  DTE SELECTION RULE:
+  DTE SELECTION RULE (NEW SELLS — SELL_NEW_PUT / SELL_NEW_CALL):
   - You have full visibility of all available expiries in the 30-50 DTE window.
   - Default preference: select the expiry CLOSEST to 45 DTE from the valid_expiries list.
   - Exception: If VIX >= 25 (high fear), prefer a longer DTE (45-50) for maximum premium and safety buffer.
   - Exception: If day_classification == QUIET_DAY and VIX < 15, a shorter DTE (30-36) is acceptable to cycle faster.
   - EARNINGS RULE: NEVER select an expiry that falls AFTER the next earnings date.
     If the closest-to-45 expiry is after earnings, step back to the last safe expiry before earnings.
+
+  DTE SELECTION RULE (ROLLS — ROLL_PUT / ROLL_CALL):
+  - MANDATORY: You MUST select from valid_expiries list ONLY (between 30 and 50 DTE). No other dates.
+  - Select the expiry with the LOWEST DTE in valid_expiries that still allows a net credit >= $0.25.
+  - This is almost always the nearest available monthly expiry (30-36 DTE range).
+  - If NO expiry in valid_expiries allows net credit >= $0.25 -> Output HOLD instead of rolling.
+  - NEVER select DTE > 50 for any roll under any circumstance.
 </input_schema_payload>
 
 <output_schema_override>

@@ -420,9 +420,24 @@ def execute_decision(dec, db, pulse_id, eye_data=None):
         if ai_expiry:
             chosen_expiry = str(ai_expiry).replace('-', '').strip()
         else:
-            # Safety fallback: use Python's pre-selected shortest expiry
-            sim_log("⚠️ AI did not output expiry_to_trade — falling back to chosen_expiry")
-            chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
+            sim_log("⚠️ AI did not output expiry_to_trade — using Smart Auto-Correction from valid_expiries")
+            valid_list = eye_data.get('valid_expiries', []) if eye_data else []
+            if valid_list and isinstance(valid_list, list):
+                # Pick expiry closest to 45 DTE from valid_expiries
+                best_exp = min(valid_list, key=lambda x: abs(x.get('dte', 45) - 45) if isinstance(x, dict) else 999)
+                chosen_expiry = str(best_exp.get('expiry', 'N/A')).replace('-', '').strip() if isinstance(best_exp, dict) else (eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A')
+            else:
+                chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
+        
+        if chosen_expiry != 'N/A':
+            try:
+                exp_date = datetime.strptime(chosen_expiry, "%Y%m%d").date()
+                calc_dte = (exp_date - datetime.now().date()).days
+                if calc_dte < 25 or calc_dte > 55:
+                    raise ValueError(f"POLICY BLOCK: SELL_NEW_PUT rejected — expiry={chosen_expiry} has {calc_dte} DTE (must be 25-55 DTE).")
+            except ValueError as ve:
+                if "POLICY BLOCK:" in str(ve):
+                    raise ve
         
         portfolio["positions"].append({
             "type": "Option", 
@@ -459,8 +474,23 @@ def execute_decision(dec, db, pulse_id, eye_data=None):
         if ai_expiry:
             chosen_expiry = str(ai_expiry).replace('-', '').strip()
         else:
-            sim_log("⚠️ AI did not output expiry_to_trade — falling back to chosen_expiry")
-            chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
+            sim_log("⚠️ AI did not output expiry_to_trade — using Smart Auto-Correction from valid_expiries")
+            valid_list = eye_data.get('valid_expiries', []) if eye_data else []
+            if valid_list and isinstance(valid_list, list):
+                best_exp = min(valid_list, key=lambda x: abs(x.get('dte', 45) - 45) if isinstance(x, dict) else 999)
+                chosen_expiry = str(best_exp.get('expiry', 'N/A')).replace('-', '').strip() if isinstance(best_exp, dict) else (eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A')
+            else:
+                chosen_expiry = eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A'
+        
+        if chosen_expiry != 'N/A':
+            try:
+                exp_date = datetime.strptime(chosen_expiry, "%Y%m%d").date()
+                calc_dte = (exp_date - datetime.now().date()).days
+                if calc_dte < 25 or calc_dte > 55:
+                    raise ValueError(f"POLICY BLOCK: SELL_NEW_CALL rejected — expiry={chosen_expiry} has {calc_dte} DTE (must be 25-55 DTE).")
+            except ValueError as ve:
+                if "POLICY BLOCK:" in str(ve):
+                    raise ve
         
         portfolio["positions"].append({
             "type": "Option", 
@@ -548,6 +578,17 @@ def execute_decision(dec, db, pulse_id, eye_data=None):
         new_premium = dec.get('open_details', {}).get('premium_to_collect') or dec.get('premium_to_collect')
         new_expiry = dec.get('open_details', {}).get('expiry_to_trade') or dec.get('expiry_to_trade') or (eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A')
         
+        # --- HARD DTE CEILING ENFORCEMENT GATE ---
+        if new_expiry and new_expiry != 'N/A':
+            try:
+                exp_date = datetime.strptime(str(new_expiry).replace('-', '').strip(), "%Y%m%d").date()
+                calc_dte = (exp_date - datetime.now().date()).days
+                if calc_dte > 50 or calc_dte < 25:
+                    raise ValueError(f"POLICY BLOCK: ROLL_PUT rejected — new_expiry={new_expiry} is {calc_dte} DTE (must be 25-50 DTE). Cannot roll beyond 50 DTE.")
+            except ValueError as ve:
+                if "POLICY BLOCK:" in str(ve):
+                    raise ve
+        
         if new_strike is None or new_premium is None:
             raise ValueError(f"ROLL_PUT details missing: new_strike={new_strike}, new_premium={new_premium}")
         
@@ -598,6 +639,17 @@ def execute_decision(dec, db, pulse_id, eye_data=None):
         new_strike = dec.get('open_details', {}).get('strike_to_trade') or dec.get('strike_to_trade')
         new_premium = dec.get('open_details', {}).get('premium_to_collect') or dec.get('premium_to_collect')
         new_expiry = dec.get('open_details', {}).get('expiry_to_trade') or dec.get('expiry_to_trade') or (eye_data.get('chosen_expiry', 'N/A') if eye_data else 'N/A')
+        
+        # --- HARD DTE CEILING ENFORCEMENT GATE ---
+        if new_expiry and new_expiry != 'N/A':
+            try:
+                exp_date = datetime.strptime(str(new_expiry).replace('-', '').strip(), "%Y%m%d").date()
+                calc_dte = (exp_date - datetime.now().date()).days
+                if calc_dte > 50 or calc_dte < 25:
+                    raise ValueError(f"POLICY BLOCK: ROLL_CALL rejected — new_expiry={new_expiry} is {calc_dte} DTE (must be 25-50 DTE). Cannot roll beyond 50 DTE.")
+            except ValueError as ve:
+                if "POLICY BLOCK:" in str(ve):
+                    raise ve
         
         if new_strike is None or new_premium is None:
             raise ValueError(f"ROLL_CALL details missing: new_strike={new_strike}, new_premium={new_premium}")

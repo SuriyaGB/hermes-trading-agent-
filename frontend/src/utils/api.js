@@ -9,8 +9,8 @@ export function getApiUrl() {
 
   // 2. Check environment variables
   const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
+  
   if (envUrl) return envUrl;
-
   // 3. Fallback automatically based on hostname
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return "http://localhost:8000";

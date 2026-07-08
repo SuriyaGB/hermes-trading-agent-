@@ -449,7 +449,19 @@ def enrich_option_position(p: Dict[str, Any], spot: float, ticker: yf.Ticker) ->
             delta_raw = calculate_delta(spot, strike, dte / 365.25, get_risk_free_rate(), iv, opt_type_str)
             delta = round(delta_raw, 4)
         except Exception as e:
-            add_warning(f"Error enriching option {opt_type_str.upper()}_{strike}_{expiry}: {e}")
+            add_warning(f"Error enriching option {opt_type_str.upper()}_{strike}_{expiry}: {e}. Applying Layer 3 Black-Scholes Fallback.")
+            try:
+                today_date = datetime.now().date()
+                exp_dt = datetime.strptime(expiry_formatted, '%Y-%m-%d').date()
+                dte = max((exp_dt - today_date).days, 1)
+                r = get_risk_free_rate()
+                T = dte / 365.25
+                iv = get_vix_sigma()
+                current_premium = black_scholes_price(spot, strike, T, r, iv, opt_type_str)
+                delta_raw = calculate_delta(spot, strike, T, r, iv, opt_type_str)
+                delta = round(delta_raw, 4)
+            except Exception as fallback_e:
+                add_warning(f"Layer 3 Black-Scholes Fallback also failed: {fallback_e}")
             
     avg_cost = float(p.get("avg_cost", 1.0))
     profit_pct = 0.0

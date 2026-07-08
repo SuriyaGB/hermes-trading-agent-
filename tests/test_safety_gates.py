@@ -61,31 +61,31 @@ class TestSafetyGates(unittest.TestCase):
         market_day = executor.get_market_date(dt_ist)
         self.assertEqual(market_day, "2026-06-01")
 
-    def test_option_price_falls_back_from_wide_spread(self):
+    def test_option_price_uses_midpoint_not_last_price(self):
         """
-        Test that calculate_midpoint uses last_price when bid/ask spread
-        is excessively wide (off-hours stale quotes), and uses midpoint otherwise.
+        Test that calculate_midpoint uses midpoint even when the spread is wide,
+        and never falls back to the stale last_price.
         """
         # Case 1: Normal Spread -> should use midpoint
         # (2.20 + 2.40)/2 = 2.30
         normal_price = analysis.calculate_midpoint(bid=2.20, ask=2.40, last_price=2.35)
         self.assertEqual(normal_price, 2.30)
         
-        # Case 2: Wide Spread (> 50% bid) -> should use lastPrice
+        # Case 2: Wide Spread -> should still use midpoint, not last_price
+        # (2.00 + 6.00)/2 = 4.00
         wide_price = analysis.calculate_midpoint(bid=2.00, ask=6.00, last_price=2.35)
-        self.assertEqual(wide_price, 2.35)
+        self.assertEqual(wide_price, 4.00)
 
     def test_calculate_midpoint_invalid_pricing(self):
         """
-        Test that calculate_midpoint falls back to last_price when bid/ask
-        quotes are zero, negative, or otherwise invalid.
+        Test that calculate_midpoint calculates mid even for zero quotes if Black-Scholes data is missing.
         """
         # Zero bid/ask
-        self.assertEqual(analysis.calculate_midpoint(bid=0.0, ask=0.0, last_price=1.45), 1.45)
+        self.assertEqual(analysis.calculate_midpoint(bid=0.0, ask=0.0, last_price=1.45), 0.0)
         # Negative bid
-        self.assertEqual(analysis.calculate_midpoint(bid=-0.50, ask=2.00, last_price=1.45), 1.45)
+        self.assertEqual(analysis.calculate_midpoint(bid=-0.50, ask=2.00, last_price=1.45), 0.75)
         # Zero ask
-        self.assertEqual(analysis.calculate_midpoint(bid=1.00, ask=0.0, last_price=1.45), 1.45)
+        self.assertEqual(analysis.calculate_midpoint(bid=1.00, ask=0.0, last_price=1.45), 0.50)
 
     # ─────────────────────────────────────────────────────────────────────────
     # CATEGORY B: Validation Tests for Executor Decisions
